@@ -131,9 +131,9 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           $version = "${{ steps.version.outputs.version }}"
-          $url = "https://github.com/AdventDevInc/kudu/releases/download/v$version/Kudu-Setup-$version.exe"
-          Invoke-WebRequest -Uri $url -OutFile "Kudu-Setup-$version.exe"
-          $hash = (Get-FileHash "Kudu-Setup-$version.exe" -Algorithm SHA256).Hash
+          $url = "https://github.com/kdairatchi/kudu/releases/download/v$version/Bulwark-Setup-$version.exe"
+          Invoke-WebRequest -Uri $url -OutFile "Bulwark-Setup-$version.exe"
+          $hash = (Get-FileHash "Bulwark-Setup-$version.exe" -Algorithm SHA256).Hash
           echo "CHECKSUM=$hash" >> $env:GITHUB_ENV
 
       - name: Update choco package files
@@ -154,7 +154,7 @@ jobs:
         shell: pwsh
         run: |
           choco pack choco/kudu.nuspec --out .
-          choco push usekudu.${{ steps.version.outputs.version }}.nupkg --source "https://push.chocolatey.org/" --api-key "${{ secrets.CHOCOLATEY_API_KEY }}"
+          choco push bulwark.${{ steps.version.outputs.version }}.nupkg --source "https://push.chocolatey.org/" --api-key "${{ secrets.CHOCOLATEY_API_KEY }}"
 
   virustotal-scan:
     needs: build
@@ -170,7 +170,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           version="${{ steps.version.outputs.version }}"
-          gh release download "v$version" --repo AdventDevInc/kudu --pattern "Kudu-Setup-*.exe" --pattern "Kudu-*.dmg" --pattern "Kudu-*.AppImage" --pattern "Kudu-*.deb" --dir artifacts/
+          gh release download "v$version" --repo kdairatchi/kudu --pattern "Bulwark-Setup-*.exe" --pattern "Bulwark-*.dmg" --pattern "Bulwark-*.AppImage" --pattern "Bulwark-*.deb" --dir artifacts/
 
       - name: Scan with VirusTotal
         env:
@@ -217,9 +217,9 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           version="${{ steps.version.outputs.version }}"
-          existing=$(gh release view "v$version" --repo AdventDevInc/kudu --json body -q .body)
+          existing=$(gh release view "v$version" --repo kdairatchi/kudu --json body -q .body)
           vt_report=$(cat vt_report.md)
-          gh release edit "v$version" --repo AdventDevInc/kudu --notes "${existing}
+          gh release edit "v$version" --repo kdairatchi/kudu --notes "${existing}
 
           ${vt_report}"
 
@@ -247,7 +247,8 @@ jobs:
         shell: pwsh
         run: |
           $version = "${{ steps.version.outputs.version }}"
-          $url = "https://github.com/AdventDevInc/kudu/releases/download/v$version/Kudu-Setup-$version.exe"
-          $releaseNotesUrl = "https://github.com/AdventDevInc/kudu/releases/tag/v$version"
+          $url = "https://github.com/kdairatchi/kudu/releases/download/v$version/Bulwark-Setup-$version.exe"
+          $releaseNotesUrl = "https://github.com/kdairatchi/kudu/releases/tag/v$version"
           Invoke-WebRequest -Uri "https://aka.ms/wingetcreate/latest" -OutFile wingetcreate.exe
-          .\wingetcreate.exe update AdventDevelopmentInc.Kudu --submit --token "${{ secrets.WINGET_GH_TOKEN }}" --urls "$url|x64|machine" --version $version --release-notes-url $releaseNotesUrl
+          # NOTE: replace with your own registered winget package identifier before publishing.
+          .\wingetcreate.exe update Kdairatchi.Bulwark --submit --token "${{ secrets.WINGET_GH_TOKEN }}" --urls "$url|x64|machine" --version $version --release-notes-url $releaseNotesUrl

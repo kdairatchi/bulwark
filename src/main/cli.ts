@@ -1252,8 +1252,8 @@ async function handleService(args: string[], ctx: CliContext): Promise<number | 
   const runUser = process.env['SUDO_USER'] || process.env['USER'] || 'root'
 
   const unitContent = `[Unit]
-Description=Kudu System Cleaner Daemon
-Documentation=https://usekudu.com
+Description=Bulwark Device Security Daemon
+Documentation=https://github.com/kdairatchi/kudu
 After=network-online.target
 Wants=network-online.target
 

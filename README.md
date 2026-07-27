@@ -1,39 +1,72 @@
 <p align="center">
-  <a href="https://usekudu.com"><img src="logo.png" alt="Kudu" width="128" /></a>
+  <a href="https://github.com/kdairatchi/kudu"><img src="logo.png" alt="Bulwark" width="128" /></a>
 </p>
 
-<h1 align="center">Kudu</h1>
+<h1 align="center">Bulwark</h1>
 
 <p align="center">
-  <b>Free, open-source system cleaner & security scanner for Windows, macOS, and Linux.</b><br/>
-  Reclaim disk space. Remove malware. Take back your privacy. All in one app.
-</p>
-
-<p align="center">
-  <a href="https://github.com/adventdevinc/kudu/stargazers"><img src="https://img.shields.io/github/stars/adventdevinc/kudu?style=flat-square&label=Stars" alt="Stars" /></a>
-  <a href="https://github.com/adventdevinc/kudu/releases"><img src="https://img.shields.io/github/v/release/adventdevinc/kudu?style=flat-square" alt="Release" /></a>
-  <a href="https://github.com/adventdevinc/kudu/releases"><img src="https://img.shields.io/github/downloads/adventdevinc/kudu/total?style=flat-square&label=Downloads" alt="Downloads" /></a>
-  <a href="LICENSE"><img src="https://img.shields.io/github/license/adventdevinc/kudu?style=flat-square" alt="License" /></a>
-  <a href="https://github.com/adventdevinc/kudu/actions"><img src="https://img.shields.io/github/actions/workflow/status/adventdevinc/kudu/release.yml?style=flat-square&label=Build" alt="Build" /></a>
-  <img src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-blue?style=flat-square" alt="Platform" />
+  <b>A family-focused device security platform for Windows, macOS, and Linux.</b><br/>
+  Protect every device in your home — without needing to be a cybersecurity expert.
 </p>
 
 <p align="center">
-  <a href="https://github.com/adventdevinc/kudu/releases"><b>Download</b></a> &nbsp;&middot;&nbsp;
-  <a href="https://usekudu.com"><b>Website</b></a> &nbsp;&middot;&nbsp;
-  <a href="https://usekudu.com/cleaners"><b>Cleaners</b></a> &nbsp;&middot;&nbsp;
+  <a href="https://github.com/kdairatchi/kudu/releases"><b>Download</b></a> &nbsp;&middot;&nbsp;
+  <a href="ROADMAP.md"><b>Roadmap</b></a> &nbsp;&middot;&nbsp;
+  <a href="docs/product/vision.md"><b>Product Vision</b></a> &nbsp;&middot;&nbsp;
+  <a href="docs/architecture/overview.md"><b>Architecture</b></a> &nbsp;&middot;&nbsp;
   <a href="CLI.md"><b>CLI Docs</b></a>
 </p>
 
+> **Naming notice.** `Bulwark` is a **temporary internal codename**, not a final brand.
+> Product IDs, signing identities, and public URLs must not be locked to a final
+> name until it clears the trademark/domain checks described in
+> [`docs/product/vision.md`](docs/product/vision.md). This repository is a fork of
+> the upstream [Kudu](https://github.com/adventdevinc/kudu) system cleaner and reuses
+> its cleaning/scanning engine as the **desktop endpoint agent**.
+
 ---
 
-<p align="center">
-  <img src="resources/kudu-animated.gif" alt="Kudu Demo" width="800" />
-</p>
+## What Bulwark is
+
+Bulwark protects the devices in a home or small business from malware, unsafe apps,
+vulnerable software, malicious network traffic, and privacy risks. It is built as a
+**local-first security agent** with an optional cloud control plane:
+
+```
+Desktop Agent          Android Agent           Network Sensor          Cloud Control Plane
+├── Windows            ├── Phones              ├── DNS filtering       ├── Device dashboard
+├── macOS              ├── Tablets             ├── Threat blocking     ├── Alerts
+└── Linux              └── Android TV boxes    ├── Device discovery    ├── Vuln intelligence
+                                               └── Traffic analysis    ├── Breach monitoring
+                                                                       ├── Reports
+                                                                       └── Remote actions
+```
+
+The desktop agent in this repository is the foundation. See
+[`docs/architecture/overview.md`](docs/architecture/overview.md) for the full target
+architecture and [`ROADMAP.md`](ROADMAP.md) for the phased plan.
+
+## Desktop agent capabilities (today)
+
+- **Malware Scanner** — YARA-X signature matching, heuristics, and Defender integration
+- **Vulnerability checks** — software inventory correlated against CVE data
+- **Security posture** — platform health checks (firewall, disk encryption, updates, and more)
+- **Threat Monitor** — malicious-destination indicators and network telemetry
+- **Breach Monitor** — email exposure checks
+- **System hygiene** — cleaning, startup management, and optimization (the original engine)
+- **[CLI Mode](CLI.md)** — scriptable, no GUI required
+
+## Local-first & privacy
+
+Bulwark runs **local-first**. Cloud features are **opt-in** and require limited,
+minimum-necessary telemetry (device metadata, security findings, destination
+indicators). File contents, passwords, private messages, packet payloads, and personal
+documents are **never** collected. See [`docs/privacy/README.md`](docs/privacy/README.md).
 
 ## Download
 
-Get the latest installer for your platform from [GitHub Releases](https://github.com/adventdevinc/kudu/releases):
+Get the latest installer for your platform from
+[GitHub Releases](https://github.com/kdairatchi/kudu/releases):
 
 | Platform | Format |
 |----------|--------|
@@ -41,73 +74,36 @@ Get the latest installer for your platform from [GitHub Releases](https://github
 | macOS | `.dmg` (Intel & Apple Silicon) |
 | Linux | `.AppImage` or `.deb` |
 
-## Why Kudu?
+## Development
 
-Most system cleaners are closed-source, ad-filled, and want your money. Some are barely disguised malware themselves.
+```bash
+npm install     # install dependencies (rebuilds native modules)
+npm run dev     # launch the desktop agent with HMR
+npm test        # run the test suite (Vitest)
+npm run build   # build main/preload/renderer
+```
 
-Kudu is **100% free, open-source, and transparent**. No ads, no upsells, no telemetry. You can read every line of code, audit every scan, and verify every delete. Built by developers who were tired of recommending CCleaner with a straight face.
+See [`CONTRIBUTING.md`](CONTRIBUTING.md) and [`AGENTS.md`](AGENTS.md) for details.
 
-## What It Does
+## Documentation
 
-<table>
-<tr>
-<td width="33%" valign="top">
-
-### Cleaning & Optimization
-- **System Cleaner** — temp files, logs, caches, crash dumps
-- **Browser Cleaner** — caches across all major browsers
-- **App Cleaner** — leftover app data
-- **Gaming Cleaner** — game launcher & shader caches
-- **Registry Cleaner** — broken/orphaned entries
-- **Startup Manager** — boot impact analysis
-- **Network Cleanup** — DNS, Wi-Fi profiles, ARP cache
-- **Disk Analyzer** — interactive treemap of disk usage
-- **Debloater** — remove Windows bloatware
-- **Driver Manager** — stale driver cleanup
-- **Program Uninstaller** — uninstall + leftover cleanup
-- **Service Manager** — optimize Windows services
-- **Software Updater** — bulk-update across winget, Chocolatey, Scoop & npm
-
-</td>
-<td width="33%" valign="top">
-
-### Security & Privacy
-- **Malware Scanner** — signature matching, heuristic analysis, Defender integration
-- **Privacy Shield** — control 30+ Windows privacy settings (telemetry, ad ID, Cortana, tracking)
-- **Secure Delete** — overwrite files with random data before deletion
-
-</td>
-<td width="33%" valign="top">
-
-### Monitoring & Tools
-- **Performance Monitor** — real-time CPU, memory, disk, network, per-core stats, S.M.A.R.T.
-- **System Restore Points** — create restore points before cleaning
-- **Cleaning History** — track past sessions & space recovered
-- **Scheduled Scans** — daily, weekly, or monthly
-- **One-Click Clean** — scan & clean everything in one click
-- **[CLI Mode](CLI.md)** — scriptable, no GUI required
-
-</td>
-</tr>
-</table>
-
-## Languages
-
-Kudu is available in 30 languages:
-
-English, Spanish, French, German, Portuguese, Italian, Japanese, Korean, Chinese (Simplified), Chinese (Traditional), Russian, Arabic, Hindi, Turkish, Dutch, Polish, Swedish, Norwegian, Danish, Finnish, Czech, Thai, Vietnamese, Indonesian, Malay, Ukrainian, Romanian, Greek, Hebrew, Hungarian
+- [Product vision](docs/product/vision.md)
+- [Architecture](docs/architecture/overview.md)
+- [Threat model](docs/threat-model/README.md)
+- [Privacy architecture](docs/privacy/README.md)
+- [API design](docs/api/device-and-dashboard-api.md)
+- [Roadmap](ROADMAP.md)
 
 ## Disclaimer
 
-Kudu by design removes files from your system. You are responsible for reviewing items before removal. We accept no liability for data loss or system instability. This software is provided "as is" without warranty.
+Bulwark performs security actions and, via its cleaning engine, can remove files from
+your system. You are responsible for reviewing items before removal. The software is
+provided "as is" without warranty.
 
-## Contributing
+## Credits
 
-Contributions are welcome! Feel free to open issues, submit PRs, or suggest features.
-
-**Want to add a cleaner for your favorite app?** Kudu's cleaning rules are simple JSON files — no code required. See the [Cleaner Rules Guide](rules/RULES.md) to get started, or browse the [full cleaner directory](https://usekudu.com/cleaners) to see what's already covered.
-
-If you find Kudu useful, consider giving it a star — it helps others discover the project.
+Bulwark is a fork of [Kudu](https://github.com/adventdevinc/kudu) by the Kudu
+Contributors, reused under the MIT license as the desktop endpoint agent.
 
 ## License
 

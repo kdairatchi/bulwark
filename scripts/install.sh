@@ -1,17 +1,17 @@
 #!/usr/bin/env bash
-# Kudu Linux installer
+# Bulwark Linux installer
 # Usage:
-#   curl -fsSL https://raw.githubusercontent.com/adventdevinc/kudu/main/scripts/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/kdairatchi/kudu/main/scripts/install.sh | bash
 #   curl -fsSL ... | bash -s -- --api-key YOUR_KEY
 #   curl -fsSL ... | bash -s -- --no-daemon   (install only, don't enable daemon)
 #   curl -fsSL ... | bash -s -- --no-boot     (install only, don't enable boot service)
 
 set -euo pipefail
 
-REPO="adventdevinc/kudu"
-INSTALL_DIR="/opt/kudu"
-BIN_LINK="/usr/local/bin/kudu"
-SERVICE_NAME="kudu-daemon"
+REPO="kdairatchi/kudu"
+INSTALL_DIR="/opt/bulwark"
+BIN_LINK="/usr/local/bin/bulwark"
+SERVICE_NAME="bulwark-daemon"
 
 API_KEY=""
 NO_DAEMON=false
@@ -86,10 +86,10 @@ apt-get install -y -qq \
 ok "Dependencies installed."
 
 # ── Fetch latest release ────────────────────────────────────────
-log "Finding latest Kudu release..."
+log "Finding latest Bulwark release..."
 RELEASE_JSON=$(curl -fsSL "https://api.github.com/repos/${REPO}/releases/latest")
 VERSION=$(echo "$RELEASE_JSON" | jq -r '.tag_name')
-ASSET_NAME="Kudu-${VERSION#v}-${ARCH_LABEL}.AppImage"
+ASSET_NAME="Bulwark-${VERSION#v}-${ARCH_LABEL}.AppImage"
 DOWNLOAD_URL=$(echo "$RELEASE_JSON" | jq -r \
   --arg name "$ASSET_NAME" \
   '.assets[] | select(.name == $name) | .browser_download_url')
@@ -106,10 +106,10 @@ log "Downloading $ASSET_NAME..."
 
 # ── Download and install ─────────────────────────────────────────
 mkdir -p "$INSTALL_DIR"
-APPIMAGE_PATH="${INSTALL_DIR}/Kudu.AppImage"
+APPIMAGE_PATH="${INSTALL_DIR}/Bulwark.AppImage"
 
 # Download to temp file first, then move atomically
-TMP_FILE=$(mktemp "${INSTALL_DIR}/.kudu-download.XXXXXX")
+TMP_FILE=$(mktemp "${INSTALL_DIR}/.bulwark-download.XXXXXX")
 trap 'rm -f "$TMP_FILE"' EXIT
 
 curl -fSL --progress-bar "$DOWNLOAD_URL" -o "$TMP_FILE"
@@ -144,11 +144,11 @@ for arg in "$@"; do
 done
 # Run without FUSE mount (avoids hang on servers without libfuse)
 export APPIMAGE_EXTRACT_AND_RUN=1
-exec /opt/kudu/Kudu.AppImage "${EXTRA_ARGS[@]}" "$@"
+exec /opt/bulwark/Bulwark.AppImage "${EXTRA_ARGS[@]}" "$@"
 WRAPPER
 chmod +x "$BIN_LINK"
 
-ok "Installed Kudu $VERSION to $APPIMAGE_PATH"
+ok "Installed Bulwark $VERSION to $APPIMAGE_PATH"
 
 # ── Configure API key / server URL ───────────────────────────────
 if [[ -n "$API_KEY" ]]; then
@@ -164,7 +164,7 @@ if [[ "$NO_BOOT" == false ]] && command -v systemctl &>/dev/null; then
 
   cat > "/etc/systemd/system/${SERVICE_NAME}.service" <<UNIT
 [Unit]
-Description=Kudu Daemon
+Description=Bulwark Daemon
 After=network-online.target
 Wants=network-online.target
 
@@ -195,22 +195,22 @@ else
     log "Skipping boot service (--no-boot)."
   else
     log "systemd not found — skipping boot service."
-    log "You can run the daemon manually: kudu --no-sandbox --daemon"
+    log "You can run the daemon manually: bulwark --no-sandbox --daemon"
   fi
 fi
 
 # ── Summary ──────────────────────────────────────────────────────
 echo ""
-ok "Kudu $VERSION installation complete!"
+ok "Bulwark $VERSION installation complete!"
 echo ""
 echo "  Binary:   $APPIMAGE_PATH"
 echo "  Symlink:  $BIN_LINK"
 [[ "$NO_BOOT" == false ]] && command -v systemctl &>/dev/null && \
 echo "  Service:  systemctl status $SERVICE_NAME"
 echo ""
-echo "  Run GUI:        kudu --no-sandbox"
-echo "  Run CLI:        kudu --no-sandbox --cli"
-echo "  Run daemon:     kudu --no-sandbox --daemon"
+echo "  Run GUI:        bulwark --no-sandbox"
+echo "  Run CLI:        bulwark --no-sandbox --cli"
+echo "  Run daemon:     bulwark --no-sandbox --daemon"
 echo "  Check status:   systemctl status $SERVICE_NAME"
 echo "  View logs:      journalctl -u $SERVICE_NAME -f"
 echo ""

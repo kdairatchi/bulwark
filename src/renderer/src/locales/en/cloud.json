@@ -27,7 +27,7 @@
   "upgradeCalloutDesc": "Basic gives you dashboards, alerts, compliance, AI safety analysis, and breach monitoring. Upgrading to Pro adds threat monitoring, vulnerability scanning, and automated remediation — features that protect you locally, not just in the cloud.",
 
   "cloudFeaturesTitle": "Cloud Dashboard",
-  "cloudFeaturesSubtitle": "Manage and monitor all your devices from cloud.usekudu.com",
+  "cloudFeaturesSubtitle": "Manage and monitor all your devices from your Bulwark cloud dashboard",
 
   "featureRemoteTitle": "Remote Management",
   "featureRemoteDesc": "Trigger scans, cleaning, software updates, and power control on any linked device from the web dashboard — no physical access needed.",

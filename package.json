@@ -1,7 +1,7 @@
 {
-  "name": "kudu",
+  "name": "bulwark",
   "version": "1.47.0",
-  "description": "A modern, open-source system cleaner for Windows, macOS, and Linux",
+  "description": "Bulwark (temporary internal codename; forked from Kudu) — a family-focused device security platform that protects Windows, macOS, and Linux endpoints from malware, vulnerable software, malicious traffic, and privacy risks.",
   "main": "./out/main/index.js",
   "scripts": {
     "dev": "electron-vite dev",
@@ -26,25 +26,29 @@
     "postinstall": "patch-package && electron-rebuild -w better-sqlite3"
   },
   "keywords": [
-    "system-cleaner",
+    "device-security",
+    "endpoint-agent",
+    "malware-scanner",
+    "vulnerability-management",
+    "network-security",
+    "family-security",
     "electron",
     "windows",
     "macos",
-    "linux",
-    "optimization"
+    "linux"
   ],
   "author": {
-    "name": "Kudu Contributors",
-    "email": "kudu@users.noreply.github.com"
+    "name": "Bulwark Contributors",
+    "email": "bulwark@users.noreply.github.com"
   },
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/adventdevinc/kudu.git"
+    "url": "https://github.com/kdairatchi/kudu.git"
   },
-  "homepage": "https://usekudu.com",
+  "homepage": "https://github.com/kdairatchi/kudu",
   "bugs": {
-    "url": "https://github.com/adventdevinc/kudu/issues"
+    "url": "https://github.com/kdairatchi/kudu/issues"
   },
   "devDependencies": {
     "@axe-core/react": "^4.11.2",
