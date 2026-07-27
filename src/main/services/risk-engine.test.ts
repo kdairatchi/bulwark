@@ -90,6 +90,14 @@ describe('risk-engine · assessRisk scoring', () => {
     expect(assessRisk(input).level).toBe(expectedLevel)
   })
 
+  it('floors a malicious-network match to at least high, overriding trust signals', () => {
+    // trusted(-20) + pkg mgr(-15) + malicious(+25) = -10 → would clamp to safe,
+    // but the malicious-network floor forces at least high.
+    const r = assessRisk({ signedByTrustedPublisher: true, trustedPackageManager: true, maliciousNetworkIndicator: true })
+    expect(r.score).toBeGreaterThanOrEqual(50)
+    expect(r.level).toBe('high')
+  })
+
   it('orders signals by absolute weight, most impactful first', () => {
     const r = assessRisk({ runsAtStartup: true, unsignedExecutable: true, recentlyCreatedBinary: true })
     expect(r.signals.map((s) => s.id)).toEqual([
@@ -256,6 +264,24 @@ describe('risk-engine · buildAppRiskReport', () => {
     expect(report.total).toBe(0)
     expect(report.postureScore).toBe(100)
     expect(report.findings).toEqual([])
+  })
+
+  it('escalates a subject with a confirmed malicious-network indicator', () => {
+    const programs = [
+      program({ id: 'clean', displayName: 'Clean', publisher: 'Microsoft Corporation', isWindowsInstaller: true }),
+      program({ id: 'beacon', displayName: 'Beacon', publisher: 'Microsoft Corporation', isWindowsInstaller: true }),
+    ]
+    const report = buildAppRiskReport(programs, now, { maliciousSubjectIds: new Set(['beacon']) })
+    const beacon = report.findings.find((f) => f.subjectId === 'beacon')!
+    const clean = report.findings.find((f) => f.subjectId === 'clean')!
+    // The malicious-network signal is decisive: even a trusted, package-managed app
+    // is floored to "high"/dangerous with strong confidence when it contacts C2.
+    expect(beacon.level).toBe('high')
+    expect(beacon.confidence).toBe('strong')
+    expect(beacon.familyStatus).toBe('dangerous')
+    expect(beacon.evidence.some((e) => /malicious/i.test(e))).toBe(true)
+    expect(clean.level).toBe('safe')
+    expect(report.familySummary.dangerous).toBe(1)
   })
 
   it('aggregates counts, sorts worst-first, and scores posture', () => {

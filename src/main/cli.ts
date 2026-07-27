@@ -505,6 +505,10 @@ Application Risk:
   risk scan                  Assess installed apps with the transparent risk engine
                              (shows evidence + confidence; exit 7 if high/critical)
 
+Network Guard:
+  net-check <domain|ip>      Evaluate a destination against a threat-indicator feed
+    [--indicators <file>]    (allow/alert/block + reason + confidence; exit 7 if blocked)
+
 Software Updater:
   updates check              Check for software updates (via winget)
   updates run <id,...>       Update specified apps
@@ -970,6 +974,47 @@ async function handleRisk(args: string[], ctx: CliContext): Promise<number | voi
 
   const worst = report.findings[0]?.level
   if (worst === 'critical' || worst === 'high') return ExitCode.SCAN_THREATS
+}
+
+async function handleNetCheck(args: string[], ctx: CliContext): Promise<number | void> {
+  const positional = args.filter((a) => !a.startsWith('--'))
+  const target = positional[0]
+  if (!target) {
+    cliUsage(ctx, 'kudu --cli net-check <domain|ip> [--indicators <file.json>]')
+    return ExitCode.INVALID_ARGS
+  }
+
+  const idxFlag = args.indexOf('--indicators')
+  const indicatorsPath = idxFlag !== -1 ? args[idxFlag + 1] : undefined
+
+  const { buildIndicatorIndex, evaluateDestination } = await import('./services/network-guard')
+
+  let indicators: import('../shared/network-guard').ThreatIndicator[] = []
+  if (indicatorsPath) {
+    try {
+      const { readFileSync } = await import('fs')
+      const parsed = JSON.parse(readFileSync(indicatorsPath, 'utf-8'))
+      indicators = Array.isArray(parsed) ? parsed : Array.isArray(parsed?.indicators) ? parsed.indicators : []
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      if (ctx.json) cliOut(ctx, { error: `Failed to read indicators: ${msg}` })
+      else log(`Failed to read indicators file: ${msg}`)
+      return ExitCode.GENERAL_ERROR
+    }
+  }
+
+  const index = buildIndicatorIndex(indicators)
+  const event = evaluateDestination({ destination: target }, index)
+
+  if (ctx.json) {
+    cliOut(ctx, event)
+  } else {
+    cliLog(ctx, `Checked ${indicators.length} indicators`)
+    log(`  ${event.destination} — ${event.decision.toUpperCase()}` +
+      (event.category ? ` (${event.reason}, confidence ${event.confidence})` : ` (${event.reason})`))
+  }
+
+  return event.decision === 'block' ? ExitCode.SCAN_THREATS : ExitCode.SUCCESS
 }
 
 async function handleUpdates(args: string[], ctx: CliContext): Promise<number | void> {
@@ -1642,6 +1687,7 @@ export async function runCli(): Promise<void> {
       case 'services': exitCode = await handleServices(parsed.commandArgs, ctx); break
       case 'programs': exitCode = await handlePrograms(parsed.commandArgs, ctx); break
       case 'risk': exitCode = await handleRisk(parsed.commandArgs, ctx); break
+      case 'net-check': exitCode = await handleNetCheck(parsed.commandArgs, ctx); break
       case 'updates': exitCode = await handleUpdates(parsed.commandArgs, ctx); break
       case 'perf': exitCode = await handlePerf(parsed.commandArgs, ctx); break
       case 'leftovers': exitCode = await handleLeftovers(parsed.commandArgs, ctx); break
