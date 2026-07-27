@@ -501,6 +501,10 @@ Service Manager:
 Program Uninstaller:
   programs list              List installed programs
 
+Application Risk:
+  risk scan                  Assess installed apps with the transparent risk engine
+                             (shows evidence + confidence; exit 7 if high/critical)
+
 Software Updater:
   updates check              Check for software updates (via winget)
   updates run <id,...>       Update specified apps
@@ -929,6 +933,60 @@ async function handlePrograms(args: string[], ctx: CliContext): Promise<number |
     cliUsage(ctx, 'kudu --cli programs list')
     return ExitCode.INVALID_ARGS
   }
+}
+
+async function handleRisk(args: string[], ctx: CliContext): Promise<number | void> {
+  const sub = args[0] ?? 'scan'
+  if (sub !== 'scan') {
+    cliUsage(ctx, 'kudu --cli risk scan [--json]')
+    return ExitCode.INVALID_ARGS
+  }
+
+  const { getInstalledProgramsFull } = await import('./services/program-uninstaller')
+  const { assessRisk, riskInputFromInstalledProgram, toFinding, levelLabel, confidenceLabel } =
+    await import('./services/risk-engine')
+
+  cliLog(ctx, 'Assessing installed application risk...')
+  const programs = await getInstalledProgramsFull()
+
+  const findings = programs.map((p) => {
+    const assessment = assessRisk(riskInputFromInstalledProgram(p))
+    return { assessment, finding: toFinding(p.id, p.displayName, assessment) }
+  })
+
+  // Highest risk first so the most important items lead the report.
+  findings.sort((a, b) => b.assessment.score - a.assessment.score)
+
+  const summary = findings.reduce<Record<string, number>>((acc, f) => {
+    acc[f.assessment.level] = (acc[f.assessment.level] ?? 0) + 1
+    return acc
+  }, {})
+
+  if (ctx.json) {
+    cliOut(ctx, {
+      findings: findings.map((f) => f.finding),
+      summary,
+      count: findings.length,
+    })
+  } else {
+    cliLog(ctx, `Assessed ${findings.length} applications`)
+    const bySeverity = ['critical', 'high', 'medium', 'low', 'safe']
+      .filter((lvl) => summary[lvl])
+      .map((lvl) => `${summary[lvl]} ${lvl}`)
+      .join(', ')
+    cliLog(ctx, `Summary: ${bySeverity || 'nothing to assess'}`)
+    // Only surface items that need attention in human mode; safe items are noise.
+    const notable = findings.filter((f) => f.assessment.level !== 'safe')
+    for (const { assessment, finding } of notable) {
+      log(`\n  ${finding.subjectName} — ${levelLabel(assessment.level)} (confidence: ${confidenceLabel(assessment.confidence)})`)
+      for (const line of assessment.explanation) log(`    • ${line}`)
+      log(`    → ${assessment.recommendedAction}`)
+    }
+    if (notable.length === 0) log('\n  No applications require attention.')
+  }
+
+  const worst = findings[0]?.assessment.level
+  if (worst === 'critical' || worst === 'high') return ExitCode.SCAN_THREATS
 }
 
 async function handleUpdates(args: string[], ctx: CliContext): Promise<number | void> {
@@ -1600,6 +1658,7 @@ export async function runCli(): Promise<void> {
       case 'drivers': exitCode = await handleDrivers(parsed.commandArgs, ctx); break
       case 'services': exitCode = await handleServices(parsed.commandArgs, ctx); break
       case 'programs': exitCode = await handlePrograms(parsed.commandArgs, ctx); break
+      case 'risk': exitCode = await handleRisk(parsed.commandArgs, ctx); break
       case 'updates': exitCode = await handleUpdates(parsed.commandArgs, ctx); break
       case 'perf': exitCode = await handlePerf(parsed.commandArgs, ctx); break
       case 'leftovers': exitCode = await handleLeftovers(parsed.commandArgs, ctx); break
