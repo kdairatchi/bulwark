@@ -501,6 +501,10 @@ Service Manager:
 Program Uninstaller:
   programs list              List installed programs
 
+Application Risk:
+  risk scan                  Assess installed apps with the transparent risk engine
+                             (shows evidence + confidence; exit 7 if high/critical)
+
 Software Updater:
   updates check              Check for software updates (via winget)
   updates run <id,...>       Update specified apps
@@ -931,6 +935,43 @@ async function handlePrograms(args: string[], ctx: CliContext): Promise<number |
   }
 }
 
+async function handleRisk(args: string[], ctx: CliContext): Promise<number | void> {
+  const sub = args[0] ?? 'scan'
+  if (sub !== 'scan') {
+    cliUsage(ctx, 'kudu --cli risk scan [--json]')
+    return ExitCode.INVALID_ARGS
+  }
+
+  const { getInstalledProgramsFull } = await import('./services/program-uninstaller')
+  const { buildAppRiskReport, levelLabel, confidenceLabel } = await import('./services/risk-engine')
+
+  cliLog(ctx, 'Assessing installed application risk...')
+  const programs = await getInstalledProgramsFull()
+  const report = buildAppRiskReport(programs) // findings are already worst-first
+
+  if (ctx.json) {
+    cliOut(ctx, report)
+  } else {
+    cliLog(ctx, `Assessed ${report.total} applications`)
+    const bySeverity = (['critical', 'high', 'medium', 'low', 'safe'] as const)
+      .filter((lvl) => report.summary[lvl])
+      .map((lvl) => `${report.summary[lvl]} ${lvl}`)
+      .join(', ')
+    cliLog(ctx, `Summary: ${bySeverity || 'nothing to assess'}`)
+    // Only surface items that need attention in human mode; safe items are noise.
+    const notable = report.findings.filter((f) => f.level !== 'safe')
+    for (const f of notable) {
+      log(`\n  ${f.subjectName} — ${levelLabel(f.level)} (confidence: ${confidenceLabel(f.confidence)})`)
+      for (const line of f.evidence) log(`    • ${line}`)
+      log(`    → ${f.recommendedAction}`)
+    }
+    if (notable.length === 0) log('\n  No applications require attention.')
+  }
+
+  const worst = report.findings[0]?.level
+  if (worst === 'critical' || worst === 'high') return ExitCode.SCAN_THREATS
+}
+
 async function handleUpdates(args: string[], ctx: CliContext): Promise<number | void> {
   const sub = args[0]
   const { checkForUpdates, runUpdates } = await import('./services/software-updater')
@@ -1252,8 +1293,8 @@ async function handleService(args: string[], ctx: CliContext): Promise<number | 
   const runUser = process.env['SUDO_USER'] || process.env['USER'] || 'root'
 
   const unitContent = `[Unit]
-Description=Kudu System Cleaner Daemon
-Documentation=https://usekudu.com
+Description=Bulwark Device Security Daemon
+Documentation=https://github.com/kdairatchi/kudu
 After=network-online.target
 Wants=network-online.target
 
@@ -1600,6 +1641,7 @@ export async function runCli(): Promise<void> {
       case 'drivers': exitCode = await handleDrivers(parsed.commandArgs, ctx); break
       case 'services': exitCode = await handleServices(parsed.commandArgs, ctx); break
       case 'programs': exitCode = await handlePrograms(parsed.commandArgs, ctx); break
+      case 'risk': exitCode = await handleRisk(parsed.commandArgs, ctx); break
       case 'updates': exitCode = await handleUpdates(parsed.commandArgs, ctx); break
       case 'perf': exitCode = await handlePerf(parsed.commandArgs, ctx); break
       case 'leftovers': exitCode = await handleLeftovers(parsed.commandArgs, ctx); break

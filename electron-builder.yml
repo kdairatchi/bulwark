@@ -1,6 +1,6 @@
-appId: com.kudu.app
-productName: Kudu
-copyright: Copyright © 2024-2026 Kudu Contributors
+appId: com.bulwark.app
+productName: Bulwark
+copyright: Copyright © 2024-2026 Bulwark Contributors
 
 directories:
   buildResources: resources
@@ -43,8 +43,8 @@ nsis:
   perMachine: true
   allowToChangeInstallationDirectory: false
   deleteAppDataOnUninstall: false
-  shortcutName: Kudu
-  artifactName: Kudu-Setup-${version}.${ext}
+  shortcutName: Bulwark
+  artifactName: Bulwark-Setup-${version}.${ext}
 
 mac:
   target:
@@ -62,7 +62,7 @@ mac:
   entitlements: resources/entitlements.mac.plist
   entitlementsInherit: resources/entitlements.mac.plist
   notarize: true
-  artifactName: Kudu-${version}-${arch}.${ext}
+  artifactName: Bulwark-${version}-${arch}.${ext}
 
 linux:
   target:
@@ -74,7 +74,7 @@ linux:
         - x64
   icon: resources/icons/
   category: Utility
-  artifactName: Kudu-${version}-${arch}.${ext}
+  artifactName: Bulwark-${version}-${arch}.${ext}
 
 deb:
   depends:

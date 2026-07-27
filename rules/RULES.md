@@ -1,8 +1,8 @@
 # Contributing Cleaner Rules
 
-Kudu's cleaning targets are defined as JSON files in this directory. Adding support for a new app, game launcher, or cache location is as simple as editing a JSON file — no TypeScript or Electron knowledge required.
+Bulwark's cleaning targets are defined as JSON files in this directory. Adding support for a new app, game launcher, or cache location is as simple as editing a JSON file — no TypeScript or Electron knowledge required.
 
-Browse the [full cleaner directory](https://usekudu.com/cleaners) to see what's already covered and what's missing.
+Browse the [rules catalog](CATALOG.md) to see what's already covered and what's missing.
 
 ## Directory Layout
 

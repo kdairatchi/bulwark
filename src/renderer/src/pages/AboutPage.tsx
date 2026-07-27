@@ -16,7 +16,7 @@ export function AboutPage() {
 
       <div className="glass-card rounded-2xl p-6">
         <div className="flex items-center gap-4">
-          <img src={logoSrc} alt="Kudu" className="h-14 w-14 rounded-xl" />
+          <img src={logoSrc} alt="Bulwark" className="h-14 w-14 rounded-xl" />
           <div>
             <p className="text-[16px] font-semibold text-white">{t('appVersion', { version: __APP_VERSION__ })}</p>
             <p className="mt-0.5 text-[12px]" style={{ color: 'var(--text-muted)' }}>{t('license')}</p>
@@ -97,8 +97,8 @@ export function AboutPage() {
         </div>
 
         <div className="mt-6 flex items-center gap-2.5">
-          <LinkButton icon={Github} label={t('github')} href="https://github.com/adventdevinc/kudu" />
-          <LinkButton icon={Bug} label={t('reportBug')} href="https://github.com/adventdevinc/kudu/issues" />
+          <LinkButton icon={Github} label={t('github')} href="https://github.com/kdairatchi/kudu" />
+          <LinkButton icon={Bug} label={t('reportBug')} href="https://github.com/kdairatchi/kudu/issues" />
         </div>
       </div>
     </div>

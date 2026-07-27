@@ -1,6 +1,6 @@
-# Contributing to Kudu
+# Contributing to Bulwark
 
-Thanks for your interest in contributing! Kudu is a community-driven project and we welcome all contributions — bug reports, feature requests, documentation improvements, and code.
+Thanks for your interest in contributing! Bulwark is a community-driven project and we welcome all contributions — bug reports, feature requests, documentation improvements, and code.
 
 ## Getting Started
 
@@ -74,11 +74,11 @@ npm run catalog          # Regenerate the rules catalog
 
 ## Reporting Bugs
 
-Use the [bug report template](https://github.com/adventdevinc/kudu/issues/new?template=bug_report.md). Include your OS, Kudu version, and steps to reproduce.
+Use the [bug report template](https://github.com/kdairatchi/kudu/issues/new?template=bug_report.md). Include your OS, Bulwark version, and steps to reproduce.
 
 ## Suggesting Features
 
-Use the [feature request template](https://github.com/adventdevinc/kudu/issues/new?template=feature_request.md).
+Use the [feature request template](https://github.com/kdairatchi/kudu/issues/new?template=feature_request.md).
 
 ## Code of Conduct
 

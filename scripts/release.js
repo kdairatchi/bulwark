@@ -54,4 +54,4 @@ run('git push origin main')
 run(`git push origin ${tag}`)
 
 console.log(`\n${tag} released! CI will build and publish.`)
-console.log(`Track progress: https://github.com/AdventDevInc/kudu/actions/workflows/release.yml`)
+console.log(`Track progress: https://github.com/kdairatchi/kudu/actions/workflows/release.yml`)

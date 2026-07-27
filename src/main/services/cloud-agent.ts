@@ -56,7 +56,12 @@ import { threatMonitor } from './threat-monitor'
 import { isLikelyFalsePositive, deduplicateCves } from './cve-filter'
 
 const execFileAsync = promisify(execFile)
-const DEFAULT_SERVER_URL = 'https://cloud.usekudu.com'
+// Cloud control plane base URL. The upstream Kudu Cloud service (usekudu.com)
+// is intentionally NOT part of this fork — point this at your own control
+// plane. Overridable via env for local/self-hosted development. Cloud features
+// stay dormant until the user opts in with an API key, so the placeholder
+// default never runs unless explicitly configured.
+const DEFAULT_SERVER_URL = process.env.BULWARK_CLOUD_URL || 'https://cloud.invalid'
 
 /**
  * HTTP statuses that indicate a permanent failure where retrying is pointless:

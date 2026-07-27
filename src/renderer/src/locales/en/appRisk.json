@@ -1,0 +1,15 @@
+{
+  "pageTitle": "Application Risk",
+  "pageDescription": "A transparent, on-device risk assessment of your installed applications. Every rating shows its evidence — no guessing, no cloud upload.",
+  "rescan": "Rescan",
+  "scanning": "Assessing applications…",
+  "protected": "Protected",
+  "needsAttention": "Needs attention",
+  "assessedSummary": "{{total}} applications assessed · {{needsAttention}} need attention",
+  "all": "All",
+  "why": "Why this rating",
+  "recommended": "Recommended",
+  "confidenceLabel": "Confidence: {{level}}",
+  "emptyForFilter": "No applications at this risk level.",
+  "andMore": "+ {{count}} more not shown"
+}

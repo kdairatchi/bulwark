@@ -3,9 +3,9 @@ $ErrorActionPreference = 'Stop'
 $version = '1.4.8'
 
 $packageArgs = @{
-  packageName    = 'usekudu'
+  packageName    = 'bulwark'
   fileType       = 'exe'
-  url64bit       = "https://github.com/AdventDevInc/kudu/releases/download/v$version/Kudu-Setup-$version.exe"
+  url64bit       = "https://github.com/kdairatchi/kudu/releases/download/v$version/Bulwark-Setup-$version.exe"
   silentArgs     = '/S'
   validExitCodes = @(0)
   checksum64     = '__REPLACE_WITH_SHA256_HASH__'

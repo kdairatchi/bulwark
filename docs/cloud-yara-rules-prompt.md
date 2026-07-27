@@ -66,7 +66,7 @@ If the hash doesn't match, the client rejects the entire bundle.
 
 When you publish new rules, also send a command to connected clients:
 ```json
-{ "type": "update-yara-rules", "requestId": "<uuid>", "url": "https://cloud.usekudu.com/api/yara-rules" }
+{ "type": "update-yara-rules", "requestId": "<uuid>", "url": "https://<your-control-plane>/api/yara-rules" }
 ```
 
 This triggers an immediate fetch+cache on the client. The client also pulls on its own every 6 hours regardless.

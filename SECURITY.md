@@ -7,13 +7,13 @@
 | Latest release | Yes |
 | Older versions | No |
 
-We recommend always running the latest version of Kudu.
+We recommend always running the latest version of Bulwark.
 
 ## Reporting a Vulnerability
 
-If you discover a security vulnerability in Kudu, **please do not open a public issue.**
+If you discover a security vulnerability in Bulwark, **please do not open a public issue.**
 
-Instead, report it privately via [GitHub Security Advisories](https://github.com/adventdevinc/kudu/security/advisories/new).
+Instead, report it privately via [GitHub Security Advisories](https://github.com/kdairatchi/kudu/security/advisories/new).
 
 Please include:
 
@@ -26,14 +26,14 @@ We will acknowledge your report within 48 hours and aim to release a fix as quic
 
 ## Scope
 
-This policy covers the Kudu desktop application and its source code. It does not cover third-party dependencies — please report those to the respective maintainers.
+This policy covers the Bulwark desktop application and its source code. It does not cover third-party dependencies — please report those to the respective maintainers.
 
 ## Security Design
 
-Kudu is a system cleaner that operates with elevated permissions. We take this responsibility seriously:
+Bulwark is a device security agent that operates with elevated permissions. We take this responsibility seriously:
 
-- **No telemetry** — Kudu does not phone home or collect any user data.
-- **No network requests** — Scans and cleaning operations are entirely local. Network access is only used for update checks and optional cloud features you explicitly enable.
+- **Local-first** — Scans and security checks run locally. Cloud features are opt-in and, when enabled, collect only minimum-necessary metadata (never file contents, passwords, or packet payloads). See [docs/privacy/README.md](docs/privacy/README.md).
+- **Minimal network use** — Network access is used for update checks and the optional cloud features you explicitly enable.
 - **Open source** — Every operation is auditable. We encourage security researchers to review our code.
 - **VirusTotal scanned** — Every release binary is automatically submitted to VirusTotal and results are linked in the release notes.
 - **Signed binaries** — Windows releases are code-signed.
