@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   assessRisk,
+  buildAppRiskReport,
   RISK_SIGNALS,
   riskInputFromInstalledProgram,
   toFinding,
@@ -244,6 +245,38 @@ describe('risk-engine · toFinding', () => {
     const finding = toFinding('app-0', 'Mystery', assessRisk({}))
     expect(finding.status).toBe('unknown')
     expect(finding.familyStatus).toBe('unknown')
+  })
+})
+
+describe('risk-engine · buildAppRiskReport', () => {
+  const now = Date.parse('2026-07-27T00:00:00Z')
+
+  it('returns an empty report with perfect posture for no programs', () => {
+    const report = buildAppRiskReport([], now)
+    expect(report.total).toBe(0)
+    expect(report.postureScore).toBe(100)
+    expect(report.findings).toEqual([])
+  })
+
+  it('aggregates counts, sorts worst-first, and scores posture', () => {
+    const programs = [
+      program({ id: 'a', displayName: 'Trusted', publisher: 'Microsoft Corporation', isWindowsInstaller: true }),
+      program({ id: 'b', displayName: 'Unknown Pub', publisher: '' }),
+      program({ id: 'c', displayName: 'Temp Sketch', publisher: '', installLocation: 'C:\\Temp\\x' }),
+    ]
+    const report = buildAppRiskReport(programs, now)
+
+    expect(report.total).toBe(3)
+    // 'c' (unknown+temp = 30, medium) should sort ahead of 'b' (20, low) and 'a' (safe)
+    expect(report.findings[0].subjectId).toBe('c')
+    expect(report.findings[0].level).toBe('medium')
+    expect(report.summary.medium).toBe(1)
+    expect(report.summary.low).toBe(1)
+    expect(report.summary.safe).toBe(1)
+    // one needs_attention (medium) out of three → 100*(1 - 0.5/3) ≈ 83
+    expect(report.familySummary.needs_attention).toBe(1)
+    expect(report.postureScore).toBe(83)
+    expect(report.generatedAt).toBe('2026-07-27T00:00:00.000Z')
   })
 })
 

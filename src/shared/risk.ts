@@ -92,6 +92,21 @@ export interface RiskAssessment {
   recommendedAction: string
 }
 
+/** Aggregated application-risk report returned to the renderer/CLI. */
+export interface AppRiskReport {
+  findings: Finding[]
+  /** Count of findings per risk level. */
+  summary: Partial<Record<RiskLevel, number>>
+  /** Count of findings per family-mode status. */
+  familySummary: Partial<Record<FamilyStatus, number>>
+  /** 0–100 posture score (100 = nothing needs attention). */
+  postureScore: number
+  /** How many applications were assessed. */
+  total: number
+  /** ISO timestamp of when the report was generated. */
+  generatedAt: string
+}
+
 /** A structured finding produced from an assessment about a specific subject. */
 export interface Finding {
   id: string
