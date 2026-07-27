@@ -33,6 +33,7 @@ import { FirewallAuditPage } from './pages/FirewallAuditPage'
 import { SchedulesPage } from './pages/SchedulesPage'
 import { GameModePage } from './pages/GameModePage'
 import { CveScannerPage } from './pages/CveScannerPage'
+import { ApplicationRiskPage } from './pages/ApplicationRiskPage'
 import { AboutPage } from './pages/AboutPage'
 import { CloudPage } from './pages/CloudPage'
 import { BreachMonitorPage } from './pages/BreachMonitorPage'
@@ -153,6 +154,7 @@ export function App() {
           <Route path="/malware" element={<MalwareScannerPage />} />
           <Route path="/threat-monitor" element={<ThreatMonitorPage />} />
           <Route path="/cve" element={<CveScannerPage />} />
+          <Route path="/app-risk" element={<ApplicationRiskPage />} />
           <Route path="/game-mode" element={<GameModePage />} />
           <Route path="/performance" element={<PerformanceMonitorPage />} />
           <Route path="/uninstaller" element={<UninstallerPage />} />
@@ -212,6 +214,7 @@ const ROUTE_TITLES: Record<string, { key: string; ns?: string } | string> = {
   '/malware': { key: 'malwareScanner' },
   '/threat-monitor': { key: 'threatMonitor' },
   '/cve': { key: 'cveScanner' },
+  '/app-risk': { key: 'appRisk' },
   '/game-mode': { key: 'gameMode' },
   '/performance': { key: 'performance' },
   '/uninstaller': 'Uninstaller',

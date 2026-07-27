@@ -84,6 +84,13 @@ describe('parseCliArgs', () => {
     expect(result.ctx.json).toBe(false)
     expect(result.ctx.verbosity).toBe('normal')
   })
+
+  it('parses the risk command with its subcommand', () => {
+    const result = parseCliArgs(['node', 'kudu', '--cli', 'risk', 'scan', '--json'])
+    expect(result.command).toBe('risk')
+    expect(result.commandArgs).toEqual(['scan'])
+    expect(result.ctx.json).toBe(true)
+  })
 })
 
 describe('ExitCode', () => {

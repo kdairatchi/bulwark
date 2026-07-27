@@ -89,6 +89,7 @@ import type {
   ContextMenuApplyResult,
   ContextMenuScanResult,
 } from '../shared/types'
+import type { AppRiskReport } from '../shared/risk'
 
 const api = {
   // Platform
@@ -425,6 +426,7 @@ const api = {
     return () => { ipcRenderer.removeListener(IPC.UNINSTALLER_PROGRESS, handler) }
   },
   programSafetyFetch: (): Promise<StartupSafetyResult> => ipcRenderer.invoke(IPC.PROGRAM_SAFETY_FETCH),
+  appRiskFetch: (): Promise<AppRiskReport> => ipcRenderer.invoke(IPC.APP_RISK_FETCH),
   onProgramSafetyUpdated: (callback: (data: StartupSafetyResult) => void) => {
     const handler = (_event: Electron.IpcRendererEvent, data: StartupSafetyResult) => callback(data)
     ipcRenderer.on(IPC.PROGRAM_SAFETY_UPDATED, handler)

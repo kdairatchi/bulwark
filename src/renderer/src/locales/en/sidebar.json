@@ -4,6 +4,7 @@
   "dashboard": "Dashboard",
   "securityHeading": "SECURITY",
   "malwareScanner": "Malware Scanner",
+  "appRisk": "Application Risk",
   "threatMonitor": "Threat Monitor",
   "systemHardening": "System Hardening",
   "cveScanner": "Vulnerabilities",

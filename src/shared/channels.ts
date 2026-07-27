@@ -167,6 +167,9 @@ export const IPC = {
   PROGRAM_SAFETY_FETCH: 'program:safety:fetch',
   PROGRAM_SAFETY_UPDATED: 'program:safety:updated',
 
+  // Application Risk (local, transparent risk engine)
+  APP_RISK_FETCH: 'app-risk:fetch',
+
   // Onboarding
   ONBOARDING_GET: 'onboarding:get',
   ONBOARDING_SET: 'onboarding:set',
