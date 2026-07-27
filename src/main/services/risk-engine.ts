@@ -177,7 +177,11 @@ export function assessRisk(input: RiskInput): RiskAssessment {
   signals.sort((a, b) => Math.abs(b.weight) - Math.abs(a.weight))
 
   const rawScore = signals.reduce((sum, s) => sum + s.weight, 0)
-  const score = Math.max(0, Math.min(100, rawScore))
+  let score = Math.max(0, Math.min(100, rawScore))
+  // A confirmed malicious-network contact is decisive: it must not be cancelled
+  // out by trust signals (a signed, package-managed app can still be hijacked).
+  // Floor it to at least "high" so it always surfaces for action.
+  if (input.maliciousNetworkIndicator) score = Math.max(score, 50)
   const level = scoreToLevel(score)
   const confidence = computeConfidence(signals)
   const familyStatus = computeFamilyStatus(level, signals.length)
@@ -262,10 +266,15 @@ export function riskInputFromInstalledProgram(
 export function buildAppRiskReport(
   programs: InstalledProgram[],
   now: number = Date.now(),
+  opts: { maliciousSubjectIds?: ReadonlySet<string> } = {},
 ): AppRiskReport {
   const generatedAt = new Date(now).toISOString()
+  const malicious = opts.maliciousSubjectIds
   const findings: Finding[] = programs.map((p) => {
-    const assessment = assessRisk(riskInputFromInstalledProgram(p, now))
+    const input = riskInputFromInstalledProgram(p, now)
+    // A confirmed malicious-network match (from Network Guard) is decisive.
+    if (malicious?.has(p.id)) input.maliciousNetworkIndicator = true
+    const assessment = assessRisk(input)
     return toFinding(p.id, p.displayName, assessment, generatedAt)
   })
 
