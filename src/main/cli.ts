@@ -943,49 +943,32 @@ async function handleRisk(args: string[], ctx: CliContext): Promise<number | voi
   }
 
   const { getInstalledProgramsFull } = await import('./services/program-uninstaller')
-  const { assessRisk, riskInputFromInstalledProgram, toFinding, levelLabel, confidenceLabel } =
-    await import('./services/risk-engine')
+  const { buildAppRiskReport, levelLabel, confidenceLabel } = await import('./services/risk-engine')
 
   cliLog(ctx, 'Assessing installed application risk...')
   const programs = await getInstalledProgramsFull()
-
-  const findings = programs.map((p) => {
-    const assessment = assessRisk(riskInputFromInstalledProgram(p))
-    return { assessment, finding: toFinding(p.id, p.displayName, assessment) }
-  })
-
-  // Highest risk first so the most important items lead the report.
-  findings.sort((a, b) => b.assessment.score - a.assessment.score)
-
-  const summary = findings.reduce<Record<string, number>>((acc, f) => {
-    acc[f.assessment.level] = (acc[f.assessment.level] ?? 0) + 1
-    return acc
-  }, {})
+  const report = buildAppRiskReport(programs) // findings are already worst-first
 
   if (ctx.json) {
-    cliOut(ctx, {
-      findings: findings.map((f) => f.finding),
-      summary,
-      count: findings.length,
-    })
+    cliOut(ctx, report)
   } else {
-    cliLog(ctx, `Assessed ${findings.length} applications`)
-    const bySeverity = ['critical', 'high', 'medium', 'low', 'safe']
-      .filter((lvl) => summary[lvl])
-      .map((lvl) => `${summary[lvl]} ${lvl}`)
+    cliLog(ctx, `Assessed ${report.total} applications`)
+    const bySeverity = (['critical', 'high', 'medium', 'low', 'safe'] as const)
+      .filter((lvl) => report.summary[lvl])
+      .map((lvl) => `${report.summary[lvl]} ${lvl}`)
       .join(', ')
     cliLog(ctx, `Summary: ${bySeverity || 'nothing to assess'}`)
     // Only surface items that need attention in human mode; safe items are noise.
-    const notable = findings.filter((f) => f.assessment.level !== 'safe')
-    for (const { assessment, finding } of notable) {
-      log(`\n  ${finding.subjectName} — ${levelLabel(assessment.level)} (confidence: ${confidenceLabel(assessment.confidence)})`)
-      for (const line of assessment.explanation) log(`    • ${line}`)
-      log(`    → ${assessment.recommendedAction}`)
+    const notable = report.findings.filter((f) => f.level !== 'safe')
+    for (const f of notable) {
+      log(`\n  ${f.subjectName} — ${levelLabel(f.level)} (confidence: ${confidenceLabel(f.confidence)})`)
+      for (const line of f.evidence) log(`    • ${line}`)
+      log(`    → ${f.recommendedAction}`)
     }
     if (notable.length === 0) log('\n  No applications require attention.')
   }
 
-  const worst = findings[0]?.assessment.level
+  const worst = report.findings[0]?.level
   if (worst === 'critical' || worst === 'high') return ExitCode.SCAN_THREATS
 }
 

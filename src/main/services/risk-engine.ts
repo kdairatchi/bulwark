@@ -8,6 +8,7 @@
 
 import type { InstalledProgram } from '../../shared/types'
 import type {
+  AppRiskReport,
   Confidence,
   FamilyStatus,
   Finding,
@@ -251,6 +252,40 @@ export function riskInputFromInstalledProgram(
     tempDirectoryBinary: isTempPath(program.installLocation || ''),
     recentlyCreatedBinary,
   }
+}
+
+/**
+ * Assess a whole installed-program inventory and aggregate it into a report:
+ * findings (worst-first), per-level and per-family counts, and a posture score
+ * where 100 means nothing needs attention. Pure and deterministic given `now`.
+ */
+export function buildAppRiskReport(
+  programs: InstalledProgram[],
+  now: number = Date.now(),
+): AppRiskReport {
+  const generatedAt = new Date(now).toISOString()
+  const findings: Finding[] = programs.map((p) => {
+    const assessment = assessRisk(riskInputFromInstalledProgram(p, now))
+    return toFinding(p.id, p.displayName, assessment, generatedAt)
+  })
+
+  findings.sort((a, b) => b.score - a.score)
+
+  const summary: Partial<Record<RiskLevel, number>> = {}
+  const familySummary: Partial<Record<FamilyStatus, number>> = {}
+  for (const f of findings) {
+    summary[f.level] = (summary[f.level] ?? 0) + 1
+    familySummary[f.familyStatus] = (familySummary[f.familyStatus] ?? 0) + 1
+  }
+
+  const total = findings.length
+  const dangerous = familySummary.dangerous ?? 0
+  const needsAttention = familySummary.needs_attention ?? 0
+  const postureScore = total === 0
+    ? 100
+    : Math.max(0, Math.min(100, Math.round(100 * (1 - (dangerous + 0.5 * needsAttention) / total))))
+
+  return { findings, summary, familySummary, postureScore, total, generatedAt }
 }
 
 /** Build a structured finding from an assessment about a specific subject. */
