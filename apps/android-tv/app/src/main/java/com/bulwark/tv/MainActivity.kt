@@ -75,10 +75,13 @@ fun BulwarkTvApp() {
     var busy by remember { mutableStateOf(false) }
     var dnsRunning by remember { mutableStateOf(DnsGuardVpnService.isRunning) }
     var consentPending by remember { mutableStateOf(vpnConsent.isPending()) }
+    var consentDenied by remember { mutableStateOf(vpnConsent.wasDenied()) }
+    var showVpnEducation by remember { mutableStateOf(false) }
 
     fun refreshGuardState() {
         dnsRunning = DnsGuardVpnService.isRunning
         consentPending = vpnConsent.isPending()
+        consentDenied = vpnConsent.wasDenied()
     }
 
     val vpnPermission = rememberLauncherForActivityResult(
@@ -89,11 +92,14 @@ fun BulwarkTvApp() {
             DnsGuardVpnService.start(context)
             dnsRunning = true
             consentPending = false
+            consentDenied = false
+            showVpnEducation = false
             statusMessage = "DNS Guard started (${blocklist.size()} blocked domains)"
         } else {
-            vpnConsent.markNeedsConsent()
+            vpnConsent.markDenied()
             consentPending = true
-            statusMessage = "DNS Guard permission denied — isolation cannot enforce until approved"
+            consentDenied = true
+            statusMessage = "VPN permission denied — tap Approve on the banner to retry"
         }
     }
 
@@ -167,6 +173,7 @@ fun BulwarkTvApp() {
                             onSuccess = {
                                 identity = it
                                 statusMessage = "Enrolled as ${it.deviceId}"
+                                showVpnEducation = true
                                 (context.applicationContext as? BulwarkApp)?.scheduleAgentWork()
                             },
                             onFailure = {
@@ -180,8 +187,12 @@ fun BulwarkTvApp() {
             if (consentPending && !dnsRunning) {
                 ConsentBanner(
                     isolated = blocklist.isIsolated(),
+                    denied = consentDenied,
                     onApprove = { requestVpnConsent() },
                 )
+                Spacer(Modifier.height(16.dp))
+            } else if (showVpnEducation && !dnsRunning) {
+                VpnEducationCard(onDismiss = { showVpnEducation = false })
                 Spacer(Modifier.height(16.dp))
             }
             Text(text = "Device status", color = Text, fontSize = 28.sp, fontWeight = FontWeight.SemiBold)
@@ -193,6 +204,7 @@ fun BulwarkTvApp() {
                 enrolledAt = identity!!.enrolledAt,
                 dnsRunning = dnsRunning,
                 consentPending = consentPending,
+                consentDenied = consentDenied,
                 blocklistSize = blocklist.size(),
                 isolated = blocklist.isIsolated(),
                 filterMode = blocklist.mode().name,
@@ -272,7 +284,7 @@ private fun LabeledField(label: String, value: String, onChange: (String) -> Uni
 }
 
 @Composable
-private fun ConsentBanner(isolated: Boolean, onApprove: () -> Unit) {
+private fun ConsentBanner(isolated: Boolean, denied: Boolean, onApprove: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -280,20 +292,53 @@ private fun ConsentBanner(isolated: Boolean, onApprove: () -> Unit) {
             .padding(20.dp),
     ) {
         Text(
-            text = if (isolated) "Isolation pending — VPN permission required"
-            else "DNS Guard required — VPN permission needed",
+            text = when {
+                denied && isolated -> "Isolation blocked — VPN permission was denied"
+                denied -> "DNS Guard blocked — VPN permission was denied"
+                isolated -> "Isolation pending — VPN permission required"
+                else -> "DNS Guard required — VPN permission needed"
+            },
             color = Color(0xFFFEE2E2),
             fontSize = 22.sp,
             fontWeight = FontWeight.Bold,
         )
         Spacer(Modifier.height(8.dp))
         Text(
-            text = "Parent policy asked this TV to filter DNS, but Android must approve the VPN once. Press Approve to enforce.",
+            text = if (denied) {
+                "Android denied the VPN dialog. Filtering is not active. Tap Retry Approve — Bulwark will not auto-prompt."
+            } else {
+                "Parent policy asked this TV to filter DNS, but Android must approve the VPN once. Press Approve to enforce."
+            },
             color = Color(0xFFFECACA),
             fontSize = 16.sp,
         )
         Spacer(Modifier.height(14.dp))
-        FocusButton("Approve DNS Guard", enabled = true, onClick = onApprove)
+        FocusButton(if (denied) "Retry Approve" else "Approve DNS Guard", enabled = true, onClick = onApprove)
+    }
+}
+
+@Composable
+private fun VpnEducationCard(onDismiss: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Color(0xFF1E3A5F))
+            .padding(20.dp),
+    ) {
+        Text(
+            text = "About DNS Guard",
+            color = Color(0xFFE0F2FE),
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Bold,
+        )
+        Spacer(Modifier.height(8.dp))
+        Text(
+            text = "When a parent isolates this TV or requires DNS Guard, Android will ask once for VPN permission. Approve on this screen — Bulwark never auto-starts the system dialog.",
+            color = Color(0xFFBAE6FD),
+            fontSize = 15.sp,
+        )
+        Spacer(Modifier.height(14.dp))
+        FocusButton("Got it", enabled = true, onClick = onDismiss)
     }
 }
 
@@ -305,6 +350,7 @@ private fun StatusCard(
     enrolledAt: String,
     dnsRunning: Boolean,
     consentPending: Boolean,
+    consentDenied: Boolean,
     blocklistSize: Int,
     isolated: Boolean,
     filterMode: String,
@@ -327,7 +373,11 @@ private fun StatusCard(
         )
         if (consentPending && !dnsRunning) {
             Text(
-                text = "VPN consent pending — filtering not active yet",
+                text = if (consentDenied) {
+                    "VPN permission denied — tap Retry Approve on the banner"
+                } else {
+                    "VPN consent pending — filtering not active yet"
+                },
                 color = Color(0xFFF87171),
                 fontSize = 15.sp,
                 fontWeight = FontWeight.SemiBold,

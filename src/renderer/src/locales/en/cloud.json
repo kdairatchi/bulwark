@@ -183,6 +183,7 @@
   "parentNoEvents": "No network events yet.",
   "parentIsolatedBadge": "ISOLATED",
   "parentVpnPendingBadge": "VPN PENDING",
+  "parentVpnPendingHint": "Approve VPN permission on the TV to enforce isolation / DNS Guard. Bulwark will not auto-prompt — tap Approve (or Retry Approve) on the TV banner.",
   "parentOnline": "Last seen",
   "parentNever": "never",
   "parentApps": "Apps",

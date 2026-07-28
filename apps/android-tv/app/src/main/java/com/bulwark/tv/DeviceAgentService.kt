@@ -220,8 +220,18 @@ class DeviceAgentService(
                     blocklistStore.replaceAll(BlocklistStore.STARTER)
                 }
                 AgentEvents.isolationChanged(false)
-                // Clearing isolation does not require the TUN to be up.
-                vpnConsent.clearPending()
+                // Clearing isolation alone must not drop pending if dnsGuardRequired remains.
+                val vpnRunning = DnsGuardVpnService.isRunning
+                val clearPending = DnsGuardEnforcement.shouldClearVpnPending(
+                    isolated = false,
+                    dnsGuardRequired = policy.dnsGuardRequired,
+                    vpnRunning = vpnRunning,
+                )
+                if (clearPending) {
+                    vpnConsent.clearPending()
+                } else if (!vpnRunning) {
+                    vpnConsent.markNeedsConsent()
+                }
                 mapOf(
                     "ok" to true,
                     "stub" to false,
@@ -229,8 +239,9 @@ class DeviceAgentService(
                     "applied" to true,
                     "isolated" to false,
                     "mode" to blocklistStore.mode().name,
-                    "dnsGuardRunning" to DnsGuardVpnService.isRunning,
-                    "vpnConsentPending" to false,
+                    "dnsGuardRequired" to policy.dnsGuardRequired,
+                    "dnsGuardRunning" to vpnRunning,
+                    "vpnConsentPending" to (!clearPending && !vpnRunning),
                 )
             }
             "APPLY_POLICY" -> {

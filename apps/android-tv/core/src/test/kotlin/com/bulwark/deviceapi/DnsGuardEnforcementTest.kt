@@ -40,4 +40,29 @@ class DnsGuardEnforcementTest {
         assertEquals(false, r["vpnConsentPending"])
         assertEquals(null, r["reason"])
     }
+
+    @Test
+    fun clearPendingOnlyWhenGuardNoLongerNeededOrVpnRunning() {
+        assertTrue(
+            DnsGuardEnforcement.shouldClearVpnPending(
+                isolated = false,
+                dnsGuardRequired = false,
+                vpnRunning = false,
+            ),
+        )
+        assertFalse(
+            DnsGuardEnforcement.shouldClearVpnPending(
+                isolated = false,
+                dnsGuardRequired = true,
+                vpnRunning = false,
+            ),
+        )
+        assertTrue(
+            DnsGuardEnforcement.shouldClearVpnPending(
+                isolated = false,
+                dnsGuardRequired = true,
+                vpnRunning = true,
+            ),
+        )
+    }
 }

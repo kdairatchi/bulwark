@@ -13,6 +13,16 @@ object DnsGuardEnforcement {
         isolated || dnsGuardRequired
 
     /**
+     * Whether local VPN-pending state can be cleared after a policy change.
+     * Clearing isolation alone must not drop pending if dnsGuardRequired remains.
+     */
+    fun shouldClearVpnPending(
+        isolated: Boolean,
+        dnsGuardRequired: Boolean,
+        vpnRunning: Boolean,
+    ): Boolean = !needsDnsGuard(isolated, dnsGuardRequired) || vpnRunning
+
+    /**
      * Build a command result that never claims DNS filtering was applied
      * when the local guard is not actually running.
      */

@@ -1160,6 +1160,21 @@ function ParentControlPanel({
           <div className="space-y-3">
             {selected && (
               <>
+                {selected.vpnConsentPending && (
+                  <div
+                    className="rounded-xl px-3 py-2.5 text-[12px]"
+                    style={{
+                      background: 'rgba(245,158,11,0.08)',
+                      border: '1px solid rgba(245,158,11,0.3)',
+                      color: '#fbbf24',
+                    }}
+                  >
+                    <div className="font-semibold text-[11px] uppercase tracking-wider mb-0.5">
+                      {t('parentVpnPendingBadge')}
+                    </div>
+                    {t('parentVpnPendingHint')}
+                  </div>
+                )}
                 <div className="flex flex-wrap gap-2">
                   {selected.isolated ? (
                     <button

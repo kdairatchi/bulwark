@@ -1,3 +1,6 @@
+import java.io.FileInputStream
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -16,9 +19,41 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    // Optional release signing — only applied when keystore.properties (or
+    // BULWARK_TV_STORE_* env vars) is present. Without secrets, release builds
+    // remain unsigned so CI / local debug keeps working.
+    val keystorePropsFile = rootProject.file("keystore.properties")
+    val keystoreProps = Properties()
+    if (keystorePropsFile.exists()) {
+        keystoreProps.load(FileInputStream(keystorePropsFile))
+    }
+    fun prop(name: String, env: String): String? =
+        keystoreProps.getProperty(name)?.takeIf { it.isNotBlank() && it != "CHANGE_ME" }
+            ?: System.getenv(env)?.takeIf { it.isNotBlank() }
+
+    val storeFilePath = prop("storeFile", "BULWARK_TV_STORE_FILE")
+    val storePassword = prop("storePassword", "BULWARK_TV_STORE_PASSWORD")
+    val keyAlias = prop("keyAlias", "BULWARK_TV_KEY_ALIAS")
+    val keyPassword = prop("keyPassword", "BULWARK_TV_KEY_PASSWORD")
+    val hasReleaseSigning = listOf(storeFilePath, storePassword, keyAlias, keyPassword).all { it != null }
+
+    if (hasReleaseSigning) {
+        signingConfigs {
+            create("release") {
+                storeFile = rootProject.file(storeFilePath!!)
+                this.storePassword = storePassword
+                this.keyAlias = keyAlias
+                this.keyPassword = keyPassword
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
+            if (hasReleaseSigning) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
     }
 
