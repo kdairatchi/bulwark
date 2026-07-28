@@ -99,7 +99,19 @@ export function registerNetworkGuardIpc(): void {
     ])
     const processNames = new Map<number, string>()
     for (const p of procInfo.list as { pid: number; name: string }[]) {
-      processNames.set(p.pid, p.name)
+      const pid = Number(p.pid)
+      const name = typeof p.name === 'string' ? p.name.trim() : ''
+      if (Number.isInteger(pid) && pid > 0 && name) processNames.set(pid, name)
+    }
+    // A full systeminformation process snapshot can be incomplete on Windows
+    // (or briefly race with a process starting/stopping). Resolve only the PIDs
+    // observed in netstat as a fast, permission-light fallback.
+    const connectionPids = [...new Set(connections.map((c) => c.pid).filter((pid): pid is number => pid != null))]
+    const nativeNames = platform.network.getProcessNames
+      ? await platform.network.getProcessNames(connectionPids).catch(() => new Map<number, string>())
+      : new Map<number, string>()
+    for (const [pid, name] of nativeNames ?? []) {
+      if (!processNames.has(pid) && name) processNames.set(pid, name)
     }
     const indicators = sanitizeIndicators(indicatorsRaw)
     return buildConnectionOverview(connections, listeningPorts, processNames, indicators, Date.now(), loadRules(), lookupCountry)

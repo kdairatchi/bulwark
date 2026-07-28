@@ -82,6 +82,24 @@ export function createDarwinNetwork(): PlatformNetwork {
       }
     },
 
+    async getProcessNames(pids: number[]): Promise<Map<number, string>> {
+      const requested = new Set(pids.filter((pid) => Number.isInteger(pid) && pid > 0))
+      if (requested.size === 0) return new Map()
+      try {
+        const { stdout } = await execFileAsync('/bin/ps', ['-axo', 'pid=,comm='], { timeout: 5000 })
+        const names = new Map<number, string>()
+        for (const line of stdout.split(/\r?\n/)) {
+          const match = line.trim().match(/^(\d+)\s+(.+)$/)
+          if (!match) continue
+          const pid = Number(match[1])
+          if (requested.has(pid) && match[2].trim()) names.set(pid, match[2].trim())
+        }
+        return names
+      } catch {
+        return new Map()
+      }
+    },
+
     async getListeningPorts(): Promise<number[]> {
       try {
         // lsof -i -sTCP:LISTEN -F n -n -P lists listening TCP sockets
