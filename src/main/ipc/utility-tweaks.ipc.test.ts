@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { join, resolve } from 'node:path'
 
 const handleMap = new Map<string, (...args: unknown[]) => unknown>()
 const mockOpenPath = vi.fn()
@@ -70,21 +71,23 @@ describe('ShutUp10 path hardening', () => {
       LOCALAPPDATA: '/tmp/LocalAppData/..',
     }
 
-    expect(getResolvedShutUp10Roots(env)).toEqual(['/tmp/ProgramFiles'])
+    const root = resolve('/tmp/ProgramFiles')
+    expect(getResolvedShutUp10Roots(env)).toEqual([root])
     expect(getShutUp10Candidates(env)).toEqual([
-      '/tmp/ProgramFiles/O&O ShutUp10++/OOSU10.exe',
-      '/tmp/ProgramFiles/OO Software/ShutUp10++/OOSU10.exe',
-      '/tmp/ProgramFiles/OO Software/O&O ShutUp10++/OOSU10.exe',
-      '/tmp/ProgramFiles/OOSU10/OOSU10.exe',
+      join(root, 'O&O ShutUp10++', 'OOSU10.exe'),
+      join(root, 'OO Software', 'ShutUp10++', 'OOSU10.exe'),
+      join(root, 'OO Software', 'O&O ShutUp10++', 'OOSU10.exe'),
+      join(root, 'OOSU10', 'OOSU10.exe'),
     ])
   })
 
   it('rejects candidates that escape a resolved root', () => {
-    const roots = ['/tmp/ProgramFiles']
+    const root = resolve('/tmp/ProgramFiles')
+    const roots = [root]
 
-    expect(isShutUp10CandidatePathAllowed('/tmp/ProgramFiles/OOSU10/OOSU10.exe', roots)).toBe(true)
-    expect(isShutUp10CandidatePathAllowed('/tmp/ProgramFiles/../evil/OOSU10.exe', roots)).toBe(false)
-    expect(isShutUp10CandidatePathAllowed('/tmp/Other/OOSU10.exe', roots)).toBe(false)
+    expect(isShutUp10CandidatePathAllowed(join(root, 'OOSU10', 'OOSU10.exe'), roots)).toBe(true)
+    expect(isShutUp10CandidatePathAllowed(`${root}/../evil/OOSU10.exe`, roots)).toBe(false)
+    expect(isShutUp10CandidatePathAllowed(resolve('/tmp/Other/OOSU10.exe'), roots)).toBe(false)
   })
 
   it('opens only a resolved candidate under an allowed root', async () => {
@@ -98,12 +101,13 @@ describe('ShutUp10 path hardening', () => {
     registerUtilityTweaksIpc()
     const result = await invoke('utility-tweaks:shutup10:launch')
 
+    const expectedPath = join(resolve('/tmp/ProgramFiles'), 'O&O ShutUp10++', 'OOSU10.exe')
     expect(result).toEqual({
       opened: true,
       fallback: false,
-      path: '/tmp/ProgramFiles/O&O ShutUp10++/OOSU10.exe',
+      path: expectedPath,
     })
-    expect(mockOpenPath).toHaveBeenCalledWith('/tmp/ProgramFiles/O&O ShutUp10++/OOSU10.exe')
+    expect(mockOpenPath).toHaveBeenCalledWith(expectedPath)
     expect(mockOpenExternal).not.toHaveBeenCalled()
   })
 
