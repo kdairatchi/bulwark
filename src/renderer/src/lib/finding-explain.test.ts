@@ -41,8 +41,23 @@ describe('finding-explain', () => {
       source: 'signature',
       details: 'Matched trojan.generic',
       detectionName: 'Trojan.Generic',
+      path: '/tmp/evil',
+      selected: true,
     })
     expect(e.why.some((w) => /signature/i.test(w))).toBe(true)
     expect(e.recommended).toMatch(/Quarantine/i)
+  })
+
+  it('recommends manual review for system-policy findings', () => {
+    const e = explainMalwareThreat({
+      severity: 'high',
+      source: 'heuristic',
+      details: 'crontab downloads and pipes to shell',
+      detectionName: 'Heuristic.Suspicious.LinuxPersistence',
+      path: 'crontab',
+      selected: false,
+    })
+    expect(e.recommended).toMatch(/manually/i)
+    expect(e.recommended).not.toMatch(/^Quarantine the selected/)
   })
 })
