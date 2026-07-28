@@ -12,18 +12,30 @@
 > Try it end-to-end:
 > - Device telemetry: `node scripts/device-client-demo.mjs`
 > - Remote commands: `node scripts/command-demo.mjs`
-> - Desktop agent flow (enroll → poll → verify → result): `node scripts/device-agent-demo.mjs`
+> - Desktop agent flow: `node scripts/device-agent-demo.mjs`
+> - Android TV agent core (JVM): `cd apps/android-tv && ./gradlew :core:runAgentDemo`
+> - Policy + emergency isolate: `node scripts/policy-isolate-demo.mjs`
+> - Event batch ingest: `node scripts/events-batch-demo.mjs`
 >
 > The Electron app exposes pairing enroll / poll / status on the Cloud page
 > (`deviceCommandAgent` in `src/main/services/device-command-agent.ts`).
+> The Android TV agent lives in `apps/android-tv/` (Compose TV UI + WorkManager).
+>
+> Dashboard **writes** require `Authorization: Bearer <token>`. Local `cloud:dev`
+> auto-generates a token (printed on startup) and allows
+> `GET /v1/dashboard-bootstrap`. Set `DASHBOARD_TOKEN` to supply a fixed token
+> and disable bootstrap.
+>
 > Implemented endpoints:
-> - `POST /v1/pairing-codes`, `POST /v1/devices/enroll`
+> - `POST /v1/pairing-codes` (dashboard auth), `POST /v1/devices/enroll`
+> - `GET /v1/dashboard-bootstrap` (local/dev only)
 > - `POST /v1/devices/{id}/heartbeat|inventory|findings` (device-signed)
-> - `GET /v1/devices`, `GET /v1/devices/{id}`, `GET /v1/findings`
-> - `GET /v1/server-key`
-> - `POST /v1/devices/{id}/commands` (dashboard enqueue)
-> - `GET /v1/devices/{id}/commands` (device-signed poll)
-> - `POST /v1/devices/{id}/commands/{commandId}/result` (device-signed)
+> - `GET /v1/devices`, `GET /v1/devices/{id}`, `GET /v1/findings`, `GET /v1/network-events` (dashboard auth)
+> - `GET /v1/server-key` (public)
+> - `POST /v1/devices/{id}/commands` (dashboard auth) · `GET …/commands` · `POST …/commands/{id}/result`
+> - `GET /v1/devices/{id}/policy` (device-signed) · `PUT …/policy` (dashboard auth)
+> - `POST /v1/devices/{id}/isolate` · `DELETE …/isolate` (dashboard auth)
+> - `POST /v1/devices/{id}/network-events` (device-signed)
 
 ## Device APIs (agent → cloud)
 
@@ -32,8 +44,8 @@ POST /v1/devices/enroll
 POST /v1/devices/{id}/heartbeat
 POST /v1/devices/{id}/inventory
 POST /v1/devices/{id}/findings
-POST /v1/devices/{id}/network-events          # planned
-GET  /v1/devices/{id}/policy                  # planned
+POST /v1/devices/{id}/network-events          # implemented (device-signed event batch)
+GET  /v1/devices/{id}/policy                  # implemented (device-signed)
 GET  /v1/devices/{id}/commands                # implemented (device-signed)
 POST /v1/devices/{id}/commands/{commandId}/result  # implemented (device-signed)
 GET  /v1/server-key                           # implemented (server Ed25519 public key)
@@ -41,14 +53,19 @@ GET  /v1/server-key                           # implemented (server Ed25519 publ
 
 ## Dashboard APIs (user → cloud)
 
+All of these require `Authorization: Bearer <dashboard-token>` unless noted.
+
 ```
-GET  /v1/devices
-GET  /v1/devices/{id}
-GET  /v1/findings
-POST /v1/devices/{id}/commands                # implemented (enqueue allowlisted command)
-POST /v1/findings/{id}/review                 # planned
-POST /v1/devices/{id}/scan                    # planned (maps to RUN_*_SCAN command)
-POST /v1/devices/{id}/isolate                 # planned
+GET  /v1/devices                              # Bearer
+GET  /v1/devices/{id}                         # Bearer
+GET  /v1/findings                             # Bearer
+GET  /v1/network-events                       # Bearer
+POST /v1/devices/{id}/commands                # Bearer (enqueue allowlisted command)
+PUT  /v1/devices/{id}/policy                  # Bearer (merge policy + APPLY_POLICY command)
+POST /v1/devices/{id}/isolate                 # Bearer (emergency isolate + ISOLATE_DEVICE)
+DELETE /v1/devices/{id}/isolate               # Bearer (clear + CLEAR_ISOLATION)
+POST /v1/findings/{id}/review                 # Bearer (status=false_positive|accepted_risk|…)
+POST /v1/devices/{id}/scan                    # Bearer (kind=health|malware|vulnerability|lolbins → RUN_*)
 GET  /v1/reports                              # planned
 POST /v1/breach-monitors                      # planned
 GET  /v1/audit-events                         # planned
@@ -92,7 +109,17 @@ UPDATE_THREAT_FEEDS
 QUARANTINE_FILE
 BLOCK_DOMAIN
 RESTART_AGENT
+ISOLATE_DEVICE
+CLEAR_ISOLATION
+APPLY_POLICY
 ```
+
+**Desktop enforcement (non-stub):**
+
+| Command | Behavior |
+|---------|----------|
+| `UPDATE_THREAT_FEEDS` | Syncs enabled filter lists (URLhaus by default) into the local DoT blocklist; optional `domains[]` (+ `replace`) merges into remote blocks (Android-parity). Params: `syncLists` (default true), `listIds[]`, `domains[]`, `replace`. |
+| `QUARANTINE_FILE` | Moves `path` / `paths[]` into the app quarantine folder when under platform malware allowlist (`/tmp`, Downloads, …). |
 
 **Not allowed:** arbitrary shell / PowerShell / remote-exec (`RUN_SHELL` is rejected
 at enqueue with HTTP 400).
@@ -142,6 +169,17 @@ Shared implementation: `src/cloud/device-api/commands.ts`
 
 `confirmed_affected · likely_affected · potential_match · not_exploitable ·
 fixed · accepted_risk · false_positive · unknown`.
+
+Findings may include an optional `category` (`kev`, `osv`, `technique`, `lolbin`,
+`publisher`, …). Open findings are **deduped** on `(deviceId, subjectName, category)`
+— re-submits refresh `level`/`reason` instead of creating duplicates.
+
+`POST /v1/findings/{id}/review` (Bearer) body: `{ "status": "false_positive"|"accepted_risk"|"fixed"|"not_exploitable"|…, "note"?: "…" }`.
+
+`GET /v1/devices` includes `securityScore` (0–100) and `openFindingsCount`. Resolved
+statuses (`false_positive`, `accepted_risk`, `fixed`, `not_exploitable`) do not
+penalize the score. Open findings are **category-weighted** (KEV/OSV/ransomware
+penalize more than publisher noise).
 
 ## Fleet hierarchy
 

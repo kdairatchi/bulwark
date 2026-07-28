@@ -1,4 +1,5 @@
 // Demo device client for the Bulwark device API.
+import { fetchDashboardToken, dashboardAuthHeaders } from './dashboard-auth.mjs'
 // Simulates a desktop/TV agent: get a pairing code, generate a per-device
 // Ed25519 key pair, enroll, then send SIGNED heartbeat / inventory / findings.
 // Finally reads back the dashboard views. No shared API key anywhere.
@@ -10,8 +11,10 @@ const BASE = process.env.DEVICE_API_URL || 'http://127.0.0.1:8787'
 const sha256 = (s) => createHash('sha256').update(s).digest('hex')
 
 async function main() {
+  const token = process.env.DASHBOARD_TOKEN || await fetchDashboardToken(BASE)
+  const dash = dashboardAuthHeaders(token)
   // 1. Dashboard issues a short-lived pairing code.
-  const pairing = await (await fetch(`${BASE}/v1/pairing-codes`, { method: 'POST' })).json()
+  const pairing = await (await fetch(`${BASE}/v1/pairing-codes`, { method: 'POST', headers: dash, body: '{}' })).json()
   console.log('1. pairing code:', pairing.code, '(expires', pairing.expiresAt + ')')
 
   // 2. Device generates its own key pair and enrolls with the code.
@@ -62,9 +65,11 @@ async function main() {
   const unsigned = await fetch(`${BASE}/v1/devices/${deviceId}/heartbeat`, { method: 'POST', body: '{}' })
   console.log('4. unsigned heartbeat rejected with status:', unsigned.status)
 
-  // 5. Dashboard views.
-  console.log('5. GET /v1/devices  ->', JSON.stringify(await (await fetch(`${BASE}/v1/devices`)).json(), null, 2))
-  console.log('   GET /v1/findings ->', JSON.stringify(await (await fetch(`${BASE}/v1/findings`)).json(), null, 2))
+  // 5. Dashboard views (Bearer required).
+  const denied = await fetch(`${BASE}/v1/devices`)
+  console.log('5. unauthenticated GET /v1/devices status:', denied.status)
+  console.log('   GET /v1/devices  ->', JSON.stringify(await (await fetch(`${BASE}/v1/devices`, { headers: dash })).json(), null, 2))
+  console.log('   GET /v1/findings ->', JSON.stringify(await (await fetch(`${BASE}/v1/findings`, { headers: dash })).json(), null, 2))
 }
 
 main().catch((e) => { console.error(e); process.exit(1) })

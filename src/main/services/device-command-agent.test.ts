@@ -145,11 +145,42 @@ describe('processVerifiedCommand', () => {
 })
 
 describe('defaultCommandExecutor', () => {
-  it('returns stub inventory for REQUEST_INVENTORY', async () => {
+  it('collects real inventory for REQUEST_INVENTORY (not a stub)', async () => {
     const r = await defaultCommandExecutor('REQUEST_INVENTORY', {})
     expect(r.ok).toBe(true)
-    expect(r.stub).toBe(true)
+    expect(r.stub).toBe(false)
     expect(r.type).toBe('REQUEST_INVENTORY')
+    expect(typeof r.count).toBe('number')
+  })
+
+  it('runs health / malware / vuln scans without stubbing', async () => {
+    for (const type of ['RUN_HEALTH_ASSESSMENT', 'RUN_MALWARE_SCAN', 'RUN_VULNERABILITY_SCAN'] as const) {
+      const r = await defaultCommandExecutor(type, { scope: 'quick' })
+      expect(r.ok).toBe(true)
+      expect(r.stub).toBe(false)
+      expect(r.type).toBe(type)
+      expect(typeof r.findings).toBe('number')
+      expect(Array.isArray(r._findings)).toBe(true)
+    }
+  })
+
+  it('UPDATE_THREAT_FEEDS domain push is not a stub', async () => {
+    const r = await defaultCommandExecutor('UPDATE_THREAT_FEEDS', {
+      syncLists: false,
+      domains: ['malware.example.invalid'],
+    })
+    expect(r.stub).toBe(false)
+    expect(r.type).toBe('UPDATE_THREAT_FEEDS')
+    expect(r.updated).toBe(true)
+    expect(r.domainsAdded).toBe(1)
+  })
+
+  it('QUARANTINE_FILE rejects disallowed paths without stubbing', async () => {
+    const r = await defaultCommandExecutor('QUARANTINE_FILE', { path: '/etc/passwd' })
+    expect(r.stub).toBe(false)
+    expect(r.applied).toBe(false)
+    expect(r.ok).toBe(false)
+    expect(String(r.reason)).toMatch(/outside allowed|missing path/i)
   })
 })
 

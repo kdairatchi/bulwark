@@ -1,4 +1,5 @@
 // Demo: secure remote-command flow.
+import { fetchDashboardToken, dashboardAuthHeaders } from './dashboard-auth.mjs'
 // Dashboard enqueues a server-SIGNED, allowlisted command; the device polls,
 // VERIFIES the server signature / allowlist / expiry / nonce, then reports a
 // result. A forged and an expired command are rejected.
@@ -9,8 +10,10 @@ const BASE = process.env.DEVICE_API_URL || 'http://127.0.0.1:8787'
 const sha256 = (s) => createHash('sha256').update(s).digest('hex')
 
 async function main() {
+  const token = process.env.DASHBOARD_TOKEN || await fetchDashboardToken(BASE)
+  const dash = dashboardAuthHeaders(token)
   // Enroll a fresh device.
-  const pairing = await (await fetch(`${BASE}/v1/pairing-codes`, { method: 'POST' })).json()
+  const pairing = await (await fetch(`${BASE}/v1/pairing-codes`, { method: 'POST', headers: dash, body: '{}' })).json()
   const { publicKey, privateKey } = generateKeyPairSync('ed25519', {
     publicKeyEncoding: { type: 'spki', format: 'pem' },
     privateKeyEncoding: { type: 'pkcs8', format: 'pem' },
@@ -30,7 +33,7 @@ async function main() {
   // Dashboard enqueues an allowlisted command.
   const issued = await (await fetch(`${BASE}/v1/devices/${deviceId}/commands`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: dash,
     body: JSON.stringify({ type: 'RUN_MALWARE_SCAN', parameters: { scope: 'quick' } }),
   })).json()
   console.log('3. dashboard issued:', issued.command.type, issued.command.commandId)
@@ -38,7 +41,7 @@ async function main() {
   // A non-allowlisted type is rejected by the server up front.
   const shell = await fetch(`${BASE}/v1/devices/${deviceId}/commands`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: dash,
     body: JSON.stringify({ type: 'RUN_SHELL', parameters: { cmd: 'rm -rf /' } }),
   })
   console.log('4. RUN_SHELL rejected with status:', shell.status)

@@ -109,6 +109,52 @@ for (const platform of PLATFORMS) {
   }
 }
 
+// Security catalogs (LotL grep + curated KEV) — separate schemas from cleaner rules.
+console.log('\nsecurity:')
+{
+  const lolSchemaPath = path.join(RULES_DIR, 'schema', 'lolbins.schema.json')
+  const lolPath = path.join(RULES_DIR, 'security', 'lolbins.json')
+  try {
+    const lolSchema = JSON.parse(readFileSync(lolSchemaPath, 'utf-8'))
+    const lolValidate = ajv.compile(lolSchema)
+    const lolData = JSON.parse(readFileSync(lolPath, 'utf-8'))
+    if (!lolValidate(lolData)) {
+      const msgs = lolValidate.errors?.map((e) => `${e.instancePath} ${e.message}`).join('; ')
+      error(`lolbins.json: schema validation failed — ${msgs}`)
+    } else {
+      const ids = (lolData.rules as Array<{ id: string }>).map((r) => r.id)
+      const dupes = ids.filter((id, i) => ids.indexOf(id) !== i)
+      if (dupes.length) error(`lolbins.json: duplicate rule ids: ${dupes.join(', ')}`)
+      else ok(`lolbins.json passes schema (${ids.length} rules)`)
+    }
+  } catch (e) {
+    error(`lolbins.json: ${(e as Error).message}`)
+  }
+
+  const kevSchemaPath = path.join(RULES_DIR, 'schema', 'kev.schema.json')
+  const kevPath = path.join(RULES_DIR, 'security', 'kev.json')
+  try {
+    const kevSchema = JSON.parse(readFileSync(kevSchemaPath, 'utf-8'))
+    const kevValidate = ajv.compile(kevSchema)
+    const kevData = JSON.parse(readFileSync(kevPath, 'utf-8'))
+    if (!kevValidate(kevData)) {
+      const msgs = kevValidate.errors?.map((e) => `${e.instancePath} ${e.message}`).join('; ')
+      error(`kev.json: schema validation failed — ${msgs}`)
+    } else {
+      const ids = (kevData.entries as Array<{ cveId: string }>).map((e) => e.cveId)
+      // Duplicate CVE IDs can appear across products — allow, but require unique cveId+product pairs
+      const pairs = (kevData.entries as Array<{ cveId: string; product: string }>).map(
+        (e) => `${e.cveId}|${e.product}`,
+      )
+      const dupes = pairs.filter((p, i) => pairs.indexOf(p) !== i)
+      if (dupes.length) error(`kev.json: duplicate cveId+product: ${dupes.join(', ')}`)
+      else ok(`kev.json passes schema (${ids.length} entries)`)
+    }
+  } catch (e) {
+    error(`kev.json: ${(e as Error).message}`)
+  }
+}
+
 console.log('')
 if (errors > 0) {
   console.error(`✗ ${errors} error(s) found`)

@@ -1,4 +1,5 @@
 /**
+import { fetchDashboardToken, dashboardAuthHeaders } from './dashboard-auth.mjs'
  * End-to-end demo of the desktop agent flow against a running device API:
  *   1. Create pairing code (dashboard)
  *   2. Enroll with a fresh Ed25519 key pair (device)
@@ -16,7 +17,9 @@ const BASE = (process.env.DEVICE_API_URL || 'http://127.0.0.1:8787').replace(/\/
 const sha256 = (s) => createHash('sha256').update(s).digest('hex')
 
 async function main() {
-  const pairing = await (await fetch(`${BASE}/v1/pairing-codes`, { method: 'POST' })).json()
+  const token = process.env.DASHBOARD_TOKEN || await fetchDashboardToken(BASE)
+  const dash = dashboardAuthHeaders(token)
+  const pairing = await (await fetch(`${BASE}/v1/pairing-codes`, { method: 'POST', headers: dash, body: '{}' })).json()
   console.log('1. pairing code:', pairing.code)
 
   const { publicKey, privateKey } = generateKeyPairSync('ed25519', {
@@ -42,7 +45,7 @@ async function main() {
 
   const issued = await (await fetch(`${BASE}/v1/devices/${deviceId}/commands`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: dash,
     body: JSON.stringify({ type: 'RUN_MALWARE_SCAN', parameters: { scope: 'quick' } }),
   })).json()
   console.log('4. dashboard issued:', issued.command.type, issued.command.commandId)

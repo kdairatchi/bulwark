@@ -17,7 +17,8 @@ import {
   buildBlockedResponse,
   frameTcp,
   deframeTcp,
-  isBlocked,
+  shouldBlockName,
+  type DnsFilterMode,
   typeName,
   parseAnswerIps,
 } from './dns-filter'
@@ -32,10 +33,13 @@ export class DnsResolver {
   private tcp: net.Server | null = null
   private config: DnsResolverConfig = { ...DEFAULT_DNS_CONFIG }
   private blockSet: Set<string> = new Set()
+  private filterMode: DnsFilterMode = 'blocklist'
   private running = false
   private startedAt: string | null = null
   /** Response-policy hook: given resolved IPs, return a block reason or null. */
   private answerPolicy: ((ips: string[]) => string | null) | null = null
+  /** Fired when a query is sinkholed (filter-list, isolation, or response-policy). */
+  private onBlocked: ((name: string, via: string) => void) | null = null
 
   private totalQueries = 0
   private blockedQueries = 0
@@ -43,9 +47,28 @@ export class DnsResolver {
   private failedQueries = 0
   private recent: DnsQueryLogEntry[] = []
 
-  /** Replace the filter-list block set. */
+  /** Replace the filter-list block set (blocklist mode). */
   setBlocklist(domains: Iterable<string>): void {
+    this.filterMode = 'blocklist'
     this.blockSet = new Set([...domains].map((d) => d.toLowerCase().replace(/\.$/, '')))
+  }
+
+  /**
+   * Set filter mode + domain set.
+   * - blocklist: listed domains are sinkholed
+   * - allowlist: only listed domains resolve (emergency isolation)
+   */
+  setFilterMode(mode: DnsFilterMode, domains: Iterable<string>): void {
+    this.filterMode = mode
+    this.blockSet = new Set([...domains].map((d) => d.toLowerCase().replace(/\.$/, '')))
+  }
+
+  getFilterMode(): DnsFilterMode {
+    return this.filterMode
+  }
+
+  setOnBlocked(fn: ((name: string, via: string) => void) | null): void {
+    this.onBlocked = fn
   }
 
   /**
@@ -146,9 +169,11 @@ export class DnsResolver {
     if (!q) { this.failedQueries++; return null }
 
     const ts = new Date().toISOString()
-    if (isBlocked(q.name, this.blockSet)) {
+    if (shouldBlockName(q.name, this.blockSet, this.filterMode)) {
       this.blockedQueries++
-      this.log({ name: q.name, type: typeName(q.qtype), blocked: true, via: 'filter-list', timestamp: ts })
+      const via = this.filterMode === 'allowlist' ? 'isolation' : 'filter-list'
+      this.log({ name: q.name, type: typeName(q.qtype), blocked: true, via, timestamp: ts })
+      try { this.onBlocked?.(q.name, via) } catch { /* ignore listener errors */ }
       return buildBlockedResponse(query, q)
     }
 
@@ -162,6 +187,7 @@ export class DnsResolver {
           if (reason) {
             this.blockedQueries++
             this.log({ name: q.name, type: typeName(q.qtype), blocked: true, via: reason, timestamp: ts })
+            try { this.onBlocked?.(q.name, reason) } catch { /* ignore */ }
             return buildBlockedResponse(query, q)
           }
         }

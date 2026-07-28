@@ -1,9 +1,11 @@
 import { describe, it, expect } from 'vitest'
 import { DeviceStore } from './store'
 import {
-  createPairingCode, enrollDevice, listDevices, getDevice, listFindings,
+  createPairingCode, enrollDevice, listDevices, getDevice, listFindings, reviewFinding,
   authenticateDevice, heartbeat, submitInventory, submitFindings,
-  getServerKey, issueCommand, pollCommands, commandResult, type SignedRequest,
+  getServerKey, issueCommand, requestScan, pollCommands, commandResult,
+  getPolicy, putPolicy, isolateDevice, clearIsolation,
+  submitNetworkEvents, listNetworkEvents, type SignedRequest,
 } from './handlers'
 import { generateDeviceKeyPair, signMessage, canonicalRequest, sha256Hex } from './crypto'
 
@@ -37,6 +39,9 @@ describe('device-api enrollment', () => {
     expect(res.status).toBe(201)
     expect((res.body as { deviceId: string }).deviceId).toMatch(/^dev_/)
     expect(listDevices(store).body).toMatchObject({ count: 1 })
+    const devices = (listDevices(store).body as { devices: Array<{ isolated: boolean; policyVersion: number }> }).devices
+    expect(devices[0].isolated).toBe(false)
+    expect(devices[0].policyVersion).toBe(1)
   })
 
   it('rejects enrollment with a bad/missing code', () => {
@@ -107,11 +112,97 @@ describe('device-api telemetry endpoints', () => {
     submitInventory(store, deviceId, { items: [{}, {}, {}] })
     submitFindings(store, deviceId, { findings: [{ level: 'high', subjectName: 'Sketchy', reason: 'known_c2' }] })
 
-    const d = (getDevice(store, deviceId).body as { lastHeartbeat: string; inventoryCount: number; findingsCount: number })
+    const d = (getDevice(store, deviceId).body as {
+      lastHeartbeat: string
+      inventoryCount: number
+      findingsCount: number
+      securityScore: number
+      openFindingsCount: number
+    })
     expect(d.lastHeartbeat).not.toBeNull()
     expect(d.inventoryCount).toBe(3)
     expect(d.findingsCount).toBe(1)
+    expect(d.openFindingsCount).toBe(1)
+    expect(d.securityScore).toBeLessThan(100)
     expect((listFindings(store).body as { count: number }).count).toBe(1)
+  })
+
+  it('surfaces vpnConsentPending from inventory dnsGuard snapshot', () => {
+    const store = freshStore()
+    const { deviceId } = enrolledDevice(store)
+    store.isolateDevice(deviceId, 'test')
+    submitInventory(store, deviceId, {
+      apps: [{ name: 'TV App' }],
+      dnsGuard: { running: false, vpnConsentPending: true, isolated: true, mode: 'ALLOWLIST' },
+    })
+    const d = getDevice(store, deviceId).body as {
+      vpnConsentPending: boolean
+      dnsGuardRunning: boolean | null
+      isolated: boolean
+    }
+    expect(d.isolated).toBe(true)
+    expect(d.dnsGuardRunning).toBe(false)
+    expect(d.vpnConsentPending).toBe(true)
+  })
+
+  it('reviews findings and improves security score', () => {
+    const store = freshStore()
+    const { deviceId } = enrolledDevice(store)
+    submitFindings(store, deviceId, {
+      findings: [
+        { level: 'likely_affected', subjectName: 'keygen', reason: 'suspicious_app_name' },
+        { level: 'potential_match', subjectName: 'Mystery', reason: 'unknown_publisher' },
+      ],
+    })
+    const before = getDevice(store, deviceId).body as { securityScore: number; openFindingsCount: number }
+    expect(before.openFindingsCount).toBe(2)
+    const findingId = (listFindings(store, deviceId).body as { findings: Array<{ id: string }> }).findings[0].id
+    const reviewed = reviewFinding(store, findingId, { status: 'false_positive', note: 'ok' })
+    expect(reviewed.status).toBe(200)
+    const after = getDevice(store, deviceId).body as { securityScore: number; openFindingsCount: number }
+    expect(after.openFindingsCount).toBe(1)
+    expect(after.securityScore).toBeGreaterThan(before.securityScore)
+    expect(reviewFinding(store, findingId, { status: 'not_a_status' }).status).toBe(400)
+    expect(reviewFinding(store, 'finding_nope', { status: 'accepted_risk' }).status).toBe(404)
+  })
+
+  it('persists category, dedupes open findings, and weights KEV in the score', () => {
+    const store = freshStore()
+    const { deviceId } = enrolledDevice(store)
+    submitFindings(store, deviceId, {
+      findings: [
+        { level: 'likely_affected', subjectName: 'CVE-2023-38545', reason: 'kev_version_match:curl@7.88.1', category: 'kev' },
+        { level: 'potential_match', subjectName: 'Mystery', reason: 'unknown_publisher', category: 'publisher' },
+      ],
+    })
+    const listed1 = listFindings(store, deviceId).body as { findings: Array<{ category: string | null; subjectName: string }>; count: number }
+    expect(listed1.count).toBe(2)
+    expect(listed1.findings.find((f) => f.subjectName === 'CVE-2023-38545')?.category).toBe('kev')
+
+    const scoreWithKev = (getDevice(store, deviceId).body as { securityScore: number }).securityScore
+
+    // Re-submit same KEV finding with refreshed reason — should update, not duplicate.
+    submitFindings(store, deviceId, {
+      findings: [
+        { level: 'likely_affected', subjectName: 'CVE-2023-38545', reason: 'kev_version_match:curl@7.88.1:epss=0.78', category: 'kev' },
+      ],
+    })
+    const listed2 = listFindings(store, deviceId).body as { findings: Array<{ reason: string; category: string | null }>; count: number }
+    expect(listed2.count).toBe(2)
+    expect(listed2.findings.filter((f) => f.category === 'kev')).toHaveLength(1)
+    expect(listed2.findings.find((f) => f.category === 'kev')?.reason).toContain('epss=')
+
+    // Publisher-only device should score higher than one with a KEV hit of same level.
+    const store2 = freshStore()
+    const { deviceId: id2 } = enrolledDevice(store2)
+    submitFindings(store2, id2, {
+      findings: [
+        { level: 'likely_affected', subjectName: 'Odd App', reason: 'suspicious_app_name', category: 'publisher' },
+        { level: 'potential_match', subjectName: 'Mystery', reason: 'unknown_publisher', category: 'publisher' },
+      ],
+    })
+    const scorePublisherOnly = (getDevice(store2, id2).body as { securityScore: number }).securityScore
+    expect(scoreWithKev).toBeLessThan(scorePublisherOnly)
   })
 
   it('does not leak the device public key in detail responses', () => {
@@ -144,6 +235,25 @@ describe('device-api commands', () => {
     expect(issueCommand(store, deviceId, { type: 'RUN_SHELL', parameters: {} }).status).toBe(400)
   })
 
+  it('requestScan maps kind to RUN_* commands', () => {
+    const store = freshStore()
+    const { deviceId } = enrolledDevice(store)
+    const health = requestScan(store, deviceId, { kind: 'health' })
+    expect(health.status).toBe(201)
+    expect((health.body as { command: { type: string } }).command.type).toBe('RUN_HEALTH_ASSESSMENT')
+    const malware = requestScan(store, deviceId, { kind: 'malware' })
+    expect((malware.body as { command: { type: string; parameters: { scope: string } } }).command.type).toBe('RUN_MALWARE_SCAN')
+    expect((malware.body as { command: { parameters: { scope: string } } }).command.parameters.scope).toBe('quick')
+    const lol = requestScan(store, deviceId, { kind: 'lolbins' })
+    expect((lol.body as { command: { type: string; parameters: { scope: string } } }).command.type).toBe('RUN_MALWARE_SCAN')
+    expect((lol.body as { command: { parameters: { scope: string } } }).command.parameters.scope).toBe('lolbins')
+    const vuln = requestScan(store, deviceId, { kind: 'vulnerability', kevSync: true, epss: true, osv: false })
+    expect((vuln.body as { command: { type: string } }).command.type).toBe('RUN_VULNERABILITY_SCAN')
+    expect((vuln.body as { command: { parameters: Record<string, unknown> } }).command.parameters.kevSync).toBe(true)
+    expect((vuln.body as { command: { parameters: Record<string, unknown> } }).command.parameters.epss).toBe(true)
+    expect(requestScan(store, deviceId, { kind: 'nope' }).status).toBe(400)
+  })
+
   it('rejects a command for an unknown device', () => {
     const store = freshStore()
     expect(issueCommand(store, 'dev_nope', { type: 'RUN_MALWARE_SCAN' }).status).toBe(404)
@@ -158,5 +268,56 @@ describe('device-api commands', () => {
   it('exposes the server public key for signature verification', () => {
     const store = freshStore()
     expect((getServerKey(store).body as { publicKeyPem: string }).publicKeyPem).toContain('BEGIN PUBLIC KEY')
+  })
+})
+
+describe('device-api policy + emergency isolate', () => {
+  it('returns a default policy and updates it via putPolicy', () => {
+    const store = freshStore()
+    const { deviceId } = enrolledDevice(store)
+    const initial = getPolicy(store, deviceId)
+    expect(initial.status).toBe(200)
+    expect((initial.body as { policy: { isolated: boolean; version: number } }).policy.isolated).toBe(false)
+
+    const updated = putPolicy(store, deviceId, {
+      blockedDomains: ['tracker.malware.test'],
+      dnsGuardRequired: true,
+    })
+    expect(updated.status).toBe(200)
+    const body = updated.body as { policy: { version: number; blockedDomains: string[] }; command: { type: string } }
+    expect(body.policy.version).toBe(2)
+    expect(body.policy.blockedDomains).toEqual(['tracker.malware.test'])
+    expect(body.command.type).toBe('APPLY_POLICY')
+  })
+
+  it('isolates a device and enqueues ISOLATE_DEVICE', () => {
+    const store = freshStore()
+    const { deviceId } = enrolledDevice(store)
+    const res = isolateDevice(store, deviceId, { reason: 'ransomware suspected' })
+    expect(res.status).toBe(202)
+    const body = res.body as { policy: { isolated: boolean }; command: { type: string } }
+    expect(body.policy.isolated).toBe(true)
+    expect(body.command.type).toBe('ISOLATE_DEVICE')
+    expect((pollCommands(store, deviceId).body as { commands: unknown[] }).commands.length).toBeGreaterThanOrEqual(1)
+
+    const cleared = clearIsolation(store, deviceId)
+    expect(cleared.status).toBe(202)
+    expect((cleared.body as { policy: { isolated: boolean } }).policy.isolated).toBe(false)
+  })
+})
+
+describe('device-api network events', () => {
+  it('accepts a batch of events and lists them', () => {
+    const store = freshStore()
+    const { deviceId } = enrolledDevice(store)
+    const res = submitNetworkEvents(store, deviceId, {
+      events: [
+        { type: 'dns_blocked', subject: 'tracker.malware.test', detail: 'blocked' },
+        { type: 'isolation_enabled', subject: 'device' },
+      ],
+    })
+    expect(res.status).toBe(202)
+    expect((res.body as { accepted: number }).accepted).toBe(2)
+    expect((listNetworkEvents(store, deviceId).body as { count: number }).count).toBe(2)
   })
 })

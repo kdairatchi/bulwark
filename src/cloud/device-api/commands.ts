@@ -17,6 +17,9 @@ export const ALLOWED_COMMANDS = [
   'QUARANTINE_FILE',
   'BLOCK_DOMAIN',
   'RESTART_AGENT',
+  'ISOLATE_DEVICE',
+  'CLEAR_ISOLATION',
+  'APPLY_POLICY',
 ] as const
 
 export type CommandType = (typeof ALLOWED_COMMANDS)[number]

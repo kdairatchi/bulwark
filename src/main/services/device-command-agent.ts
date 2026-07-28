@@ -20,10 +20,19 @@ import {
   clearDeviceIdentity,
   type DeviceIdentity,
 } from './device-identity-store'
+import {
+  devicePolicyEnforcer,
+  parseRemotePolicy,
+} from './device-policy-enforcer'
+import { collectDesktopInventory } from './desktop-inventory'
+import { executeRemoteScan } from './desktop-remote-scans'
+import { executeUpdateThreatFeeds, executeQuarantineFile } from './desktop-remote-actions'
+import { getPlatform } from '../platform'
 import { cloudLog } from './logger'
 
 const DEFAULT_BASE_URL = process.env.DEVICE_API_URL || 'http://127.0.0.1:8787'
 const DEFAULT_POLL_MS = 15_000
+const INVENTORY_SYNC_MS = 5 * 60 * 1000
 const MAX_SEEN_NONCES = 500
 
 /** Pairing codes are human-enterable like `K7Q2-9F3M` (hex; dash optional on input). */
@@ -58,31 +67,81 @@ export type CommandExecutor = (
   parameters: Record<string, unknown>,
 ) => Promise<Record<string, unknown>>
 
-/** Default allowlisted stubs — real scanners wire in later. */
+/** Default allowlisted handlers — inventory/scans use real local posture data. */
 export async function defaultCommandExecutor(
   type: CommandType,
   parameters: Record<string, unknown>,
 ): Promise<Record<string, unknown>> {
   switch (type) {
-    case 'REQUEST_INVENTORY':
+    case 'REQUEST_INVENTORY': {
+      try {
+        const payload = await collectDesktopInventory({
+          loadApps: () => getPlatform().commands.getInstalledApps(),
+          platform: `${platform()} ${release()}`,
+          hostname: hostname(),
+        })
+        return {
+          ok: true,
+          stub: false,
+          type,
+          count: payload.count,
+          findingCount: payload.findings.length,
+          hostname: payload.hostname,
+          platform: payload.platform,
+          // Embedded for agent-bound sync (stripped from command result if desired).
+          _inventory: payload,
+          parameters,
+        }
+      } catch (err) {
+        return {
+          ok: false,
+          stub: false,
+          type,
+          error: err instanceof Error ? err.message : String(err),
+          parameters,
+        }
+      }
+    }
+    case 'RUN_MALWARE_SCAN':
+    case 'RUN_VULNERABILITY_SCAN':
+    case 'RUN_HEALTH_ASSESSMENT': {
+      try {
+        const apps = await getPlatform().commands.getInstalledApps()
+        return await executeRemoteScan(type, apps, parameters)
+      } catch (err) {
+        return {
+          ok: false,
+          stub: false,
+          type,
+          threatsFound: 0,
+          findings: 0,
+          error: err instanceof Error ? err.message : String(err),
+          parameters,
+        }
+      }
+    }
+    case 'UPDATE_THREAT_FEEDS':
+      return executeUpdateThreatFeeds(parameters)
+    case 'QUARANTINE_FILE':
+      return executeQuarantineFile(parameters)
+    case 'BLOCK_DOMAIN': {
+      const domain = typeof parameters.domain === 'string'
+        ? parameters.domain
+        : typeof parameters.host === 'string' ? parameters.host : ''
+      return devicePolicyEnforcer.blockDomain(domain)
+    }
+    case 'ISOLATE_DEVICE':
+    case 'CLEAR_ISOLATION':
+    case 'APPLY_POLICY':
+      // Prefer the agent-bound executor (pulls fresh policy). Fallback keeps stubs honest.
       return {
         ok: true,
         stub: true,
         type,
-        hostname: hostname(),
-        platform: platform(),
-        release: release(),
+        applied: false,
+        reason: 'policy commands require agent-bound executor',
         parameters,
       }
-    case 'RUN_MALWARE_SCAN':
-    case 'RUN_VULNERABILITY_SCAN':
-    case 'RUN_HEALTH_ASSESSMENT':
-      return { ok: true, stub: true, type, threatsFound: 0, findings: 0, parameters }
-    case 'UPDATE_THREAT_FEEDS':
-      return { ok: true, stub: true, type, updated: false, parameters }
-    case 'QUARANTINE_FILE':
-    case 'BLOCK_DOMAIN':
-      return { ok: true, stub: true, type, applied: false, reason: 'stub — awaiting enforcement wiring', parameters }
     case 'RESTART_AGENT':
       return { ok: true, stub: true, type, scheduled: false, parameters }
     default:
@@ -141,20 +200,47 @@ export class DeviceCommandAgent {
   private lastCommandAt: string | null = null
   private lastCommandType: string | null = null
   private lastError: string | null = null
+  private lastInventoryAt = 0
   private commandsProcessed = 0
   private commandsRejected = 0
   private readonly pollMs: number
   private readonly execute: CommandExecutor
   private readonly fetchImpl?: typeof fetch
+  private readonly inventorySyncMs: number
 
   constructor(opts?: {
     pollMs?: number
     execute?: CommandExecutor
     fetchImpl?: typeof fetch
+    inventorySyncMs?: number
   }) {
     this.pollMs = opts?.pollMs ?? DEFAULT_POLL_MS
     this.execute = opts?.execute ?? defaultCommandExecutor
     this.fetchImpl = opts?.fetchImpl
+    this.inventorySyncMs = opts?.inventorySyncMs ?? INVENTORY_SYNC_MS
+  }
+
+  /**
+   * Test/demo helper: inject an enrolled identity without pairing I/O.
+   * Sets lastInventoryAt so the next tick skips an immediate inventory sync.
+   */
+  setIdentityForTest(identity: DeviceIdentity | null): void {
+    this.identity = identity
+    this.lastInventoryAt = identity ? Date.now() : 0
+    if (!identity) {
+      this.seenNonces.clear()
+      this.commandsProcessed = 0
+      this.commandsRejected = 0
+    }
+  }
+
+  /** Wait until any in-flight tick completes (tests). */
+  async waitForIdle(timeoutMs = 10_000): Promise<void> {
+    const start = Date.now()
+    while (this.tickInFlight) {
+      if (Date.now() - start > timeoutMs) throw new Error('device-api agent tick idle timeout')
+      await new Promise((r) => setTimeout(r, 15))
+    }
   }
 
   getStatus(): DeviceAgentStatus {
@@ -263,10 +349,50 @@ export class DeviceCommandAgent {
       const client = new DeviceApiClient({ baseUrl: this.identity.baseUrl, fetchImpl: this.fetchImpl })
       await client.heartbeat(this.identity.privateKeyPem, this.identity.deviceId)
       this.lastHeartbeatAt = new Date().toISOString()
+
+      // Pull latest policy each tick (parity with Android TV agent).
+      try {
+        const policy = parseRemotePolicy(
+          await client.getPolicy(this.identity.privateKeyPem, this.identity.deviceId),
+        )
+        await devicePolicyEnforcer.applyRemotePolicy(policy)
+      } catch (err) {
+        cloudLog('INFO', 'device-api policy pull failed', {
+          error: err instanceof Error ? err.message : String(err),
+        })
+      }
+
       const commands = await client.pollCommands(this.identity.privateKeyPem, this.identity.deviceId)
       this.lastPollAt = new Date().toISOString()
       for (const cmd of commands) {
         await this.handleCommand(client, cmd)
+      }
+
+      // Periodic inventory sync (also runs immediately when never synced).
+      if (Date.now() - this.lastInventoryAt >= this.inventorySyncMs) {
+        try {
+          await this.syncInventory(client)
+        } catch (err) {
+          cloudLog('INFO', 'device-api inventory sync failed', {
+            error: err instanceof Error ? err.message : String(err),
+          })
+        }
+      }
+
+      const events = devicePolicyEnforcer.drainEvents()
+      if (events.length > 0) {
+        try {
+          await client.submitNetworkEvents(
+            this.identity.privateKeyPem,
+            this.identity.deviceId,
+            events,
+          )
+        } catch (err) {
+          cloudLog('INFO', 'device-api event flush failed', {
+            error: err instanceof Error ? err.message : String(err),
+            count: events.length,
+          })
+        }
       }
       this.lastError = null
     } catch (err) {
@@ -278,15 +404,85 @@ export class DeviceCommandAgent {
     }
   }
 
+  /** Collect installed apps, POST inventory + findings to the control plane. */
+  private async syncInventory(client: DeviceApiClient): Promise<{ count: number; findingCount: number }> {
+    if (!this.identity) return { count: 0, findingCount: 0 }
+    const payload = await collectDesktopInventory({
+      loadApps: () => getPlatform().commands.getInstalledApps(),
+      platform: `${platform()} ${release()}`,
+      hostname: hostname(),
+    })
+    await client.submitInventory(this.identity.privateKeyPem, this.identity.deviceId, {
+      apps: payload.apps,
+      count: payload.count,
+      platform: payload.platform,
+      hostname: payload.hostname,
+    })
+    if (payload.findings.length > 0) {
+      await client.submitFindings(this.identity.privateKeyPem, this.identity.deviceId, payload.findings)
+      for (const f of payload.findings.slice(0, 20)) {
+        devicePolicyEnforcer.pushEvent('finding', f.subjectName, f.reason)
+      }
+    }
+    this.lastInventoryAt = Date.now()
+    cloudLog('INFO', 'device-api inventory synced', {
+      count: payload.count,
+      findings: payload.findings.length,
+    })
+    return { count: payload.count, findingCount: payload.findings.length }
+  }
+
   private async handleCommand(client: DeviceApiClient, cmd: CommandEnvelope): Promise<void> {
     if (!this.identity) return
+    const identity = this.identity
+    const execute: CommandExecutor = async (type, parameters) => {
+      if (type === 'APPLY_POLICY' || type === 'ISOLATE_DEVICE' || type === 'CLEAR_ISOLATION') {
+        const policy = parseRemotePolicy(
+          await client.getPolicy(identity.privateKeyPem, identity.deviceId),
+        )
+        return devicePolicyEnforcer.applyRemotePolicy(policy)
+      }
+      if (type === 'REQUEST_INVENTORY') {
+        const synced = await this.syncInventory(client)
+        return {
+          ok: true,
+          stub: false,
+          type,
+          count: synced.count,
+          findingCount: synced.findingCount,
+          hostname: hostname(),
+          platform: `${platform()} ${release()}`,
+        }
+      }
+      if (
+        type === 'RUN_HEALTH_ASSESSMENT'
+        || type === 'RUN_MALWARE_SCAN'
+        || type === 'RUN_VULNERABILITY_SCAN'
+      ) {
+        const result = await this.execute(type, parameters)
+        const embedded = Array.isArray(result._findings)
+          ? result._findings as Array<{ level: string; subjectName: string; reason: string; category?: string }>
+          : []
+        if (embedded.length > 0) {
+          await client.submitFindings(identity.privateKeyPem, identity.deviceId, embedded)
+          for (const f of embedded.slice(0, 20)) {
+            devicePolicyEnforcer.pushEvent('finding', f.subjectName, f.reason)
+          }
+        }
+        return result
+      }
+      if (type === 'BLOCK_DOMAIN') {
+        return defaultCommandExecutor(type, parameters)
+      }
+      return this.execute(type, parameters)
+    }
     const processed = await processVerifiedCommand({
       serverPublicKeyPem: this.identity.serverPublicKeyPem,
       deviceId: this.identity.deviceId,
       cmd,
       seenNonces: this.seenNonces,
       now: Date.now(),
-      execute: this.execute,
+      execute,
     })
     if (!processed.accepted) {
       this.commandsRejected++
@@ -302,11 +498,13 @@ export class DeviceCommandAgent {
       return
     }
     try {
+      // Never post bulky embedded payloads back as command results.
+      const { _inventory: _dropInv, _findings: _dropFind, ...safeResult } = processed.result
       await client.postCommandResult(
         this.identity.privateKeyPem,
         this.identity.deviceId,
         cmd.commandId,
-        processed.result,
+        safeResult,
       )
       this.commandsProcessed++
       this.lastCommandAt = new Date().toISOString()

@@ -526,6 +526,124 @@ const api = {
     commandsRejected: number
   }> => ipcRenderer.invoke(IPC.DEVICE_API_POLL_NOW),
 
+  // Parent dashboard (control plane operator actions)
+  dashboardCreatePairingCode: (payload?: { baseUrl?: string; token?: string }): Promise<
+    { success: true; code: string; expiresAt: string } | { success: false; error: string }
+  > => ipcRenderer.invoke(IPC.DASHBOARD_CREATE_PAIRING_CODE, payload ?? {}),
+  dashboardBootstrap: (payload?: { baseUrl?: string }): Promise<
+    { success: true; token: string } | { success: false; error: string }
+  > => ipcRenderer.invoke(IPC.DASHBOARD_BOOTSTRAP, payload ?? {}),
+  dashboardListDevices: (payload?: { baseUrl?: string; token?: string }): Promise<
+    | {
+        success: true
+        devices: Array<{
+          id: string
+          name: string
+          os: string | null
+          enrolledAt: string
+          lastHeartbeat: string | null
+          inventoryCount: number
+          findingsCount: number
+          isolated: boolean
+          policyVersion: number
+          dnsGuardRequired: boolean
+          blockedDomains: string[]
+        }>
+      }
+    | { success: false; error: string }
+  > => ipcRenderer.invoke(IPC.DASHBOARD_LIST_DEVICES, payload ?? {}),
+  dashboardIsolate: (payload: { baseUrl?: string; token?: string; deviceId: string; reason?: string }): Promise<
+    { success: true; policy: { isolated: boolean; version: number }; command: { type: string } } | { success: false; error: string }
+  > => ipcRenderer.invoke(IPC.DASHBOARD_ISOLATE, payload),
+  dashboardClearIsolation: (payload: { baseUrl?: string; token?: string; deviceId: string }): Promise<
+    { success: true; policy: { isolated: boolean; version: number }; command: { type: string } } | { success: false; error: string }
+  > => ipcRenderer.invoke(IPC.DASHBOARD_CLEAR_ISOLATION, payload),
+  dashboardPutPolicy: (payload: {
+    baseUrl?: string
+    token?: string
+    deviceId: string
+    blockedDomains?: string[]
+    dnsGuardRequired?: boolean
+    isolationAllowlist?: string[]
+    allowInstallUnknown?: boolean
+  }): Promise<
+    { success: true; policy: { isolated: boolean; version: number; blockedDomains: string[] }; command: { type: string } } | { success: false; error: string }
+  > => ipcRenderer.invoke(IPC.DASHBOARD_PUT_POLICY, payload),
+  dashboardListEvents: (payload?: { baseUrl?: string; token?: string; deviceId?: string }): Promise<
+    | {
+        success: true
+        events: Array<{
+          id: string
+          deviceId: string
+          type: string
+          at: string
+          subject: string | null
+          detail: string | null
+          metadata: Record<string, unknown>
+        }>
+      }
+    | { success: false; error: string }
+  > => ipcRenderer.invoke(IPC.DASHBOARD_LIST_EVENTS, payload ?? {}),
+  dashboardListFindings: (payload?: { baseUrl?: string; token?: string; deviceId?: string }): Promise<
+    | {
+        success: true
+        findings: Array<{
+          id: string
+          deviceId: string
+          level: string
+          subjectName: string
+          reason: string
+          createdAt: string
+        }>
+      }
+    | { success: false; error: string }
+  > => ipcRenderer.invoke(IPC.DASHBOARD_LIST_FINDINGS, payload ?? {}),
+  dashboardIssueCommand: (payload: {
+    baseUrl?: string
+    token?: string
+    deviceId: string
+    type: string
+    parameters?: Record<string, unknown>
+  }): Promise<
+    { success: true; command: { commandId: string; type: string } } | { success: false; error: string }
+  > => ipcRenderer.invoke(IPC.DASHBOARD_ISSUE_COMMAND, payload),
+
+  dashboardRequestScan: (payload: {
+    baseUrl?: string
+    token?: string
+    deviceId: string
+    kind: 'health' | 'malware' | 'vulnerability' | 'lolbins'
+    scope?: string
+  }): Promise<
+    { success: true; command: { commandId: string; type: string } } | { success: false; error: string }
+  > => ipcRenderer.invoke(IPC.DASHBOARD_REQUEST_SCAN, payload),
+
+  dashboardReviewFinding: (payload: {
+    baseUrl?: string
+    token?: string
+    findingId: string
+    status: string
+    note?: string
+  }): Promise<
+    | {
+      success: true
+      finding: {
+        id: string
+        deviceId: string
+        level: string
+        subjectName: string
+        reason: string
+        createdAt: string
+        status: string
+        reviewedAt: string | null
+        reviewNote: string | null
+      }
+      securityScore: number
+      openFindingsCount: number
+    }
+    | { success: false; error: string }
+  > => ipcRenderer.invoke(IPC.DASHBOARD_REVIEW_FINDING, payload),
+
   // Duplicate Finder
   duplicatesSelectDir: (): Promise<string | null> =>
     ipcRenderer.invoke(IPC.DUPLICATES_SELECT_DIR),

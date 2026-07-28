@@ -164,4 +164,64 @@ export class DeviceApiClient {
     )
     if (status < 200 || status >= 300) throw new DeviceApiHttpError(status, body)
   }
+
+  async submitFindings(
+    privateKeyPem: string,
+    deviceId: string,
+    findings: Array<{ level: string; subjectName: string; reason: string; category?: string }>,
+  ): Promise<number> {
+    const { status, body } = await this.signed(
+      privateKeyPem, deviceId, 'POST', `/v1/devices/${deviceId}/findings`, { findings },
+    )
+    if (status < 200 || status >= 300) throw new DeviceApiHttpError(status, body)
+    return typeof (body as { accepted?: number }).accepted === 'number'
+      ? (body as { accepted: number }).accepted
+      : findings.length
+  }
+
+  async getPolicy(privateKeyPem: string, deviceId: string): Promise<{
+    version: number
+    updatedAt: string
+    isolated: boolean
+    dnsGuardRequired: boolean
+    blockedDomains: string[]
+    isolationAllowlist: string[]
+    allowInstallUnknown: boolean
+  }> {
+    const { status, body } = await this.signed(
+      privateKeyPem, deviceId, 'GET', `/v1/devices/${deviceId}/policy`,
+    )
+    if (status < 200 || status >= 300) throw new DeviceApiHttpError(status, body)
+    const policy = (body as { policy?: unknown }).policy
+    if (!policy || typeof policy !== 'object') throw new DeviceApiHttpError(status, body)
+    return policy as {
+      version: number
+      updatedAt: string
+      isolated: boolean
+      dnsGuardRequired: boolean
+      blockedDomains: string[]
+      isolationAllowlist: string[]
+      allowInstallUnknown: boolean
+    }
+  }
+
+  async submitNetworkEvents(
+    privateKeyPem: string,
+    deviceId: string,
+    events: Array<{
+      type: string
+      at?: string
+      subject?: string | null
+      detail?: string | null
+      metadata?: Record<string, unknown>
+    }>,
+  ): Promise<number> {
+    const { status, body } = await this.signed(
+      privateKeyPem, deviceId, 'POST', `/v1/devices/${deviceId}/network-events`, { events },
+    )
+    if (status < 200 || status >= 300) throw new DeviceApiHttpError(status, body)
+    return typeof (body as { accepted?: number }).accepted === 'number'
+      ? (body as { accepted: number }).accepted
+      : events.length
+  }
 }

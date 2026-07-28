@@ -1,0 +1,528 @@
+{
+  "version": "1.0.0",
+  "updatedAt": "2026-07-28T00:00:00Z",
+  "source": "CISA Known Exploited Vulnerabilities — curated offline subset for Bulwark name/version matching",
+  "description": "Not the full KEV catalog. Used for basic CVE matching in RUN_VULNERABILITY_SCAN. Full OSV/NVD remains Phase 5.",
+  "entries": [
+    {
+      "cveId": "CVE-2024-21412",
+      "vendor": "Microsoft",
+      "product": "Windows",
+      "aliases": ["internet explorer", "ieframe"],
+      "severity": "high",
+      "ransomware": false,
+      "dateAdded": "2024-02-13",
+      "requiredAction": "Apply Microsoft updates"
+    },
+    {
+      "cveId": "CVE-2024-1709",
+      "vendor": "ConnectWise",
+      "product": "ScreenConnect",
+      "aliases": ["screenconnect", "connectwise screenconnect"],
+      "severity": "critical",
+      "ransomware": true,
+      "dateAdded": "2024-02-22",
+      "requiredAction": "Update ScreenConnect"
+    },
+    {
+      "cveId": "CVE-2024-21762",
+      "vendor": "Fortinet",
+      "product": "FortiOS",
+      "aliases": ["fortios", "fortigate", "fortinet"],
+      "severity": "critical",
+      "ransomware": true,
+      "dateAdded": "2024-02-09",
+      "requiredAction": "Upgrade FortiOS"
+    },
+    {
+      "cveId": "CVE-2024-3400",
+      "vendor": "Palo Alto Networks",
+      "product": "PAN-OS",
+      "aliases": ["pan-os", "palo alto networks", "paloalto"],
+      "severity": "critical",
+      "ransomware": false,
+      "dateAdded": "2024-04-12",
+      "requiredAction": "Apply PAN-OS upgrades / hotfixes"
+    },
+    {
+      "cveId": "CVE-2023-46805",
+      "vendor": "Ivanti",
+      "product": "Connect Secure",
+      "aliases": ["ivanti connect secure", "pulse secure", "ivanti vpn"],
+      "severity": "critical",
+      "ransomware": true,
+      "dateAdded": "2024-01-10",
+      "requiredAction": "Apply Ivanti patches"
+    },
+    {
+      "cveId": "CVE-2024-21887",
+      "vendor": "Ivanti",
+      "product": "Connect Secure",
+      "aliases": ["ivanti connect secure", "ivanti policy secure"],
+      "severity": "critical",
+      "ransomware": true,
+      "dateAdded": "2024-01-10",
+      "requiredAction": "Apply Ivanti patches"
+    },
+    {
+      "cveId": "CVE-2023-22527",
+      "vendor": "Atlassian",
+      "product": "Confluence Data Center and Server",
+      "aliases": ["confluence", "atlassian confluence"],
+      "severity": "critical",
+      "ransomware": true,
+      "dateAdded": "2024-01-24",
+      "requiredAction": "Upgrade Confluence"
+    },
+    {
+      "cveId": "CVE-2023-22515",
+      "vendor": "Atlassian",
+      "product": "Confluence Data Center and Server",
+      "aliases": ["confluence server", "confluence data center"],
+      "severity": "critical",
+      "ransomware": true,
+      "dateAdded": "2023-10-05",
+      "requiredAction": "Upgrade Confluence"
+    },
+    {
+      "cveId": "CVE-2023-34362",
+      "vendor": "Progress",
+      "product": "MOVEit Transfer",
+      "aliases": ["moveit", "moveit transfer", "progress moveit"],
+      "severity": "critical",
+      "ransomware": true,
+      "dateAdded": "2023-06-02",
+      "requiredAction": "Upgrade MOVEit Transfer"
+    },
+    {
+      "cveId": "CVE-2023-27350",
+      "vendor": "PaperCut",
+      "product": "PaperCut NG/MF",
+      "aliases": ["papercut", "papercut ng", "papercut mf"],
+      "severity": "critical",
+      "ransomware": true,
+      "dateAdded": "2023-04-21",
+      "requiredAction": "Upgrade PaperCut"
+    },
+    {
+      "cveId": "CVE-2023-0669",
+      "vendor": "Fortra",
+      "product": "GoAnywhere MFT",
+      "aliases": ["goanywhere", "goanywhere mft"],
+      "severity": "critical",
+      "ransomware": true,
+      "dateAdded": "2023-02-14",
+      "requiredAction": "Upgrade GoAnywhere MFT"
+    },
+    {
+      "cveId": "CVE-2021-44228",
+      "vendor": "Apache",
+      "product": "Log4j",
+      "aliases": ["log4j", "log4j-core", "apache log4j"],
+      "severity": "critical",
+      "ransomware": true,
+      "dateAdded": "2021-12-10",
+      "requiredAction": "Upgrade Log4j to a fixed release",
+      "vulnerableBelow": "2.17.0"
+    },
+    {
+      "cveId": "CVE-2021-45046",
+      "vendor": "Apache",
+      "product": "Log4j",
+      "aliases": ["log4j", "log4j-core"],
+      "severity": "critical",
+      "ransomware": true,
+      "dateAdded": "2021-12-14",
+      "requiredAction": "Upgrade Log4j",
+      "vulnerableBelow": "2.17.0"
+    },
+    {
+      "cveId": "CVE-2022-22965",
+      "vendor": "VMware",
+      "product": "Spring Framework",
+      "aliases": ["spring-framework", "spring framework", "spring-webmvc"],
+      "severity": "critical",
+      "ransomware": false,
+      "dateAdded": "2022-04-04",
+      "requiredAction": "Upgrade Spring Framework",
+      "vulnerableBelow": "5.3.18"
+    },
+    {
+      "cveId": "CVE-2022-41040",
+      "vendor": "Microsoft",
+      "product": "Exchange Server",
+      "aliases": ["exchange server", "microsoft exchange", "outlook exchange"],
+      "severity": "critical",
+      "ransomware": true,
+      "dateAdded": "2022-09-30",
+      "requiredAction": "Apply Exchange updates"
+    },
+    {
+      "cveId": "CVE-2022-41082",
+      "vendor": "Microsoft",
+      "product": "Exchange Server",
+      "aliases": ["exchange server", "microsoft exchange"],
+      "severity": "critical",
+      "ransomware": true,
+      "dateAdded": "2022-09-30",
+      "requiredAction": "Apply Exchange updates"
+    },
+    {
+      "cveId": "CVE-2021-34527",
+      "vendor": "Microsoft",
+      "product": "Windows Print Spooler",
+      "aliases": ["print spooler", "printnightmare"],
+      "severity": "critical",
+      "ransomware": true,
+      "dateAdded": "2021-07-02",
+      "requiredAction": "Apply Windows updates"
+    },
+    {
+      "cveId": "CVE-2020-1472",
+      "vendor": "Microsoft",
+      "product": "Netlogon",
+      "aliases": ["netlogon", "zerologon"],
+      "severity": "critical",
+      "ransomware": true,
+      "dateAdded": "2020-09-18",
+      "requiredAction": "Apply Windows domain controller updates"
+    },
+    {
+      "cveId": "CVE-2019-0708",
+      "vendor": "Microsoft",
+      "product": "Remote Desktop Services",
+      "aliases": ["remote desktop services", "bluekeep"],
+      "severity": "critical",
+      "ransomware": true,
+      "dateAdded": "2022-02-10",
+      "requiredAction": "Apply Windows updates / disable legacy RDP"
+    },
+    {
+      "cveId": "CVE-2023-36884",
+      "vendor": "Microsoft",
+      "product": "Office",
+      "aliases": ["microsoft office", "office 2016", "office 2019", "office 365"],
+      "severity": "high",
+      "ransomware": false,
+      "dateAdded": "2023-07-11",
+      "requiredAction": "Apply Microsoft Office updates"
+    },
+    {
+      "cveId": "CVE-2023-21674",
+      "vendor": "Microsoft",
+      "product": "Windows",
+      "aliases": ["windows advanced local procedure call", "alpc"],
+      "severity": "high",
+      "ransomware": false,
+      "dateAdded": "2023-01-10",
+      "requiredAction": "Apply Windows updates"
+    },
+    {
+      "cveId": "CVE-2024-0519",
+      "vendor": "Google",
+      "product": "Chrome",
+      "aliases": ["google chrome", "chrome"],
+      "severity": "high",
+      "ransomware": false,
+      "dateAdded": "2024-01-16",
+      "requiredAction": "Update Google Chrome",
+      "vulnerableBelow": "120.0.6099.224"
+    },
+    {
+      "cveId": "CVE-2023-4863",
+      "vendor": "Google",
+      "product": "Chrome",
+      "aliases": ["google chrome", "chrome", "libwebp"],
+      "severity": "critical",
+      "ransomware": false,
+      "dateAdded": "2023-09-13",
+      "requiredAction": "Update Chrome / libwebp consumers",
+      "vulnerableBelow": "116.0.5845.187"
+    },
+    {
+      "cveId": "CVE-2022-4262",
+      "vendor": "Google",
+      "product": "Chrome",
+      "aliases": ["google chrome", "chromium"],
+      "severity": "high",
+      "ransomware": false,
+      "dateAdded": "2022-12-05",
+      "requiredAction": "Update Chrome",
+      "vulnerableBelow": "108.0.5359.94"
+    },
+    {
+      "cveId": "CVE-2022-1096",
+      "vendor": "Google",
+      "product": "Chrome",
+      "aliases": ["google chrome", "chrome"],
+      "severity": "high",
+      "ransomware": false,
+      "dateAdded": "2022-03-25",
+      "requiredAction": "Update Chrome",
+      "vulnerableBelow": "99.0.4844.84"
+    },
+    {
+      "cveId": "CVE-2024-9680",
+      "vendor": "Mozilla",
+      "product": "Firefox",
+      "aliases": ["mozilla firefox", "firefox"],
+      "severity": "critical",
+      "ransomware": false,
+      "dateAdded": "2024-10-10",
+      "requiredAction": "Update Firefox",
+      "vulnerableBelow": "131.0.2"
+    },
+    {
+      "cveId": "CVE-2022-26485",
+      "vendor": "Mozilla",
+      "product": "Firefox",
+      "aliases": ["mozilla firefox", "firefox"],
+      "severity": "critical",
+      "ransomware": false,
+      "dateAdded": "2022-03-07",
+      "requiredAction": "Update Firefox",
+      "vulnerableBelow": "97.0.2"
+    },
+    {
+      "cveId": "CVE-2023-5217",
+      "vendor": "Google",
+      "product": "libvpx",
+      "aliases": ["libvpx", "libvpx0"],
+      "severity": "high",
+      "ransomware": false,
+      "dateAdded": "2023-09-28",
+      "requiredAction": "Update libvpx / browsers",
+      "vulnerableBelow": "1.13.1"
+    },
+    {
+      "cveId": "CVE-2023-38545",
+      "vendor": "curl",
+      "product": "curl",
+      "aliases": ["curl", "libcurl", "libcurl4"],
+      "severity": "critical",
+      "ransomware": false,
+      "dateAdded": "2023-10-11",
+      "requiredAction": "Update curl/libcurl",
+      "vulnerableBelow": "8.4.0"
+    },
+    {
+      "cveId": "CVE-2023-38546",
+      "vendor": "curl",
+      "product": "libcurl",
+      "aliases": ["libcurl", "libcurl4", "curl"],
+      "severity": "medium",
+      "ransomware": false,
+      "dateAdded": "2023-10-11",
+      "requiredAction": "Update libcurl",
+      "vulnerableBelow": "8.4.0"
+    },
+    {
+      "cveId": "CVE-2022-3602",
+      "vendor": "OpenSSL",
+      "product": "OpenSSL",
+      "aliases": ["openssl", "libssl", "libssl3", "libssl1.1"],
+      "severity": "high",
+      "ransomware": false,
+      "dateAdded": "2022-11-01",
+      "requiredAction": "Update OpenSSL",
+      "vulnerableBelow": "3.0.7"
+    },
+    {
+      "cveId": "CVE-2022-3786",
+      "vendor": "OpenSSL",
+      "product": "OpenSSL",
+      "aliases": ["openssl", "libssl3"],
+      "severity": "high",
+      "ransomware": false,
+      "dateAdded": "2022-11-01",
+      "requiredAction": "Update OpenSSL",
+      "vulnerableBelow": "3.0.7"
+    },
+    {
+      "cveId": "CVE-2023-0286",
+      "vendor": "OpenSSL",
+      "product": "OpenSSL",
+      "aliases": ["openssl", "libssl3", "libssl1.1"],
+      "severity": "high",
+      "ransomware": false,
+      "dateAdded": "2023-02-09",
+      "requiredAction": "Update OpenSSL",
+      "vulnerableBelow": "3.0.8"
+    },
+    {
+      "cveId": "CVE-2024-6387",
+      "vendor": "OpenBSD",
+      "product": "OpenSSH",
+      "aliases": ["openssh", "openssh-server", "openssh-client"],
+      "severity": "high",
+      "ransomware": false,
+      "dateAdded": "2024-07-01",
+      "requiredAction": "Update OpenSSH",
+      "vulnerableBelow": "9.8"
+    },
+    {
+      "cveId": "CVE-2023-38408",
+      "vendor": "OpenBSD",
+      "product": "OpenSSH",
+      "aliases": ["openssh", "openssh-client"],
+      "severity": "high",
+      "ransomware": false,
+      "dateAdded": "2023-07-19",
+      "requiredAction": "Update OpenSSH",
+      "vulnerableBelow": "9.3p2"
+    },
+    {
+      "cveId": "CVE-2021-4034",
+      "vendor": "Polkit",
+      "product": "polkit",
+      "aliases": ["polkit", "policykit-1", "pkexec"],
+      "severity": "critical",
+      "ransomware": false,
+      "dateAdded": "2022-01-28",
+      "requiredAction": "Update polkit",
+      "vulnerableBelow": "0.120"
+    },
+    {
+      "cveId": "CVE-2021-3156",
+      "vendor": "Sudo",
+      "product": "sudo",
+      "aliases": ["sudo"],
+      "severity": "critical",
+      "ransomware": false,
+      "dateAdded": "2022-03-03",
+      "requiredAction": "Update sudo",
+      "vulnerableBelow": "1.9.5p2"
+    },
+    {
+      "cveId": "CVE-2022-0847",
+      "vendor": "Linux",
+      "product": "Kernel",
+      "aliases": ["dirty pipe", "linux-image"],
+      "severity": "high",
+      "ransomware": false,
+      "dateAdded": "2022-03-07",
+      "requiredAction": "Update Linux kernel"
+    },
+    {
+      "cveId": "CVE-2024-3094",
+      "vendor": "Tukaani",
+      "product": "xz",
+      "aliases": ["xz-utils", "liblzma", "liblzma5", "xz"],
+      "severity": "critical",
+      "ransomware": false,
+      "dateAdded": "2024-03-29",
+      "requiredAction": "Downgrade/replace compromised xz/liblzma packages",
+      "vulnerableBelow": "5.6.2"
+    },
+    {
+      "cveId": "CVE-2023-44487",
+      "vendor": "Multiple",
+      "product": "HTTP/2",
+      "aliases": ["nghttp2", "libnghttp2", "http2 rapid reset"],
+      "severity": "high",
+      "ransomware": false,
+      "dateAdded": "2023-10-10",
+      "requiredAction": "Update HTTP/2 stacks (nghttp2, etc.)"
+    },
+    {
+      "cveId": "CVE-2023-20887",
+      "vendor": "VMware",
+      "product": "VMware Aria Operations for Networks",
+      "aliases": ["aria operations", "vrealize network insight"],
+      "severity": "critical",
+      "ransomware": false,
+      "dateAdded": "2023-06-13",
+      "requiredAction": "Apply VMware advisories"
+    },
+    {
+      "cveId": "CVE-2023-27997",
+      "vendor": "Fortinet",
+      "product": "FortiOS",
+      "aliases": ["fortios", "fortiproxy", "fortigate"],
+      "severity": "critical",
+      "ransomware": true,
+      "dateAdded": "2023-06-13",
+      "requiredAction": "Upgrade FortiOS / FortiProxy"
+    },
+    {
+      "cveId": "CVE-2024-27198",
+      "vendor": "JetBrains",
+      "product": "TeamCity",
+      "aliases": ["teamcity", "jetbrains teamcity"],
+      "severity": "critical",
+      "ransomware": false,
+      "dateAdded": "2024-03-07",
+      "requiredAction": "Upgrade TeamCity"
+    },
+    {
+      "cveId": "CVE-2024-27199",
+      "vendor": "JetBrains",
+      "product": "TeamCity",
+      "aliases": ["teamcity"],
+      "severity": "high",
+      "ransomware": false,
+      "dateAdded": "2024-03-07",
+      "requiredAction": "Upgrade TeamCity"
+    },
+    {
+      "cveId": "CVE-2023-26360",
+      "vendor": "Adobe",
+      "product": "ColdFusion",
+      "aliases": ["adobe coldfusion", "coldfusion"],
+      "severity": "critical",
+      "ransomware": true,
+      "dateAdded": "2023-03-15",
+      "requiredAction": "Apply ColdFusion updates"
+    },
+    {
+      "cveId": "CVE-2023-26359",
+      "vendor": "Adobe",
+      "product": "ColdFusion",
+      "aliases": ["coldfusion", "adobe coldfusion"],
+      "severity": "critical",
+      "ransomware": true,
+      "dateAdded": "2023-03-15",
+      "requiredAction": "Apply ColdFusion updates"
+    },
+    {
+      "cveId": "CVE-2023-20198",
+      "vendor": "Cisco",
+      "product": "IOS XE",
+      "aliases": ["ios xe", "cisco ios xe", "cisco ios-xe"],
+      "severity": "critical",
+      "ransomware": false,
+      "dateAdded": "2023-10-16",
+      "requiredAction": "Apply Cisco IOS XE updates"
+    },
+    {
+      "cveId": "CVE-2024-20353",
+      "vendor": "Cisco",
+      "product": "ASA / Firepower",
+      "aliases": ["cisco asa", "cisco firepower", "firepower threat defense"],
+      "severity": "critical",
+      "ransomware": false,
+      "dateAdded": "2024-04-24",
+      "requiredAction": "Apply Cisco ASA/FTD updates"
+    },
+    {
+      "cveId": "CVE-2023-42793",
+      "vendor": "JetBrains",
+      "product": "TeamCity",
+      "aliases": ["teamcity", "jetbrains teamcity"],
+      "severity": "critical",
+      "ransomware": true,
+      "dateAdded": "2023-09-19",
+      "requiredAction": "Upgrade TeamCity"
+    },
+    {
+      "cveId": "CVE-2024-24919",
+      "vendor": "Check Point",
+      "product": "Security Gateways",
+      "aliases": ["check point", "checkpoint", "check point gateway"],
+      "severity": "critical",
+      "ransomware": false,
+      "dateAdded": "2024-05-30",
+      "requiredAction": "Apply Check Point hotfixes"
+    }
+  ]
+}

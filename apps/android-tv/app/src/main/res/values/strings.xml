@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Bulwark TV</string>
+    <string name="enroll_title">Enroll this TV</string>
+    <string name="enroll_hint">Enter the pairing code from your Bulwark dashboard</string>
+    <string name="status_title">Device status</string>
+</resources>

@@ -40,12 +40,18 @@ Split the reusable security engine (inventory, risk engine, policy engine) into
 Auth, device registration/enrollment (pairing codes + per-device keys), device list,
 security score, findings, alerts, scan requests, email breach checks, basic reports.
 
-## Phase 4 — Android TV agent (first unique feature)
+## Phase 4 — Android TV agent (first unique feature)  *(scaffold in progress)*
 
 Compose TV UI (ten-foot design), device enrollment, app inventory, device legitimacy
 check, sideloaded-app detection, permission risk analysis, APK certificate/hash
 collection, `VpnService` DNS parsing + local blocklist, event batching, remote policy
 sync, emergency isolation.
+
+**Landed in `apps/android-tv/`:** Gradle multi-module project (`:core` JVM protocol
+library + `:app` Leanback/Compose TV UI), pairing enroll, WorkManager command poller,
+PackageManager inventory with APK/cert hashes + static surface (exported/debuggable/
+targetSdk), posture findings, DnsGuard `VpnService` + local blocklist, remote policy
+sync + emergency isolation, network-event batching, JVM demo (`:core:runAgentDemo`).
 
 ## Phase 5 — Vulnerability intelligence
 
