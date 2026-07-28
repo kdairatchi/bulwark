@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { DeviceStore } from './store'
 import {
-  createPairingCode, enrollDevice, listDevices, getDevice, listFindings,
+  createPairingCode, enrollDevice, listDevices, getDevice, listFindings, reviewFinding,
   authenticateDevice, heartbeat, submitInventory, submitFindings,
   getServerKey, issueCommand, requestScan, pollCommands, commandResult,
   getPolicy, putPolicy, isolateDevice, clearIsolation,
@@ -112,11 +112,40 @@ describe('device-api telemetry endpoints', () => {
     submitInventory(store, deviceId, { items: [{}, {}, {}] })
     submitFindings(store, deviceId, { findings: [{ level: 'high', subjectName: 'Sketchy', reason: 'known_c2' }] })
 
-    const d = (getDevice(store, deviceId).body as { lastHeartbeat: string; inventoryCount: number; findingsCount: number })
+    const d = (getDevice(store, deviceId).body as {
+      lastHeartbeat: string
+      inventoryCount: number
+      findingsCount: number
+      securityScore: number
+      openFindingsCount: number
+    })
     expect(d.lastHeartbeat).not.toBeNull()
     expect(d.inventoryCount).toBe(3)
     expect(d.findingsCount).toBe(1)
+    expect(d.openFindingsCount).toBe(1)
+    expect(d.securityScore).toBeLessThan(100)
     expect((listFindings(store).body as { count: number }).count).toBe(1)
+  })
+
+  it('reviews findings and improves security score', () => {
+    const store = freshStore()
+    const { deviceId } = enrolledDevice(store)
+    submitFindings(store, deviceId, {
+      findings: [
+        { level: 'likely_affected', subjectName: 'keygen', reason: 'suspicious_app_name' },
+        { level: 'potential_match', subjectName: 'Mystery', reason: 'unknown_publisher' },
+      ],
+    })
+    const before = getDevice(store, deviceId).body as { securityScore: number; openFindingsCount: number }
+    expect(before.openFindingsCount).toBe(2)
+    const findingId = (listFindings(store, deviceId).body as { findings: Array<{ id: string }> }).findings[0].id
+    const reviewed = reviewFinding(store, findingId, { status: 'false_positive', note: 'ok' })
+    expect(reviewed.status).toBe(200)
+    const after = getDevice(store, deviceId).body as { securityScore: number; openFindingsCount: number }
+    expect(after.openFindingsCount).toBe(1)
+    expect(after.securityScore).toBeGreaterThan(before.securityScore)
+    expect(reviewFinding(store, findingId, { status: 'not_a_status' }).status).toBe(400)
+    expect(reviewFinding(store, 'finding_nope', { status: 'accepted_risk' }).status).toBe(404)
   })
 
   it('does not leak the device public key in detail responses', () => {

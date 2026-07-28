@@ -460,6 +460,8 @@ type ParentDevice = {
   lastHeartbeat: string | null
   inventoryCount: number
   findingsCount: number
+  openFindingsCount?: number
+  securityScore?: number
   isolated: boolean
   policyVersion: number
   dnsGuardRequired: boolean
@@ -482,6 +484,9 @@ type ParentFinding = {
   subjectName: string
   reason: string
   createdAt: string
+  status?: string
+  reviewedAt?: string | null
+  reviewNote?: string | null
 }
 
 function ParentControlPanel({
@@ -705,6 +710,30 @@ function ParentControlPanel({
     setBusy(false)
   }
 
+  const handleReviewFinding = async (findingId: string, status: 'false_positive' | 'accepted_risk') => {
+    setBusy(true)
+    try {
+      const token = await ensureToken()
+      const res = await window.kudu?.dashboardReviewFinding?.({
+        ...authPayload(),
+        token: token || undefined,
+        findingId,
+        status,
+      })
+      if (res?.success) {
+        toast.success(t('parentReviewToast'), {
+          description: `${status} · score ${res.securityScore}`,
+        })
+        await refresh()
+      } else {
+        toast.error(t('parentReviewFailedToast'), { description: res && 'error' in res ? res.error : undefined })
+      }
+    } catch {
+      toast.error(t('parentReviewFailedToast'))
+    }
+    setBusy(false)
+  }
+
   return (
     <div
       className="rounded-2xl p-6 mb-4 mt-4"
@@ -792,7 +821,14 @@ function ParentControlPanel({
                   {d.os || 'unknown'} · {t('parentOnline')}: {d.lastHeartbeat ? new Date(d.lastHeartbeat).toLocaleString() : t('parentNever')}
                 </div>
                 <div className="text-[11px] mt-0.5" style={{ color: 'var(--text-dim)' }}>
-                  {t('parentApps')}: {d.inventoryCount} · {t('parentFindings')}: {d.findingsCount}
+                  {t('parentApps')}: {d.inventoryCount} · {t('parentFindings')}: {d.openFindingsCount ?? d.findingsCount}
+                  {' · '}
+                  <span style={{
+                    color: (d.securityScore ?? 100) >= 80 ? '#4ade80'
+                      : (d.securityScore ?? 100) >= 50 ? '#fbbf24' : '#f87171',
+                  }}>
+                    {t('parentScore')}: {d.securityScore ?? '—'}
+                  </span>
                 </div>
               </button>
             ))}
@@ -897,20 +933,58 @@ function ParentControlPanel({
         {findings.length === 0 ? (
           <p className="text-[12px]" style={{ color: 'var(--text-dim)' }}>{t('parentNoFindings')}</p>
         ) : (
-          <div className="max-h-40 overflow-y-auto space-y-1.5 mb-4">
-            {[...findings].reverse().slice(0, 40).map((f) => (
-              <div
-                key={f.id}
-                className="rounded-lg px-3 py-2 text-[11px] font-mono"
-                style={{ background: 'var(--bg-subtle)', border: '1px solid var(--border-medium)', color: 'var(--text-secondary)' }}
-              >
-                <span style={{ color: f.level.includes('likely') ? '#f87171' : '#fbbf24' }}>{f.level}</span>
-                {' · '}
-                {f.subjectName}
-                {' · '}
-                <span style={{ color: 'var(--text-dim)' }}>{f.reason}</span>
-              </div>
-            ))}
+          <div className="max-h-52 overflow-y-auto space-y-1.5 mb-4">
+            {[...findings].reverse().slice(0, 40).map((f) => {
+              const resolved = ['false_positive', 'accepted_risk', 'fixed', 'not_exploitable'].includes(f.status || '')
+              return (
+                <div
+                  key={f.id}
+                  className="rounded-lg px-3 py-2 text-[11px] font-mono"
+                  style={{
+                    background: 'var(--bg-subtle)',
+                    border: '1px solid var(--border-medium)',
+                    color: 'var(--text-secondary)',
+                    opacity: resolved ? 0.55 : 1,
+                  }}
+                >
+                  <div>
+                    <span style={{ color: f.level.includes('likely') ? '#f87171' : '#fbbf24' }}>{f.level}</span>
+                    {' · '}
+                    {f.subjectName}
+                    {' · '}
+                    <span style={{ color: 'var(--text-dim)' }}>{f.reason}</span>
+                    {f.status && (
+                      <>
+                        {' · '}
+                        <span style={{ color: resolved ? '#4ade80' : 'var(--text-muted)' }}>{f.status}</span>
+                      </>
+                    )}
+                  </div>
+                  {!resolved && (
+                    <div className="flex flex-wrap gap-1.5 mt-1.5">
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={() => handleReviewFinding(f.id, 'false_positive')}
+                        className="rounded-lg px-2 py-1 text-[10px] font-sans font-medium disabled:opacity-40"
+                        style={{ background: 'var(--bg-elevated, var(--bg-subtle))', border: '1px solid var(--border-medium)', color: 'var(--text-secondary)' }}
+                      >
+                        {t('parentMarkFalsePositive')}
+                      </button>
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={() => handleReviewFinding(f.id, 'accepted_risk')}
+                        className="rounded-lg px-2 py-1 text-[10px] font-sans font-medium disabled:opacity-40"
+                        style={{ background: 'var(--bg-elevated, var(--bg-subtle))', border: '1px solid var(--border-medium)', color: 'var(--text-secondary)' }}
+                      >
+                        {t('parentMarkAcceptedRisk')}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
           </div>
         )}
       </div>

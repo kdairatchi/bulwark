@@ -246,6 +246,7 @@ export const IPC = {
   DASHBOARD_LIST_FINDINGS: 'dashboard:list-findings',
   DASHBOARD_ISSUE_COMMAND: 'dashboard:issue-command',
   DASHBOARD_REQUEST_SCAN: 'dashboard:request-scan',
+  DASHBOARD_REVIEW_FINDING: 'dashboard:review-finding',
   DASHBOARD_BOOTSTRAP: 'dashboard:bootstrap',
 
   // Threat Monitor

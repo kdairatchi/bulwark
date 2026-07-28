@@ -26,6 +26,32 @@ export interface Device {
   findingsCount: number
 }
 
+/** Review / lifecycle statuses for dashboard findings (see docs/api). */
+export const FINDING_STATUSES = [
+  'confirmed_affected',
+  'likely_affected',
+  'potential_match',
+  'not_exploitable',
+  'fixed',
+  'accepted_risk',
+  'false_positive',
+  'unknown',
+] as const
+
+export type StoredFindingStatus = (typeof FINDING_STATUSES)[number]
+
+export function isFindingStatus(value: string): value is StoredFindingStatus {
+  return (FINDING_STATUSES as readonly string[]).includes(value)
+}
+
+/** Statuses that no longer count against the device security score. */
+export const RESOLVED_FINDING_STATUSES = new Set<StoredFindingStatus>([
+  'false_positive',
+  'accepted_risk',
+  'fixed',
+  'not_exploitable',
+])
+
 export interface StoredFinding {
   id: string
   deviceId: string
@@ -33,6 +59,9 @@ export interface StoredFinding {
   subjectName: string
   reason: string
   createdAt: string
+  status: StoredFindingStatus
+  reviewedAt: string | null
+  reviewNote: string | null
 }
 
 export interface AuditEvent {
@@ -274,10 +303,15 @@ export class DeviceStore {
     this.log('inventory_received', `${deviceId} +${count}`)
   }
 
-  addFindings(deviceId: string, findings: Omit<StoredFinding, 'id' | 'deviceId' | 'createdAt'>[]): number {
+  addFindings(deviceId: string, findings: Array<Omit<StoredFinding, 'id' | 'deviceId' | 'createdAt' | 'status' | 'reviewedAt' | 'reviewNote'> & {
+    status?: string
+  }>): number {
     const d = this.devices.get(deviceId)
     if (!d) return 0
     for (const f of findings) {
+      const status = typeof f.status === 'string' && isFindingStatus(f.status)
+        ? f.status
+        : (isFindingStatus(f.level) ? f.level : 'potential_match')
       this.findings.push({
         id: `finding_${this.deps.uuid()}`,
         deviceId,
@@ -285,6 +319,9 @@ export class DeviceStore {
         subjectName: f.subjectName,
         reason: f.reason,
         createdAt: new Date(this.deps.now()).toISOString(),
+        status,
+        reviewedAt: null,
+        reviewNote: null,
       })
     }
     d.findingsCount += findings.length
@@ -294,6 +331,49 @@ export class DeviceStore {
 
   listFindings(deviceId?: string): StoredFinding[] {
     return deviceId ? this.findings.filter((f) => f.deviceId === deviceId) : [...this.findings]
+  }
+
+  getFinding(id: string): StoredFinding | undefined {
+    return this.findings.find((f) => f.id === id)
+  }
+
+  reviewFinding(
+    id: string,
+    status: StoredFindingStatus,
+    note?: string | null,
+  ): StoredFinding | null {
+    const f = this.getFinding(id)
+    if (!f) return null
+    f.status = status
+    f.reviewedAt = new Date(this.deps.now()).toISOString()
+    f.reviewNote = typeof note === 'string' && note.trim() ? note.trim().slice(0, 500) : null
+    this.log('finding_reviewed', `${id} → ${status}`)
+    return f
+  }
+
+  openFindings(deviceId: string): StoredFinding[] {
+    return this.findings.filter(
+      (f) => f.deviceId === deviceId && !RESOLVED_FINDING_STATUSES.has(f.status),
+    )
+  }
+
+  /**
+   * 0–100 security score from open findings (100 = nothing needs attention).
+   * Resolved reviews (false_positive / accepted_risk / fixed / not_exploitable) do not penalize.
+   */
+  securityScore(deviceId: string): number {
+    const open = this.openFindings(deviceId)
+    if (open.length === 0) return 100
+    let penalty = 0
+    for (const f of open) {
+      const level = f.level.toLowerCase()
+      if (level.includes('critical') || level.includes('likely') || level === 'dangerous') penalty += 25
+      else if (level.includes('high') || level.includes('confirmed')) penalty += 20
+      else if (level.includes('medium') || level.includes('potential')) penalty += 10
+      else if (level === 'safe' || level === 'low') penalty += 2
+      else penalty += 8
+    }
+    return Math.max(0, Math.min(100, 100 - penalty))
   }
 
   private networkEvents: Array<{ id: string; deviceId: string; type: string; at: string; subject: string | null; detail: string | null; metadata: Record<string, unknown> }> = []

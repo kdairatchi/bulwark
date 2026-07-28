@@ -4,7 +4,7 @@
 import { createServer, type IncomingMessage, type ServerResponse, type Server } from 'http'
 import { DeviceStore } from './store'
 import {
-  createPairingCode, enrollDevice, listDevices, getDevice, listFindings,
+  createPairingCode, enrollDevice, listDevices, getDevice, listFindings, reviewFinding,
   authenticateDevice, authenticateDashboard, dashboardBootstrap,
   heartbeat, submitInventory, submitFindings,
   getServerKey, issueCommand, requestScan, pollCommands, commandResult,
@@ -72,6 +72,13 @@ export function createDeviceApiServer(store: DeviceStore): Server {
       if (method === 'GET' && path === '/v1/findings') {
         const deviceId = url.searchParams.get('deviceId') ?? undefined
         return send(res, listFindings(store, deviceId))
+      }
+      const reviewPath = path.match(/^\/v1\/findings\/([^/]+)\/review$/)
+      if (method === 'POST' && reviewPath) {
+        if (!requireDashboard(store, req, res)) return
+        const body = parseJson(rawBody)
+        if (body === null) return send(res, { status: 400, body: { error: 'invalid JSON' } })
+        return send(res, reviewFinding(store, decodeURIComponent(reviewPath[1]), body))
       }
       if (method === 'GET' && path === '/v1/network-events') {
         const deviceId = url.searchParams.get('deviceId') ?? undefined

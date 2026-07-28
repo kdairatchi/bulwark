@@ -180,4 +180,19 @@ export function registerDeviceApiIpc(): void {
       return httpErr(err)
     }
   })
+
+  ipcMain.handle(IPC.DASHBOARD_REVIEW_FINDING, async (_event, payload: unknown) => {
+    const o = asRecord(payload)
+    const findingId = typeof o.findingId === 'string' ? o.findingId : ''
+    const status = typeof o.status === 'string' ? o.status : ''
+    if (!findingId) return { success: false, error: 'findingId is required' }
+    if (!status) return { success: false, error: 'status is required' }
+    const note = typeof o.note === 'string' ? o.note : undefined
+    try {
+      const result = await clientFromPayload(payload).reviewFinding(findingId, status, note)
+      return { success: true as const, ...result }
+    } catch (err) {
+      return httpErr(err)
+    }
+  })
 }

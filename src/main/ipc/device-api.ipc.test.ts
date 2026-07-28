@@ -26,6 +26,7 @@ vi.mock('../../shared/channels', () => ({
     DASHBOARD_LIST_FINDINGS: 'dashboard:list-findings',
     DASHBOARD_ISSUE_COMMAND: 'dashboard:issue-command',
     DASHBOARD_REQUEST_SCAN: 'dashboard:request-scan',
+    DASHBOARD_REVIEW_FINDING: 'dashboard:review-finding',
   },
 }))
 
@@ -50,6 +51,7 @@ vi.mock('../services/dashboard-api-client', () => {
     listFindings: vi.fn(),
     issueCommand: vi.fn(),
     requestScan: vi.fn(),
+    reviewFinding: vi.fn(),
   }
   class MockDashboardApiClient {
     constructor() {
@@ -169,5 +171,23 @@ describe('device-api IPC', () => {
     })
     expect(dash.requestScan).toHaveBeenCalledWith('dev_1', 'health', { scope: undefined })
     expect(result).toEqual({ success: true, command: { commandId: 'cmd_s', type: 'RUN_HEALTH_ASSESSMENT' } })
+  })
+
+  it('reviews a finding via dashboard client', async () => {
+    registerDeviceApiIpc()
+    const dash = (dashboardMod as unknown as { __mockDashboard: {
+      reviewFinding: ReturnType<typeof vi.fn>
+    } }).__mockDashboard
+    dash.reviewFinding.mockResolvedValue({
+      finding: { id: 'f1', status: 'false_positive' },
+      securityScore: 100,
+      openFindingsCount: 0,
+    })
+    const result = await invoke('dashboard:review-finding', {
+      findingId: 'f1',
+      status: 'false_positive',
+    })
+    expect(dash.reviewFinding).toHaveBeenCalledWith('f1', 'false_positive', undefined)
+    expect(result).toMatchObject({ success: true, securityScore: 100 })
   })
 })

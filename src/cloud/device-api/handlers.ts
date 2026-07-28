@@ -1,7 +1,7 @@
 // Pure request handlers + device signature auth. No I/O — the http server in
 // server.ts adapts Node requests to these, which keeps them unit-testable.
 
-import { DeviceStore } from './store'
+import { DeviceStore, isFindingStatus, type StoredFindingStatus } from './store'
 import { canonicalRequest, sha256Hex, verifyMessage } from './crypto'
 
 export interface HandlerResult {
@@ -76,30 +76,55 @@ export function enrollDevice(store: DeviceStore, input: unknown): HandlerResult 
   return { status: 201, body: { deviceId: device.id, enrolledAt: device.enrolledAt } }
 }
 
+function deviceDashboardView(store: DeviceStore, d: NonNullable<ReturnType<DeviceStore['getDevice']>>) {
+  const policy = store.getPolicy(d.id)
+  return {
+    id: d.id, name: d.name, os: d.os, enrolledAt: d.enrolledAt,
+    lastHeartbeat: d.lastHeartbeat, inventoryCount: d.inventoryCount, findingsCount: d.findingsCount,
+    openFindingsCount: store.openFindings(d.id).length,
+    securityScore: store.securityScore(d.id),
+    isolated: policy?.isolated ?? false,
+    policyVersion: policy?.version ?? 1,
+    dnsGuardRequired: policy?.dnsGuardRequired ?? false,
+    blockedDomains: policy?.blockedDomains ?? [],
+  }
+}
+
 export function listDevices(store: DeviceStore): HandlerResult {
-  const devices = store.listDevices().map((d) => {
-    const policy = store.getPolicy(d.id)
-    return {
-      id: d.id, name: d.name, os: d.os, enrolledAt: d.enrolledAt,
-      lastHeartbeat: d.lastHeartbeat, inventoryCount: d.inventoryCount, findingsCount: d.findingsCount,
-      isolated: policy?.isolated ?? false,
-      policyVersion: policy?.version ?? 1,
-      dnsGuardRequired: policy?.dnsGuardRequired ?? false,
-      blockedDomains: policy?.blockedDomains ?? [],
-    }
-  })
+  const devices = store.listDevices().map((d) => deviceDashboardView(store, d))
   return { status: 200, body: { devices, count: devices.length } }
 }
 
 export function getDevice(store: DeviceStore, id: string): HandlerResult {
   const d = store.getDevice(id)
   if (!d) return { status: 404, body: { error: 'device not found' } }
-  return { status: 200, body: { ...d, publicKeyPem: undefined } }
+  return { status: 200, body: { ...deviceDashboardView(store, d), publicKeyPem: undefined } }
 }
 
 export function listFindings(store: DeviceStore, deviceId?: string): HandlerResult {
   const findings = store.listFindings(deviceId)
   return { status: 200, body: { findings, count: findings.length } }
+}
+
+/** Dashboard: mark a finding reviewed (false_positive, accepted_risk, etc.). */
+export function reviewFinding(store: DeviceStore, findingId: string, input: unknown): HandlerResult {
+  const o = (input ?? {}) as Record<string, unknown>
+  const statusRaw = typeof o.status === 'string' ? o.status.trim() : ''
+  if (!isFindingStatus(statusRaw)) {
+    return { status: 400, body: { error: 'status must be a valid finding status' } }
+  }
+  const note = typeof o.note === 'string' ? o.note : typeof o.reviewNote === 'string' ? o.reviewNote : null
+  const finding = store.reviewFinding(findingId, statusRaw as StoredFindingStatus, note)
+  if (!finding) return { status: 404, body: { error: 'finding not found' } }
+  const score = store.securityScore(finding.deviceId)
+  return {
+    status: 200,
+    body: {
+      finding,
+      securityScore: score,
+      openFindingsCount: store.openFindings(finding.deviceId).length,
+    },
+  }
 }
 
 // ─── Device signature auth ──────────────────────────────────
@@ -229,10 +254,11 @@ export function submitFindings(store: DeviceStore, deviceId: string, input: unkn
       level: typeof r.level === 'string' ? r.level : 'unknown',
       subjectName: typeof r.subjectName === 'string' ? r.subjectName : 'unknown',
       reason: typeof r.reason === 'string' ? r.reason : '',
+      status: typeof r.status === 'string' ? r.status : undefined,
     }
   })
   const accepted = store.addFindings(deviceId, findings)
-  return { status: 202, body: { accepted } }
+  return { status: 202, body: { accepted, securityScore: store.securityScore(deviceId) } }
 }
 
 export function getPolicy(store: DeviceStore, deviceId: string): HandlerResult {

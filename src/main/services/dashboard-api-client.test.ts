@@ -144,4 +144,28 @@ describe('DashboardApiClient', () => {
     const issued = await client.requestScan('dev_1', 'malware', { scope: 'quick' })
     expect(issued.command.type).toBe('RUN_MALWARE_SCAN')
   })
+
+  it('reviewFinding posts status to /findings/{id}/review', async () => {
+    const fetchImpl = mockFetch((url, init) => {
+      expect(String(url)).toContain('/v1/findings/finding_1/review')
+      expect(init?.method).toBe('POST')
+      expect(JSON.parse(String(init?.body))).toEqual({ status: 'accepted_risk', note: 'known tool' })
+      return {
+        status: 200,
+        body: {
+          finding: { id: 'finding_1', status: 'accepted_risk', reviewedAt: 't', reviewNote: 'known tool' },
+          securityScore: 90,
+          openFindingsCount: 1,
+        },
+      }
+    })
+    const client = new DashboardApiClient({
+      baseUrl: 'http://127.0.0.1:8787',
+      token: 'tok',
+      fetchImpl: fetchImpl as unknown as typeof fetch,
+    })
+    const res = await client.reviewFinding('finding_1', 'accepted_risk', 'known tool')
+    expect(res.securityScore).toBe(90)
+    expect(res.finding.status).toBe('accepted_risk')
+  })
 })

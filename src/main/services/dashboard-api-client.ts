@@ -14,6 +14,8 @@ export interface DashboardDevice {
   lastHeartbeat: string | null
   inventoryCount: number
   findingsCount: number
+  openFindingsCount: number
+  securityScore: number
   isolated: boolean
   policyVersion: number
   dnsGuardRequired: boolean
@@ -47,6 +49,9 @@ export interface DashboardFinding {
   subjectName: string
   reason: string
   createdAt: string
+  status: string
+  reviewedAt: string | null
+  reviewNote: string | null
 }
 
 export interface DashboardApiClientOptions {
@@ -216,6 +221,30 @@ export class DashboardApiClient {
     const { status, body } = await this.request('POST', `/v1/devices/${deviceId}/scan`, payload)
     if (status < 200 || status >= 300) throw new DeviceApiHttpError(status, body)
     return body as { command: { commandId: string; type: string } }
+  }
+
+  async reviewFinding(
+    findingId: string,
+    status: string,
+    note?: string,
+  ): Promise<{
+    finding: DashboardFinding
+    securityScore: number
+    openFindingsCount: number
+  }> {
+    const payload: Record<string, unknown> = { status }
+    if (note) payload.note = note
+    const { status: httpStatus, body } = await this.request(
+      'POST',
+      `/v1/findings/${encodeURIComponent(findingId)}/review`,
+      payload,
+    )
+    if (httpStatus < 200 || httpStatus >= 300) throw new DeviceApiHttpError(httpStatus, body)
+    return body as {
+      finding: DashboardFinding
+      securityScore: number
+      openFindingsCount: number
+    }
   }
 }
 

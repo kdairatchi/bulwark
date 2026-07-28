@@ -618,6 +618,32 @@ const api = {
     { success: true; command: { commandId: string; type: string } } | { success: false; error: string }
   > => ipcRenderer.invoke(IPC.DASHBOARD_REQUEST_SCAN, payload),
 
+  dashboardReviewFinding: (payload: {
+    baseUrl?: string
+    token?: string
+    findingId: string
+    status: string
+    note?: string
+  }): Promise<
+    | {
+      success: true
+      finding: {
+        id: string
+        deviceId: string
+        level: string
+        subjectName: string
+        reason: string
+        createdAt: string
+        status: string
+        reviewedAt: string | null
+        reviewNote: string | null
+      }
+      securityScore: number
+      openFindingsCount: number
+    }
+    | { success: false; error: string }
+  > => ipcRenderer.invoke(IPC.DASHBOARD_REVIEW_FINDING, payload),
+
   // Duplicate Finder
   duplicatesSelectDir: (): Promise<string | null> =>
     ipcRenderer.invoke(IPC.DUPLICATES_SELECT_DIR),

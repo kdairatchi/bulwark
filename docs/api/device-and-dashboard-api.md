@@ -62,7 +62,7 @@ POST /v1/devices/{id}/commands                # implemented (enqueue allowlisted
 PUT  /v1/devices/{id}/policy                  # implemented (merge policy + APPLY_POLICY command)
 POST /v1/devices/{id}/isolate                 # implemented (emergency isolate + ISOLATE_DEVICE)
 DELETE /v1/devices/{id}/isolate               # implemented (clear + CLEAR_ISOLATION)
-POST /v1/findings/{id}/review                 # planned
+POST /v1/findings/{id}/review                 # implemented (Bearer; status=false_positive|accepted_risk|…)
 POST /v1/devices/{id}/scan                    # implemented (Bearer; kind=health|malware|vulnerability → RUN_*)
 GET  /v1/reports                              # planned
 POST /v1/breach-monitors                      # planned
@@ -160,6 +160,12 @@ Shared implementation: `src/cloud/device-api/commands.ts`
 
 `confirmed_affected · likely_affected · potential_match · not_exploitable ·
 fixed · accepted_risk · false_positive · unknown`.
+
+`POST /v1/findings/{id}/review` (Bearer) body: `{ "status": "false_positive"|"accepted_risk"|"fixed"|"not_exploitable"|…, "note"?: "…" }`.
+
+`GET /v1/devices` includes `securityScore` (0–100) and `openFindingsCount`. Resolved
+statuses (`false_positive`, `accepted_risk`, `fixed`, `not_exploitable`) do not
+penalize the score.
 
 ## Fleet hierarchy
 
