@@ -217,10 +217,13 @@ export class DashboardApiClient {
   async requestScan(
     deviceId: string,
     kind: 'health' | 'malware' | 'vulnerability' | 'lolbins',
-    opts?: { scope?: string },
+    opts?: { scope?: string; kevSync?: boolean; osv?: boolean; epss?: boolean },
   ): Promise<{ command: { commandId: string; type: string } }> {
     const payload: Record<string, unknown> = { kind }
     if (opts?.scope) payload.scope = opts.scope
+    if (opts?.kevSync !== undefined) payload.kevSync = opts.kevSync
+    if (opts?.osv !== undefined) payload.osv = opts.osv
+    if (opts?.epss !== undefined) payload.epss = opts.epss
     const { status, body } = await this.request('POST', `/v1/devices/${deviceId}/scan`, payload)
     if (status < 200 || status >= 300) throw new DeviceApiHttpError(status, body)
     return body as { command: { commandId: string; type: string } }

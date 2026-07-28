@@ -173,8 +173,16 @@ export function registerDeviceApiIpc(): void {
       return { success: false, error: 'kind must be health, malware, vulnerability, or lolbins' }
     }
     const scope = typeof o.scope === 'string' ? o.scope : undefined
+    const kevSync = typeof o.kevSync === 'boolean' ? o.kevSync : undefined
+    const osv = typeof o.osv === 'boolean' ? o.osv : undefined
+    const epss = typeof o.epss === 'boolean' ? o.epss : undefined
     try {
-      const result = await clientFromPayload(payload).requestScan(deviceId, kind, { scope })
+      const result = await clientFromPayload(payload).requestScan(deviceId, kind, {
+        scope,
+        kevSync,
+        osv,
+        epss,
+      })
       return { success: true as const, ...result }
     } catch (err) {
       return httpErr(err)

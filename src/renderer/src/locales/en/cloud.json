@@ -200,6 +200,7 @@
   "parentRunMalware": "Run malware scan",
   "parentRunLolbins": "Run LotL scan",
   "parentRunVuln": "Run vuln scan",
+  "parentVulnOsv": "Include OSV",
   "parentRefreshFeeds": "Refresh threat feeds",
   "parentFeedsQueuedToast": "UPDATE_THREAT_FEEDS queued — agent will sync URLhaus + optional domains",
   "parentFeedsFailedToast": "Could not queue threat-feed refresh",

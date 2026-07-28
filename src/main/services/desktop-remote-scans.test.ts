@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import type { InstalledApp } from '../platform/types'
 import {
   runHealthAssessment,
@@ -67,6 +67,33 @@ describe('desktop-remote-scans', () => {
     expect(r.scope).toMatch(/kev/)
     expect(r._findings.some((f) => f.category === 'kev' && f.subjectName === 'CVE-2023-38545')).toBe(true)
     expect(r.note).toMatch(/NVD|incomplete/i)
+  })
+
+  it('vulnerability scan can attach EPSS tags when epss=true', async () => {
+    const prevFetch = globalThis.fetch
+    globalThis.fetch = vi.fn(async (url: RequestInfo | URL) => {
+      const u = String(url)
+      if (u.includes('epss')) {
+        return {
+          ok: true,
+          json: async () => ({
+            data: [{ cve: 'CVE-2023-38545', epss: '0.78', percentile: '0.99' }],
+          }),
+        } as Response
+      }
+      throw new Error(`unexpected fetch ${u}`)
+    }) as typeof fetch
+    try {
+      const r = await runVulnerabilityScanPosture(
+        [app({ name: 'curl', version: '7.88.1', publisher: 'curl' })],
+        { epss: true },
+      )
+      expect(r.scope).toMatch(/epss/)
+      const hit = r._findings.find((f) => f.subjectName === 'CVE-2023-38545')
+      expect(hit?.reason).toMatch(/epss=/)
+    } finally {
+      globalThis.fetch = prevFetch
+    }
   })
 
   it('executeRemoteScan dispatches by type', async () => {

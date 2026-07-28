@@ -73,8 +73,8 @@ function getCatalog(catalogPath?: string): KevCatalog {
   }
 }
 
-export function getKevCatalogInfo(catalogPath?: string): { version: string; entryCount: number } {
-  const c = loadKevCatalog(catalogPath ?? defaultCatalogPath())
+export function getKevCatalogInfo(catalogPath?: string, catalog?: KevCatalog): { version: string; entryCount: number } {
+  const c = catalog ?? loadKevCatalog(catalogPath ?? defaultCatalogPath())
   return { version: c.version, entryCount: c.entries.length }
 }
 
@@ -136,9 +136,9 @@ function versionStillVulnerable(installed: string, vulnerableBelow?: string): bo
 
 export function matchKevAgainstApps(
   apps: InstalledApp[],
-  opts: { catalogPath?: string; maxHits?: number } = {},
+  opts: { catalogPath?: string; catalog?: KevCatalog; maxHits?: number } = {},
 ): KevHit[] {
-  const catalog = getCatalog(opts.catalogPath)
+  const catalog = opts.catalog ?? getCatalog(opts.catalogPath)
   const maxHits = opts.maxHits ?? 100
   const hits: KevHit[] = []
   const seen = new Set<string>()

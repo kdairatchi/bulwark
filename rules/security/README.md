@@ -26,18 +26,23 @@ Used by:
 Curated offline **CISA KEV** subset for **basic CVE matching** (name/alias + optional
 `vulnerableBelow` version gate). Wired into `RUN_VULNERABILITY_SCAN` via `kev-matcher`.
 
-Optional live enrichment: pass `parameters.osv=true` to also query OSV.dev for a
-small allowlisted set of packages (soft-fail, bounded).
+**Live sync:** `kev-feed` can download the full CISA KEV JSON, cache it under userData,
+and merge with vendored entries (vendored keeps version gates / richer aliases). Enable
+with `parameters.kevSync=true` (parent vuln scan does this by default).
+
+**EPSS:** `epss-client` enriches CVE/KEV/OSV findings via FIRST.org when `parameters.epss=true`.
+
+**OSV:** pass `parameters.osv=true` for bounded OSV.dev package queries (parent checkbox).
 
 ### Coverage vs gaps
 
 | Capability | Status |
 |------------|--------|
 | Offline KEV name/version match (curated) | **Landed** |
+| Live CISA KEV sync + disk cache | **Landed** (`kevSync`) |
+| EPSS enrichment | **Landed** (`epss`) |
 | Bounded OSV queries (`osv=true`) | **Landed (optional)** |
-| Full CISA KEV catalog sync | Not yet (subset only) |
-| NVD bulk / CPE matching | **Phase 5 incomplete** |
-| EPSS enrichment | **Phase 5 incomplete** |
+| Full NVD CPE matching | **Phase 5 incomplete** |
 | Live zero-day intel feed | Out of scope |
 | Full LOLBAS dump (~1000+ bins) | Seed catalog; expand iteratively |
 | ETW / process-tree / kernel | Not started |

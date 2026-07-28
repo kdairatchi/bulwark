@@ -208,8 +208,10 @@ describe('device-api commands', () => {
     const lol = requestScan(store, deviceId, { kind: 'lolbins' })
     expect((lol.body as { command: { type: string; parameters: { scope: string } } }).command.type).toBe('RUN_MALWARE_SCAN')
     expect((lol.body as { command: { parameters: { scope: string } } }).command.parameters.scope).toBe('lolbins')
-    const vuln = requestScan(store, deviceId, { kind: 'vulnerability' })
+    const vuln = requestScan(store, deviceId, { kind: 'vulnerability', kevSync: true, epss: true, osv: false })
     expect((vuln.body as { command: { type: string } }).command.type).toBe('RUN_VULNERABILITY_SCAN')
+    expect((vuln.body as { command: { parameters: Record<string, unknown> } }).command.parameters.kevSync).toBe(true)
+    expect((vuln.body as { command: { parameters: Record<string, unknown> } }).command.parameters.epss).toBe(true)
     expect(requestScan(store, deviceId, { kind: 'nope' }).status).toBe(400)
   })
 

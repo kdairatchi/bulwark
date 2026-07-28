@@ -509,6 +509,7 @@ function ParentControlPanel({
   const [mintedCode, setMintedCode] = useState<string | null>(null)
   const [blockedText, setBlockedText] = useState('')
   const [quarantinePath, setQuarantinePath] = useState('')
+  const [vulnOsv, setVulnOsv] = useState(false)
   const [dnsGuard, setDnsGuard] = useState(false)
   const [busy, setBusy] = useState(false)
   const [dashboardToken, setDashboardToken] = useState('')
@@ -691,7 +692,10 @@ function ParentControlPanel({
     setBusy(false)
   }
 
-  const handleRequestScan = async (kind: 'health' | 'malware' | 'vulnerability' | 'lolbins') => {
+  const handleRequestScan = async (
+    kind: 'health' | 'malware' | 'vulnerability' | 'lolbins',
+    extra: Record<string, unknown> = {},
+  ) => {
     if (!selected) return
     setBusy(true)
     try {
@@ -702,6 +706,15 @@ function ParentControlPanel({
         deviceId: selected.id,
         kind,
         scope: kind === 'malware' ? 'quick' : kind === 'lolbins' ? 'lolbins' : undefined,
+        ...(kind === 'vulnerability'
+          ? {
+              // Phase 5 thin slice: refresh CISA KEV + EPSS; OSV opt-in via checkbox
+              kevSync: true,
+              epss: true,
+              osv: vulnOsv,
+              ...extra,
+            }
+          : extra),
       })
       if (res?.success) {
         toast.success(t('parentScanQueuedToast'), { description: res.command.type })
@@ -977,6 +990,10 @@ function ParentControlPanel({
                     <Bug className="h-3.5 w-3.5" strokeWidth={1.8} />
                     {t('parentRunVuln')}
                   </button>
+                  <label className="flex items-center gap-1.5 text-[11px] px-1" style={{ color: 'var(--text-muted)' }}>
+                    <input type="checkbox" checked={vulnOsv} onChange={(e) => setVulnOsv(e.target.checked)} />
+                    {t('parentVulnOsv')}
+                  </label>
                   <button
                     onClick={handleRefreshFeeds}
                     disabled={busy}

@@ -17,7 +17,9 @@ import {
   getLolbinCatalogInfo,
 } from './lolbin-scanner'
 import { matchKevAgainstApps, kevHitsToCloudFindings, getKevCatalogInfo } from './kev-matcher'
+import { getEffectiveKevCatalog } from './kev-feed'
 import { scanAppsWithOsv } from './osv-client'
+import { fetchEpssScores, enrichFindingsWithEpss } from './epss-client'
 
 export type CloudScanFinding = InventoryFinding
 
@@ -160,9 +162,9 @@ export async function runMalwareScanQuick(
 }
 
 /**
- * Vulnerability posture + offline KEV name/version match + technique/vuln-heuristic grep.
- * Optional OSV.dev queries when parameters.osv === true (soft-fail, bounded).
- * Full NVD bulk + EPSS enrichment remains incomplete Phase 5 work.
+ * Vulnerability posture + KEV name/version match (+ optional live CISA sync) +
+ * technique/vuln-heuristic grep. Optional OSV + EPSS enrichment (soft-fail, bounded).
+ * Full NVD CPE matching remains incomplete Phase 5 work.
  */
 export async function runVulnerabilityScanPosture(
   apps: InstalledApp[],
@@ -181,15 +183,32 @@ export async function runVulnerabilityScanPosture(
     ),
   )
 
-  let kevInfo = { version: '0', entryCount: 0 }
-  try { kevInfo = getKevCatalogInfo() } catch { /* catalog missing in odd test layouts */ }
-  const kevHits = kevHitsToCloudFindings(matchKevAgainstApps(apps))
+  const enableKevSync = parameters.kevSync === true || parameters.kevSync === 'true'
+    || parameters.syncKev === true || parameters.syncKev === 'true'
+  const kevEffective = await getEffectiveKevCatalog({ sync: enableKevSync })
+  const kevInfo = getKevCatalogInfo(undefined, kevEffective.catalog)
+  const kevHits = kevHitsToCloudFindings(
+    matchKevAgainstApps(apps, { catalog: kevEffective.catalog }),
+  )
 
   const enableOsv = parameters.osv === true || parameters.osv === 'true'
   const osvHits = enableOsv ? await scanAppsWithOsv(apps) : []
 
-  const findings = [...kevHits, ...osvHits, ...posture, ...techniqueHits, ...nameTech].slice(0, 200)
-  const cveLike = kevHits.length + osvHits.length
+  const enableEpss = parameters.epss === true || parameters.epss === 'true'
+  let cveFindings = [...kevHits, ...osvHits]
+  if (enableEpss && cveFindings.length > 0) {
+    const scores = await fetchEpssScores(cveFindings.map((f) => f.subjectName))
+    cveFindings = enrichFindingsWithEpss(cveFindings, scores)
+  }
+
+  const findings = [...cveFindings, ...posture, ...techniqueHits, ...nameTech].slice(0, 200)
+  const cveLike = cveFindings.length
+  const scopeParts = ['kev']
+  if (enableKevSync || kevEffective.source.startsWith('merged')) scopeParts.push(kevEffective.synced ? 'live' : 'cached')
+  if (enableOsv) scopeParts.push('osv')
+  if (enableEpss) scopeParts.push('epss')
+  scopeParts.push('posture', 'technique')
+
   return {
     ok: true,
     stub: false,
@@ -198,12 +217,12 @@ export async function runVulnerabilityScanPosture(
     threatsFound: findings.length,
     postureScore: buildAppRiskReport(installedAppsToPrograms(apps)).postureScore,
     appsAssessed: apps.length,
-    scope: enableOsv
-      ? 'kev_osv_posture_technique'
-      : 'kev_posture_technique',
-    note: `Offline KEV match (catalog v${kevInfo.version}, ${kevInfo.entryCount} entries, ${cveLike} CVE-like hits)`
-      + (enableOsv ? ' + bounded OSV queries' : '')
-      + ' — full NVD/EPSS Phase 5 still incomplete (not a live zero-day feed)',
+    scope: scopeParts.join('_'),
+    note: `KEV match (${kevEffective.source}, catalog v${kevInfo.version}, ${kevInfo.entryCount} entries, ${cveLike} CVE-like hits)`
+      + (enableOsv ? ' + OSV' : '')
+      + (enableEpss ? ' + EPSS' : '')
+      + (kevEffective.error ? ` [kev-sync: ${kevEffective.error}]` : '')
+      + ' — full NVD CPE matching still incomplete (not a live zero-day feed)',
     parameters,
     _findings: findings,
   }
