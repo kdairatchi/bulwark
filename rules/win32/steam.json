@@ -3,10 +3,7 @@
   "type": "steam",
   "libraries": [
     "${PROGRAMFILES_X86}/Steam",
-    "${PROGRAMFILES}/Steam",
-    "D:/SteamLibrary",
-    "E:/SteamLibrary",
-    "F:/SteamLibrary"
+    "${PROGRAMFILES}/Steam"
   ],
   "redistPatterns": [
     "_CommonRedist", "CommonRedist", "__installer", "__Installer",

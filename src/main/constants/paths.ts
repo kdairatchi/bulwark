@@ -45,7 +45,7 @@ export const SYSTEM_PATHS = {
   defenderScanHistory: join(PROGRAMDATA, 'Microsoft', 'Windows Defender', 'Scans', 'History'),
 
   // Previous installation
-  windowsOld: 'C:\\Windows.old',
+  windowsOld: join(WINDIR, '..', 'Windows.old'),
 }
 
 // Only cache paths — never touch cookies, history, sessions, passwords, or bookmarks
@@ -221,7 +221,4 @@ export const STEAM_REDIST_PATTERNS = [
 export const DEFAULT_STEAM_LIBRARIES = [
   join(PROGRAMFILES_X86, 'Steam'),
   join(PROGRAMFILES, 'Steam'),
-  'D:\\SteamLibrary',
-  'E:\\SteamLibrary',
-  'F:\\SteamLibrary',
 ]

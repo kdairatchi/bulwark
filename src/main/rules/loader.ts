@@ -152,7 +152,7 @@ export function resolvePath(raw: string, vars: Record<string, string>, platform:
   })
   // Normalise separators: JSON always uses '/', convert to platform separator
   if (platform === 'win32') {
-    return resolved.replace(/\//g, '\\')
+    return path.win32.normalize(resolved.replace(/\//g, '\\'))
   }
   return resolved
 }

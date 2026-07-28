@@ -18,9 +18,11 @@ import miscJson from '../../../../rules/win32/misc.json'
 const HOME = homedir()
 const LOCALAPPDATA = process.env.LOCALAPPDATA || join(HOME, 'AppData', 'Local')
 const APPDATA = process.env.APPDATA || join(HOME, 'AppData', 'Roaming')
+const WINDIR = process.env.WINDIR || process.env.SystemRoot || 'C:\\Windows'
 const PROGRAMDATA = process.env.ProgramData || 'C:\\ProgramData'
 const PROGRAMFILES_X86 = process.env['ProgramFiles(x86)'] || 'C:\\Program Files (x86)'
 const PROGRAMFILES = process.env.ProgramFiles || 'C:\\Program Files'
+const PUBLIC = process.env.PUBLIC || join(path.win32.parse(WINDIR).root || 'C:\\', 'Users', 'Public')
 
 const rulesJson: RulesJsonSet = {
   system: systemJson as RulesJsonSet['system'],
@@ -48,8 +50,8 @@ export function createWin32Paths(): PlatformPaths {
         { path: join(userProfile, 'Documents'),  maxDepth: 4, maxFiles: 5000 },
         { path: userProfile,                     maxDepth: 1, maxFiles: 500 },
         { path: join(LOCALAPPDATA, 'Temp'),      maxDepth: 4, maxFiles: 10000 },
-        { path: 'C:\\Windows\\Temp',             maxDepth: 3, maxFiles: 5000 },
-        { path: 'C:\\Users\\Public',             maxDepth: 4, maxFiles: 3000 },
+        { path: join(WINDIR, 'Temp'),              maxDepth: 3, maxFiles: 5000 },
+        { path: PUBLIC,                            maxDepth: 4, maxFiles: 3000 },
 
         // Medium-risk: persistence & dropper locations — moderate scan
         { path: APPDATA,                         maxDepth: 5, maxFiles: 8000 },
@@ -64,11 +66,11 @@ export function createWin32Paths(): PlatformPaths {
 
     malwareSystemDirs(): string[] {
       return [
-        'c:\\windows\\system32',
-        'c:\\windows\\syswow64',
-        'c:\\windows',
-        'c:\\windows\\servicing',
-        'c:\\windows\\winsxs',
+        join(WINDIR, 'System32').toLowerCase(),
+        join(WINDIR, 'SysWOW64').toLowerCase(),
+        WINDIR.toLowerCase(),
+        join(WINDIR, 'servicing').toLowerCase(),
+        join(WINDIR, 'WinSxS').toLowerCase(),
       ]
     },
 
