@@ -255,6 +255,14 @@ export const IPC = {
   UTILITY_CONFIG_FIX_RUN: 'utility-config:fix:run',
   UTILITY_CONFIG_FIX_PROGRESS: 'utility-config:fix:progress',
 
+  // Utility Tabs — Updates (WinUtil-style OS updates / pause / helpers)
+  UTILITY_UPDATES_STATUS: 'utility-updates:status',
+  UTILITY_UPDATES_OS_CHECK: 'utility-updates:os:check',
+  UTILITY_UPDATES_OS_INSTALL: 'utility-updates:os:install',
+  UTILITY_UPDATES_PAUSE: 'utility-updates:pause',
+  UTILITY_UPDATES_RESUME: 'utility-updates:resume',
+  UTILITY_UPDATES_HELPER: 'utility-updates:helper',
+
   // Cloud Agent
   CLOUD_LINK: 'cloud:link',
   CLOUD_UNLINK: 'cloud:unlink',

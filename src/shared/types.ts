@@ -1206,6 +1206,67 @@ export interface UtilityConfigOpenSshStatusResult {
   details: string
 }
 
+/** Allowed Windows Update pause durations (days). */
+export type UtilityUpdatesPauseDays = 1 | 7 | 14 | 35
+
+export type UtilityUpdatesHelperId = 'open-wu-settings' | 'reset-wu-services' | 'winget-repair'
+
+export interface UtilityUpdatesStatus {
+  available: boolean
+  isAdmin: boolean
+  paused: boolean
+  pauseExpiresAt: string | null
+  details: string
+}
+
+export interface UtilityOsUpdateInfo {
+  title: string
+  kb: string
+  severity: string
+  sizeBytes: number
+  downloaded: boolean
+}
+
+export interface UtilityOsUpdateCheckResult {
+  available: boolean
+  updates: UtilityOsUpdateInfo[]
+  error?: string
+}
+
+export interface UtilityOsUpdateInstallResult {
+  success: boolean
+  installed: number
+  needsReboot: boolean
+  resultCode: number
+  needsAdmin: boolean
+  error?: string
+}
+
+export interface UtilityUpdatesPauseResult {
+  success: boolean
+  status?: UtilityUpdatesStatus
+  needsAdmin: boolean
+  error?: string
+}
+
+export interface UtilityUpdatesResumeResult {
+  success: boolean
+  status?: UtilityUpdatesStatus
+  needsAdmin: boolean
+  error?: string
+}
+
+/** Same shape as UtilityConfigActionResult for helper actions. */
+export interface UtilityUpdatesHelperResult {
+  id: string
+  success: boolean
+  summary: string
+  needsAdmin: boolean
+  requiresReboot: boolean
+  log?: string
+  error?: string
+}
+
 export interface UpdateCheckResult {
   apps: UpdatableApp[]
   upToDate: UpToDateApp[]

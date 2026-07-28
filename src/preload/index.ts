@@ -74,6 +74,14 @@ import type {
   UtilityConfigFixProgress,
   UtilityConfigOpenSshStatusResult,
   UtilityLegacyPanelLaunchResult,
+  UtilityOsUpdateCheckResult,
+  UtilityOsUpdateInstallResult,
+  UtilityUpdatesHelperId,
+  UtilityUpdatesHelperResult,
+  UtilityUpdatesPauseDays,
+  UtilityUpdatesPauseResult,
+  UtilityUpdatesResumeResult,
+  UtilityUpdatesStatus,
   FileTypeInfo,
   CloudActionEntry,
   ThreatSnapshot,
@@ -550,6 +558,20 @@ const api = {
     ipcRenderer.on(IPC.UTILITY_CONFIG_FIX_PROGRESS, handler)
     return () => { ipcRenderer.removeListener(IPC.UTILITY_CONFIG_FIX_PROGRESS, handler) }
   },
+
+  // Utility Tabs — Updates
+  utilityUpdatesStatus: (): Promise<UtilityUpdatesStatus> =>
+    ipcRenderer.invoke(IPC.UTILITY_UPDATES_STATUS),
+  utilityUpdatesOsCheck: (): Promise<UtilityOsUpdateCheckResult> =>
+    ipcRenderer.invoke(IPC.UTILITY_UPDATES_OS_CHECK),
+  utilityUpdatesOsInstall: (): Promise<UtilityOsUpdateInstallResult> =>
+    ipcRenderer.invoke(IPC.UTILITY_UPDATES_OS_INSTALL),
+  utilityUpdatesPause: (days: UtilityUpdatesPauseDays): Promise<UtilityUpdatesPauseResult> =>
+    ipcRenderer.invoke(IPC.UTILITY_UPDATES_PAUSE, days),
+  utilityUpdatesResume: (): Promise<UtilityUpdatesResumeResult> =>
+    ipcRenderer.invoke(IPC.UTILITY_UPDATES_RESUME),
+  utilityUpdatesHelper: (id: UtilityUpdatesHelperId): Promise<UtilityUpdatesHelperResult> =>
+    ipcRenderer.invoke(IPC.UTILITY_UPDATES_HELPER, id),
 
   // Cloud Agent
   cloudLink: (apiKey: string): Promise<{ success: boolean; error?: string }> =>
