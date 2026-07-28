@@ -1,4 +1,4 @@
-# Security grep catalogs
+# Security catalogs
 
 ## `lolbins.json` (v1.1+)
 
@@ -21,18 +21,30 @@ Used by:
 | `technique` | AMSI/ETW bypass, LSASS dump, WMI persist, schtasks /create, SSH -R |
 | `vuln_heuristic` | Log4Shell JNDI, Shellshock, Follina/msdt, PrintNightmare markers |
 
-### What this is not (still missing)
+## `kev.json` (v1.0+)
+
+Curated offline **CISA KEV** subset for **basic CVE matching** (name/alias + optional
+`vulnerableBelow` version gate). Wired into `RUN_VULNERABILITY_SCAN` via `kev-matcher`.
+
+Optional live enrichment: pass `parameters.osv=true` to also query OSV.dev for a
+small allowlisted set of packages (soft-fail, bounded).
+
+### Coverage vs gaps
 
 | Capability | Status |
 |------------|--------|
-| Live CVE / OSV / NVD matching | **Phase 5** — not this catalog |
-| CISA KEV + EPSS enrichment | **Phase 5** |
-| Live zero-day intel feed | **Out of scope** (static heuristics only) |
-| Full LOLBAS project dump (~1000+ bins) | Seed catalog (~70 rules); expand iteratively |
-| ETW / kernel / process-tree correlation | Not started |
-| Full disk YARA marathon remotely | Local malware UI path only |
-| Packet firewall | Deferred |
+| Offline KEV name/version match (curated) | **Landed** |
+| Bounded OSV queries (`osv=true`) | **Landed (optional)** |
+| Full CISA KEV catalog sync | Not yet (subset only) |
+| NVD bulk / CPE matching | **Phase 5 incomplete** |
+| EPSS enrichment | **Phase 5 incomplete** |
+| Live zero-day intel feed | Out of scope |
+| Full LOLBAS dump (~1000+ bins) | Seed catalog; expand iteratively |
+| ETW / process-tree / kernel | Not started |
 
 ### Schema
 
-`rules/schema/lolbins.schema.json` — validated by `npm run validate:rules`.
+- `rules/schema/lolbins.schema.json`
+- `rules/schema/kev.schema.json`
+
+Validated by `npm run validate:rules`.

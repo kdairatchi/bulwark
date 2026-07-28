@@ -16,6 +16,8 @@ import {
   matchLolbinContent,
   getLolbinCatalogInfo,
 } from './lolbin-scanner'
+import { matchKevAgainstApps, kevHitsToCloudFindings, getKevCatalogInfo } from './kev-matcher'
+import { scanAppsWithOsv } from './osv-client'
 
 export type CloudScanFinding = InventoryFinding
 
@@ -158,9 +160,9 @@ export async function runMalwareScanQuick(
 }
 
 /**
- * Vulnerability posture + technique / static vuln-heuristic grep
- * (AMSI bypass, Log4Shell JNDI markers, Follina/msdt, etc.).
- * Live CVE/OSV/KEV matching remains Phase 5 — this is static pattern heuristics only.
+ * Vulnerability posture + offline KEV name/version match + technique/vuln-heuristic grep.
+ * Optional OSV.dev queries when parameters.osv === true (soft-fail, bounded).
+ * Full NVD bulk + EPSS enrichment remains incomplete Phase 5 work.
  */
 export async function runVulnerabilityScanPosture(
   apps: InstalledApp[],
@@ -178,7 +180,16 @@ export async function runVulnerabilityScanPosture(
       (h) => h.category === 'technique' || h.category === 'vuln_heuristic',
     ),
   )
-  const findings = [...posture, ...techniqueHits, ...nameTech].slice(0, 200)
+
+  let kevInfo = { version: '0', entryCount: 0 }
+  try { kevInfo = getKevCatalogInfo() } catch { /* catalog missing in odd test layouts */ }
+  const kevHits = kevHitsToCloudFindings(matchKevAgainstApps(apps))
+
+  const enableOsv = parameters.osv === true || parameters.osv === 'true'
+  const osvHits = enableOsv ? await scanAppsWithOsv(apps) : []
+
+  const findings = [...kevHits, ...osvHits, ...posture, ...techniqueHits, ...nameTech].slice(0, 200)
+  const cveLike = kevHits.length + osvHits.length
   return {
     ok: true,
     stub: false,
@@ -187,8 +198,12 @@ export async function runVulnerabilityScanPosture(
     threatsFound: findings.length,
     postureScore: buildAppRiskReport(installedAppsToPrograms(apps)).postureScore,
     appsAssessed: apps.length,
-    scope: 'inventory_posture_plus_technique_vuln_grep',
-    note: 'Posture + offline technique/vuln-heuristic grep — live CVE/OSV/KEV is Phase 5 (not a zero-day intel feed)',
+    scope: enableOsv
+      ? 'kev_osv_posture_technique'
+      : 'kev_posture_technique',
+    note: `Offline KEV match (catalog v${kevInfo.version}, ${kevInfo.entryCount} entries, ${cveLike} CVE-like hits)`
+      + (enableOsv ? ' + bounded OSV queries' : '')
+      + ' — full NVD/EPSS Phase 5 still incomplete (not a live zero-day feed)',
     parameters,
     _findings: findings,
   }

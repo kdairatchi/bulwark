@@ -1,0 +1,40 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Bulwark curated CISA KEV snapshot",
+  "type": "object",
+  "required": ["version", "updatedAt", "entries"],
+  "additionalProperties": false,
+  "properties": {
+    "version": { "type": "string", "minLength": 1 },
+    "updatedAt": { "type": "string", "minLength": 1 },
+    "source": { "type": "string" },
+    "description": { "type": "string" },
+    "entries": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["cveId", "vendor", "product", "aliases", "severity"],
+        "additionalProperties": false,
+        "properties": {
+          "cveId": { "type": "string", "pattern": "^CVE-[0-9]{4}-[0-9]{4,}$" },
+          "vendor": { "type": "string", "minLength": 1 },
+          "product": { "type": "string", "minLength": 1 },
+          "aliases": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "type": "string", "minLength": 2 }
+          },
+          "severity": { "type": "string", "enum": ["critical", "high", "medium", "low"] },
+          "ransomware": { "type": "boolean" },
+          "dateAdded": { "type": "string" },
+          "requiredAction": { "type": "string" },
+          "vulnerableBelow": {
+            "type": "string",
+            "description": "If set, only flag when installed version is strictly below this"
+          }
+        }
+      }
+    }
+  }
+}

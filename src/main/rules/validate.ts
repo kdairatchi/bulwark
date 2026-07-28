@@ -109,7 +109,7 @@ for (const platform of PLATFORMS) {
   }
 }
 
-// Security / LotL grep catalog (separate schema from cleaner rules).
+// Security catalogs (LotL grep + curated KEV) — separate schemas from cleaner rules.
 console.log('\nsecurity:')
 {
   const lolSchemaPath = path.join(RULES_DIR, 'schema', 'lolbins.schema.json')
@@ -129,6 +129,29 @@ console.log('\nsecurity:')
     }
   } catch (e) {
     error(`lolbins.json: ${(e as Error).message}`)
+  }
+
+  const kevSchemaPath = path.join(RULES_DIR, 'schema', 'kev.schema.json')
+  const kevPath = path.join(RULES_DIR, 'security', 'kev.json')
+  try {
+    const kevSchema = JSON.parse(readFileSync(kevSchemaPath, 'utf-8'))
+    const kevValidate = ajv.compile(kevSchema)
+    const kevData = JSON.parse(readFileSync(kevPath, 'utf-8'))
+    if (!kevValidate(kevData)) {
+      const msgs = kevValidate.errors?.map((e) => `${e.instancePath} ${e.message}`).join('; ')
+      error(`kev.json: schema validation failed — ${msgs}`)
+    } else {
+      const ids = (kevData.entries as Array<{ cveId: string }>).map((e) => e.cveId)
+      // Duplicate CVE IDs can appear across products — allow, but require unique cveId+product pairs
+      const pairs = (kevData.entries as Array<{ cveId: string; product: string }>).map(
+        (e) => `${e.cveId}|${e.product}`,
+      )
+      const dupes = pairs.filter((p, i) => pairs.indexOf(p) !== i)
+      if (dupes.length) error(`kev.json: duplicate cveId+product: ${dupes.join(', ')}`)
+      else ok(`kev.json passes schema (${ids.length} entries)`)
+    }
+  } catch (e) {
+    error(`kev.json: ${(e as Error).message}`)
   }
 }
 

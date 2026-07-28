@@ -55,8 +55,18 @@ describe('desktop-remote-scans', () => {
       app({ name: 'Sketchy', publisher: '' }),
     ])
     expect(r.stub).toBe(false)
-    expect(r.note).toMatch(/Phase 5/)
+    expect(r.note).toMatch(/KEV|NVD/i)
     expect(r.appsAssessed).toBe(1)
+  })
+
+  it('vulnerability scan emits KEV CVE findings for vulnerable curl', async () => {
+    const r = await runVulnerabilityScanPosture([
+      app({ name: 'curl', version: '7.88.1', publisher: 'curl' }),
+    ])
+    expect(r.stub).toBe(false)
+    expect(r.scope).toMatch(/kev/)
+    expect(r._findings.some((f) => f.category === 'kev' && f.subjectName === 'CVE-2023-38545')).toBe(true)
+    expect(r.note).toMatch(/NVD|incomplete/i)
   })
 
   it('executeRemoteScan dispatches by type', async () => {
