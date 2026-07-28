@@ -14,6 +14,8 @@ import {
 import { PageHeader } from '@/components/layout/PageHeader'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
+import { FindingExplainPanel } from '@/components/shared/FindingExplainPanel'
+import { explainCloudAction, explainScanHistory } from '@/lib/activity-explain'
 import { useHistoryStore } from '@/stores/history-store'
 import { useCloudHistoryStore } from '@/stores/cloud-history-store'
 import { formatBytes } from '@/lib/utils'
@@ -618,6 +620,22 @@ function ScanDetailPopup({ entry, onClose }: { entry: ScanHistoryEntry; onClose:
           </button>
         </div>
 
+        {(() => {
+          const explained = explainScanHistory(entry)
+          return (
+            <div className="mb-5 rounded-xl px-4 py-3" style={{ background: 'var(--bg-subtle)', border: `1px solid ${explained.accent}33` }}>
+              <FindingExplainPanel
+                why={explained.why}
+                recommended={explained.recommended}
+                accent={explained.accent}
+                whyTitle={t('detail.explainWhy')}
+                recommendedTitle={t('detail.explainRecommended')}
+                animate={false}
+              />
+            </div>
+          )
+        })()}
+
         {/* Stats grid */}
         <div className="mb-5 grid grid-cols-4 gap-2.5">
           <DetailStat label={t('detail.statFound')} value={entry.totalItemsFound.toLocaleString()} />
@@ -1005,6 +1023,22 @@ function CloudDetailPopup({ entry, onClose }: { entry: CloudActionEntry; onClose
             <XCircle className="h-4 w-4" strokeWidth={1.8} />
           </button>
         </div>
+
+        {(() => {
+          const explained = explainCloudAction(entry)
+          return (
+            <div className="mb-5 rounded-xl px-4 py-3" style={{ background: 'var(--bg-subtle)', border: `1px solid ${explained.accent}33` }}>
+              <FindingExplainPanel
+                why={explained.why}
+                recommended={explained.recommended}
+                accent={explained.accent}
+                whyTitle={t('cloud.explainWhy')}
+                recommendedTitle={t('cloud.explainRecommended')}
+                animate={false}
+              />
+            </div>
+          )
+        })()}
 
         {/* Detail rows */}
         <div className="space-y-3 rounded-xl p-4" style={{ background: 'var(--bg-subtle)' }}>

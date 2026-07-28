@@ -30,7 +30,10 @@ import { openPublicCloudDashboard } from '@/lib/cloud-dashboard-url'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { FindingExplainPanel, FindingExpand } from '@/components/shared/FindingExplainPanel'
 import { FamilyPairingWizard } from '@/components/cloud/FamilyPairingWizard'
+import { EmergencyIsolateWizard } from '@/components/cloud/EmergencyIsolateWizard'
+import { BreachMonitorWizard } from '@/components/cloud/BreachMonitorWizard'
 import { explainFinding, familyStatusLabel } from '@/lib/finding-explain'
+import { explainParentEvent } from '@/lib/parent-event-explain'
 import { cn } from '@/lib/utils'
 import { useSettingsStore } from '@/stores/settings-store'
 import { usePlatform } from '@/hooks/usePlatform'
@@ -561,6 +564,11 @@ function ParentControlPanel({
   const [dnsGuard, setDnsGuard] = useState(false)
   const [busy, setBusy] = useState(false)
   const [dashboardToken, setDashboardToken] = useState('')
+  const [isolateWizard, setIsolateWizard] = useState<{ open: boolean; mode: 'isolate' | 'clear' }>({
+    open: false,
+    mode: 'isolate',
+  })
+  const [breachWizardOpen, setBreachWizardOpen] = useState(false)
 
   const selected = devices.find((d) => d.id === selectedId) ?? null
 
@@ -653,9 +661,10 @@ function ParentControlPanel({
     setMinting(false)
   }
 
-  const handleIsolate = async () => {
-    if (!selected) return
+  const handleIsolate = async (): Promise<boolean> => {
+    if (!selected) return false
     setBusy(true)
+    let ok = false
     try {
       const token = await ensureToken()
       const res = await window.kudu?.dashboardIsolate?.({
@@ -667,6 +676,7 @@ function ParentControlPanel({
       if (res?.success) {
         toast.success(t('parentIsolatedToast'))
         await refresh()
+        ok = true
       } else {
         toast.error(t('parentIsolateFailedToast'), { description: res && 'error' in res ? res.error : undefined })
       }
@@ -674,11 +684,13 @@ function ParentControlPanel({
       toast.error(t('parentIsolateFailedToast'))
     }
     setBusy(false)
+    return ok
   }
 
-  const handleClear = async () => {
-    if (!selected) return
+  const handleClear = async (): Promise<boolean> => {
+    if (!selected) return false
     setBusy(true)
+    let ok = false
     try {
       const token = await ensureToken()
       const res = await window.kudu?.dashboardClearIsolation?.({
@@ -689,6 +701,7 @@ function ParentControlPanel({
       if (res?.success) {
         toast.success(t('parentClearedToast'))
         await refresh()
+        ok = true
       } else {
         toast.error(t('parentIsolateFailedToast'), { description: res && 'error' in res ? res.error : undefined })
       }
@@ -696,6 +709,7 @@ function ParentControlPanel({
       toast.error(t('parentIsolateFailedToast'))
     }
     setBusy(false)
+    return ok
   }
 
   const handleSavePolicy = async () => {
@@ -867,13 +881,14 @@ function ParentControlPanel({
     setBusy(false)
   }
 
-  const handleAddBreachMonitor = async () => {
+  const handleAddBreachMonitor = async (): Promise<boolean> => {
     const email = breachEmailInput.trim()
     if (!email) {
       toast.error(t('parentBreachEmailRequired'))
-      return
+      return false
     }
     setBusy(true)
+    let ok = false
     try {
       const token = await ensureToken()
       const res = await window.kudu?.dashboardCreateBreachMonitor?.({
@@ -889,6 +904,7 @@ function ParentControlPanel({
         toast.success(t('parentBreachAddedToast'), {
           description: res.source ? `source=${res.source}` : undefined,
         })
+        ok = true
       } else {
         toast.error(t('parentBreachAddFailedToast'), { description: res && 'error' in res ? res.error : undefined })
       }
@@ -896,6 +912,7 @@ function ParentControlPanel({
       toast.error(t('parentBreachAddFailedToast'))
     }
     setBusy(false)
+    return ok
   }
 
   const handleRemoveBreachMonitor = async (email: string) => {
@@ -1077,7 +1094,7 @@ function ParentControlPanel({
                 <div className="flex flex-wrap gap-2">
                   {selected.isolated ? (
                     <button
-                      onClick={handleClear}
+                      onClick={() => setIsolateWizard({ open: true, mode: 'clear' })}
                       disabled={busy}
                       className="flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-[13px] font-medium disabled:opacity-40"
                       style={{ background: 'var(--bg-subtle)', border: '1px solid var(--border-medium)', color: 'var(--text-secondary)' }}
@@ -1087,7 +1104,7 @@ function ParentControlPanel({
                     </button>
                   ) : (
                     <button
-                      onClick={handleIsolate}
+                      onClick={() => setIsolateWizard({ open: true, mode: 'isolate' })}
                       disabled={busy}
                       className="flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-[13px] font-medium disabled:opacity-40"
                       style={{ background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.35)', color: '#f87171' }}
@@ -1268,6 +1285,24 @@ function ParentControlPanel({
           </span>
         </div>
         <p className="text-[11px] mb-2" style={{ color: 'var(--text-dim)' }}>{t('parentBreachHint')}</p>
+        {breachEmails.length === 0 ? (
+          <div
+            className="rounded-xl px-4 py-4 mb-3"
+            style={{ background: 'var(--bg-subtle)', border: '1px solid var(--border-medium)' }}
+          >
+            <p className="text-[12px] mb-3" style={{ color: 'var(--text-secondary)' }}>{t('parentBreachEmpty')}</p>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => setBreachWizardOpen(true)}
+              className="rounded-xl px-3 py-2 text-[12px] font-medium disabled:opacity-40"
+              style={{ background: 'rgba(96,165,250,0.15)', border: '1px solid rgba(96,165,250,0.35)', color: '#93c5fd' }}
+            >
+              {t('breachWizardStart')}
+            </button>
+          </div>
+        ) : (
+          <>
         <div className="flex flex-wrap gap-2 mb-3">
           <input
             type="email"
@@ -1281,11 +1316,20 @@ function ParentControlPanel({
           <button
             type="button"
             disabled={busy}
-            onClick={handleAddBreachMonitor}
+            onClick={() => void handleAddBreachMonitor()}
             className="rounded-xl px-3 py-2 text-[12px] font-medium disabled:opacity-40"
             style={{ background: 'rgba(96,165,250,0.15)', border: '1px solid rgba(96,165,250,0.35)', color: '#93c5fd' }}
           >
             {t('parentBreachAdd')}
+          </button>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => setBreachWizardOpen(true)}
+            className="rounded-xl px-3 py-2 text-[12px] font-medium disabled:opacity-40"
+            style={{ background: 'var(--bg-subtle)', border: '1px solid var(--border-medium)', color: 'var(--text-secondary)' }}
+          >
+            {t('breachWizardLearnMore')}
           </button>
           <button
             type="button"
@@ -1297,9 +1341,6 @@ function ParentControlPanel({
             {t('parentBreachRefresh')}
           </button>
         </div>
-        {breachEmails.length === 0 ? (
-          <p className="text-[12px]" style={{ color: 'var(--text-dim)' }}>{t('parentBreachEmpty')}</p>
-        ) : (
           <div className="space-y-2 max-h-64 overflow-y-auto">
             {breachEmails.map((m) => (
               <div
@@ -1363,6 +1404,7 @@ function ParentControlPanel({
               </div>
             ))}
           </div>
+          </>
         )}
       </div>
 
@@ -1373,23 +1415,98 @@ function ParentControlPanel({
         {events.length === 0 ? (
           <p className="text-[12px]" style={{ color: 'var(--text-dim)' }}>{t('parentNoEvents')}</p>
         ) : (
-          <div className="max-h-48 overflow-y-auto space-y-1.5">
+          <div className="max-h-72 overflow-y-auto space-y-2">
             {[...events].reverse().slice(0, 40).map((e) => (
-              <div
-                key={e.id}
-                className="rounded-lg px-3 py-2 text-[11px] font-mono"
-                style={{ background: 'var(--bg-subtle)', border: '1px solid var(--border-medium)', color: 'var(--text-secondary)' }}
-              >
-                <span style={{ color: e.type.includes('block') || e.type.includes('isolat') ? '#f87171' : '#a1a1aa' }}>{e.type}</span>
-                {' · '}
-                {e.subject || '—'}
-                {' · '}
-                <span style={{ color: 'var(--text-dim)' }}>{new Date(e.at).toLocaleString()}</span>
-              </div>
+              <ParentEventCard key={e.id} event={e} t={t} />
             ))}
           </div>
         )}
       </div>
+
+      <EmergencyIsolateWizard
+        open={isolateWizard.open}
+        mode={isolateWizard.mode}
+        deviceName={selected?.name || selected?.id || t('isolateWizardUnknownDevice')}
+        busy={busy}
+        t={t}
+        onClose={() => setIsolateWizard((w) => ({ ...w, open: false }))}
+        onConfirm={async () => {
+          if (isolateWizard.mode === 'isolate') return handleIsolate()
+          return handleClear()
+        }}
+      />
+      <BreachMonitorWizard
+        open={breachWizardOpen}
+        busy={busy}
+        email={breachEmailInput}
+        usage={breachUsage}
+        limit={breachLimit}
+        t={t}
+        onClose={() => setBreachWizardOpen(false)}
+        onEmailChange={setBreachEmailInput}
+        onConfirmAdd={handleAddBreachMonitor}
+      />
+    </div>
+  )
+}
+
+function ParentEventCard({
+  event: e,
+  t,
+}: {
+  event: ParentEvent
+  t: (key: string, opts?: Record<string, unknown>) => string
+}) {
+  const [open, setOpen] = useState(false)
+  const explained = explainParentEvent(e)
+
+  return (
+    <div
+      className="rounded-xl overflow-hidden"
+      style={{
+        background: 'var(--bg-subtle)',
+        border: `1px solid ${open ? explained.accent + '55' : 'var(--border-medium)'}`,
+      }}
+    >
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="flex w-full items-start gap-2 px-3 py-2 text-left"
+        aria-expanded={open}
+      >
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-1.5 mb-0.5">
+            <span
+              className="rounded-full px-2 py-0.5 text-[10px] font-semibold"
+              style={{ color: explained.accent, background: `${explained.accent}1a`, border: `1px solid ${explained.accent}40` }}
+            >
+              {explained.title}
+            </span>
+            <span className="text-[10px]" style={{ color: 'var(--text-dim)' }}>
+              {new Date(e.at).toLocaleString()}
+            </span>
+          </div>
+          <p className="text-[12px] truncate" style={{ color: 'var(--text-secondary)' }}>
+            {e.subject || e.type}
+          </p>
+        </div>
+        <span className="text-[11px] shrink-0 mt-1" style={{ color: 'var(--text-muted)' }}>
+          {open ? t('parentEventHide') : t('parentEventExplain')}
+        </span>
+      </button>
+      {open && (
+        <div className="px-3 pb-3 pt-0 border-t" style={{ borderColor: 'var(--border-medium)' }}>
+          <FindingExplainPanel
+            why={explained.why}
+            recommended={explained.recommended}
+            accent={explained.accent}
+            whyTitle={t('parentEventWhy')}
+            recommendedTitle={t('parentEventRecommended')}
+            animate={false}
+            className="pt-2"
+          />
+        </div>
+      )}
     </div>
   )
 }

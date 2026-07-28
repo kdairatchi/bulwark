@@ -27,6 +27,8 @@ import { PageHeader } from '@/components/layout/PageHeader'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
 import { StatCard } from '@/components/shared/StatCard'
 import { HealthScore } from '@/components/shared/HealthScore'
+import { FindingExplainPanel, FindingExpand } from '@/components/shared/FindingExplainPanel'
+import { explainHealthScore } from '@/lib/health-score-explain'
 import { cn, formatBytes, formatDate, formatNumber } from '@/lib/utils'
 import { useStatsStore } from '@/stores/stats-store'
 import { useSettingsStore } from '@/stores/settings-store'
@@ -201,28 +203,29 @@ export function DashboardPage() {
     startup: '/startup'
   }
 
-  const healthScore = (() => {
+  const healthExplanation = (() => {
     const totalTools = toolCoverage.length
     const doneTools = toolCoverage.filter((t) => t.usedRecently).length
-    let score = Math.round((doneTools / totalTools) * 60)
-
-    if (drives.length > 0) {
-      const worstUsage = Math.max(...drives.map((d) => d.usedSpace / d.totalSize))
-      if (worstUsage > 0.7) {
-        score -= Math.min(20, Math.round((worstUsage - 0.7) / 0.3 * 20))
-      }
-    }
-
-    if (stats.lastScanDate) {
-      const daysSinceScan = (Date.now() - new Date(stats.lastScanDate).getTime()) / (1000 * 60 * 60 * 24)
-      score -= Math.min(20, Math.round(daysSinceScan * (20 / 7)))
-    } else {
-      score -= 10
-    }
-
-    if (stats.lastScanDate) score += 40
-    return Math.max(0, Math.min(100, score))
+    const missingToolLabels = toolCoverage.filter((t) => !t.usedRecently).map((t) => t.label)
+    const worstDiskUsage = drives.length > 0
+      ? Math.max(...drives.map((d) => d.usedSpace / d.totalSize))
+      : null
+    const hasLastScan = !!stats.lastScanDate
+    const daysSinceScan = hasLastScan
+      ? (Date.now() - new Date(stats.lastScanDate!).getTime()) / (1000 * 60 * 60 * 24)
+      : null
+    return explainHealthScore({
+      toolsTotal: totalTools,
+      toolsRecent: doneTools,
+      missingToolLabels,
+      worstDiskUsage,
+      daysSinceScan,
+      hasLastScan,
+    })
   })()
+  const healthScore = healthExplanation.score
+
+  const [healthWhyOpen, setHealthWhyOpen] = useState(false)
 
   // ── One-click clean callbacks (unchanged logic) ────────────
 
@@ -477,6 +480,26 @@ export function DashboardPage() {
             className="glass-card flex flex-col items-center justify-center rounded-2xl px-6 py-6"
           >
             <HealthScore score={healthScore} size="md" />
+            <button
+              type="button"
+              onClick={() => setHealthWhyOpen((o) => !o)}
+              className="mt-3 text-[12px] font-medium transition-colors"
+              style={{ color: 'var(--accent)' }}
+            >
+              {healthWhyOpen ? t('healthWhyHide') : t('healthWhyToggle')}
+            </button>
+            <FindingExpand open={healthWhyOpen}>
+              <div className="mt-3 w-full max-w-sm rounded-xl px-3 py-3 text-left" style={{ background: 'var(--bg-subtle)', border: '1px solid var(--border-default)' }}>
+                <FindingExplainPanel
+                  why={healthExplanation.why}
+                  recommended={healthExplanation.recommended}
+                  accent={healthScore >= 71 ? '#22c55e' : healthScore >= 41 ? '#f59e0b' : '#f87171'}
+                  whyTitle={t('healthExplainWhy')}
+                  recommendedTitle={t('healthExplainRecommended')}
+                  animate={false}
+                />
+              </div>
+            </FindingExpand>
             <div className="mt-4 flex items-center gap-2">
               {toolCoverage.map((tool) => {
                 const Icon = tool.icon
