@@ -152,3 +152,16 @@ describe('defaultCommandExecutor', () => {
     expect(r.type).toBe('REQUEST_INVENTORY')
   })
 })
+
+describe('isValidPairingCode', () => {
+  it('accepts dashed and undashed 8-char codes', async () => {
+    const { isValidPairingCode, normalizePairingCode } = await import('./device-command-agent')
+    expect(normalizePairingCode('k7q29f3m')).toBe('K7Q2-9F3M')
+    expect(normalizePairingCode('K7Q2-9F3M')).toBe('K7Q2-9F3M')
+    expect(isValidPairingCode('K7Q2-9F3M')).toBe(true)
+    expect(isValidPairingCode('k7q2-9f3m')).toBe(true)
+    expect(isValidPairingCode('K7Q29F3M')).toBe(true)
+    expect(isValidPairingCode('AB')).toBe(false)
+    expect(isValidPairingCode('RUN_SHELL')).toBe(false)
+  })
+})

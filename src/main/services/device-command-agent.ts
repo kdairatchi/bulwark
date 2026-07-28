@@ -26,6 +26,17 @@ const DEFAULT_BASE_URL = process.env.DEVICE_API_URL || 'http://127.0.0.1:8787'
 const DEFAULT_POLL_MS = 15_000
 const MAX_SEEN_NONCES = 500
 
+/** Pairing codes are human-enterable like `K7Q2-9F3M` (dash optional on input). */
+export function normalizePairingCode(raw: string): string {
+  const cleaned = raw.trim().toUpperCase().replace(/[^A-Z0-9]/g, '')
+  if (cleaned.length === 8) return `${cleaned.slice(0, 4)}-${cleaned.slice(4)}`
+  return raw.trim().toUpperCase()
+}
+
+export function isValidPairingCode(code: string): boolean {
+  return /^[A-Z0-9]{4}-[A-Z0-9]{4}$/.test(normalizePairingCode(code))
+}
+
 export interface DeviceAgentStatus {
   enrolled: boolean
   running: boolean
@@ -191,8 +202,8 @@ export class DeviceCommandAgent {
     name?: string
     baseUrl?: string
   }): Promise<{ success: true; deviceId: string } | { success: false; error: string }> {
-    const code = input.code.trim().toUpperCase()
-    if (!/^[A-Z0-9]{4,16}$/.test(code)) {
+    const code = normalizePairingCode(input.code)
+    if (!isValidPairingCode(code)) {
       return { success: false, error: 'Invalid pairing code' }
     }
     const baseUrl = (input.baseUrl?.trim() || DEFAULT_BASE_URL).replace(/\/+$/, '')
