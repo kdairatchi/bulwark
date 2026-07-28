@@ -45,20 +45,38 @@ cd apps/android-tv
 Install on a device/emulator with the Leanback launcher. Emulator loopback to the
 host control plane is `http://10.0.2.2:8787` (prefilled in the enroll UI).
 
-### Release signing (local, optional)
+### Release signing (local + CI)
 
-Release builds stay **unsigned** unless you provide a keystore — so CI and debug
-keep working without secrets.
+Release builds stay **unsigned** unless you provide a keystore — so debug / unsigned
+CI keeps working.
+
+**Local**
 
 1. Copy `keystore.properties.example` → `keystore.properties` (gitignored).
 2. Point `storeFile` at a local `.jks` / `.keystore` (also gitignored).
 3. Or set env vars: `BULWARK_TV_STORE_FILE`, `BULWARK_TV_STORE_PASSWORD`,
    `BULWARK_TV_KEY_ALIAS`, `BULWARK_TV_KEY_PASSWORD`.
-4. Build: `./gradlew :app:assembleRelease`
+4. Build: `./gradlew :app:bundleRelease :app:assembleRelease`
 
-Bump `versionCode` / `versionName` in `app/build.gradle.kts` before Play uploads.
-Play Console upload / Play App Signing enrollment / CI secret wiring are **out of
-scope** here (wait for a trademark-cleared brand before locking identities).
+**CI / Play Console**
+
+See [`docs/play-release.md`](docs/play-release.md) for the full secret list and
+Play Console checklist. Workflows:
+
+- `.github/workflows/android-tv-ci.yml` — `:core:test` on TV path changes (no secrets)
+- `.github/workflows/android-tv-release.yml` — signed AAB/APK + optional Play upload
+  (`workflow_dispatch` or tag `tv-v*`)
+
+Required Actions secrets: `BULWARK_TV_KEYSTORE_BASE64`, `BULWARK_TV_STORE_PASSWORD`,
+`BULWARK_TV_KEY_ALIAS`, `BULWARK_TV_KEY_PASSWORD`,
+`BULWARK_TV_PLAY_SERVICE_ACCOUNT_JSON`.
+
+```bash
+./apps/android-tv/scripts/encode-keystore.sh path/to/upload.jks
+```
+
+Uploads default to the **internal** track as a **draft**. Bump `versionCode` via
+workflow inputs, tag-derived semver, or `BULWARK_TV_VERSION_CODE`.
 
 ## Security model
 
@@ -81,7 +99,7 @@ Matches `docs/api/device-and-dashboard-api.md` and
 
 ## Not in this slice (later Phase 4)
 
-Play Console upload / CI signing secrets · packet-level firewall beyond DNS.
+Promoting Play drafts to production automatically · packet-level firewall beyond DNS.
 
 ## This slice also includes
 
@@ -94,3 +112,4 @@ Play Console upload / CI signing secrets · packet-level firewall beyond DNS.
 - Commands: `BLOCK_DOMAIN`, `UPDATE_THREAT_FEEDS`, `ISOLATE_DEVICE`,
   `CLEAR_ISOLATION`, `APPLY_POLICY`, real `RUN_HEALTH_ASSESSMENT`
 - Optional local release signing scaffold (`keystore.properties`)
+- CI signed release + Play Console draft upload (`.github/workflows/android-tv-release.yml`)

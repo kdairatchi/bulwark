@@ -67,7 +67,8 @@ library + `:app` Leanback/Compose TV UI), pairing enroll, WorkManager command po
 PackageManager inventory with APK/cert hashes + static surface (exported/debuggable/
 targetSdk), posture findings, DnsGuard `VpnService` + local blocklist, remote policy
 sync + emergency isolation, network-event batching, JVM demo (`:core:runAgentDemo`),
-optional local release-signing scaffold, VPN consent UX (education + denied retry) and
+optional local release-signing scaffold, CI Play draft upload workflow
+(`android-tv-release.yml`), VPN consent UX (education + denied retry) and
 parent **VPN PENDING** hint.
 
 ## Phase 5 — Vulnerability intelligence

@@ -14,8 +14,9 @@ android {
         applicationId = "com.bulwark.tv"
         minSdk = 26
         targetSdk = 34
-        versionCode = 1
-        versionName = "0.1.0"
+        // CI can override via BULWARK_TV_VERSION_CODE / BULWARK_TV_VERSION_NAME
+        versionCode = System.getenv("BULWARK_TV_VERSION_CODE")?.toIntOrNull() ?: 1
+        versionName = System.getenv("BULWARK_TV_VERSION_NAME")?.takeIf { it.isNotBlank() } ?: "0.1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -40,7 +41,8 @@ android {
     if (hasReleaseSigning) {
         signingConfigs {
             create("release") {
-                storeFile = rootProject.file(storeFilePath!!)
+                val store = file(storeFilePath!!)
+                storeFile = if (store.isAbsolute) store else rootProject.file(storeFilePath)
                 this.storePassword = storePassword
                 this.keyAlias = keyAlias
                 this.keyPassword = keyPassword

@@ -1,0 +1,39 @@
+# Lightweight Android TV CI — no signing secrets required.
+# Runs :core JVM tests when apps/android-tv changes.
+
+name: Android TV CI
+
+on:
+  pull_request:
+    paths:
+      - "apps/android-tv/**"
+      - ".github/workflows/android-tv-ci.yml"
+  push:
+    branches: [main]
+    paths:
+      - "apps/android-tv/**"
+      - ".github/workflows/android-tv-ci.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  core-test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/android-tv
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Unit tests (:core)
+        run: ./gradlew :core:test --no-daemon
