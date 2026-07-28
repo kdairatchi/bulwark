@@ -236,6 +236,13 @@ export const IPC = {
   DEVICE_API_UNENROLL: 'device-api:unenroll',
   DEVICE_API_GET_STATUS: 'device-api:get-status',
   DEVICE_API_POLL_NOW: 'device-api:poll-now',
+  /** Parent dashboard ops against the control plane (unsigned reference routes). */
+  DASHBOARD_CREATE_PAIRING_CODE: 'dashboard:create-pairing-code',
+  DASHBOARD_LIST_DEVICES: 'dashboard:list-devices',
+  DASHBOARD_ISOLATE: 'dashboard:isolate',
+  DASHBOARD_CLEAR_ISOLATION: 'dashboard:clear-isolation',
+  DASHBOARD_PUT_POLICY: 'dashboard:put-policy',
+  DASHBOARD_LIST_EVENTS: 'dashboard:list-events',
 
   // Threat Monitor
   THREAT_MONITOR_GET_SNAPSHOT: 'threat-monitor:get-snapshot',

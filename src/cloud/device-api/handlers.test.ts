@@ -39,6 +39,9 @@ describe('device-api enrollment', () => {
     expect(res.status).toBe(201)
     expect((res.body as { deviceId: string }).deviceId).toMatch(/^dev_/)
     expect(listDevices(store).body).toMatchObject({ count: 1 })
+    const devices = (listDevices(store).body as { devices: Array<{ isolated: boolean; policyVersion: number }> }).devices
+    expect(devices[0].isolated).toBe(false)
+    expect(devices[0].policyVersion).toBe(1)
   })
 
   it('rejects enrollment with a bad/missing code', () => {

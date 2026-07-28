@@ -35,10 +35,17 @@ export function enrollDevice(store: DeviceStore, input: unknown): HandlerResult 
 }
 
 export function listDevices(store: DeviceStore): HandlerResult {
-  const devices = store.listDevices().map((d) => ({
-    id: d.id, name: d.name, os: d.os, enrolledAt: d.enrolledAt,
-    lastHeartbeat: d.lastHeartbeat, inventoryCount: d.inventoryCount, findingsCount: d.findingsCount,
-  }))
+  const devices = store.listDevices().map((d) => {
+    const policy = store.getPolicy(d.id)
+    return {
+      id: d.id, name: d.name, os: d.os, enrolledAt: d.enrolledAt,
+      lastHeartbeat: d.lastHeartbeat, inventoryCount: d.inventoryCount, findingsCount: d.findingsCount,
+      isolated: policy?.isolated ?? false,
+      policyVersion: policy?.version ?? 1,
+      dnsGuardRequired: policy?.dnsGuardRequired ?? false,
+      blockedDomains: policy?.blockedDomains ?? [],
+    }
+  })
   return { status: 200, body: { devices, count: devices.length } }
 }
 

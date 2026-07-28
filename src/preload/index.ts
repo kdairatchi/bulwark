@@ -526,6 +526,61 @@ const api = {
     commandsRejected: number
   }> => ipcRenderer.invoke(IPC.DEVICE_API_POLL_NOW),
 
+  // Parent dashboard (control plane operator actions)
+  dashboardCreatePairingCode: (payload?: { baseUrl?: string }): Promise<
+    { success: true; code: string; expiresAt: string } | { success: false; error: string }
+  > => ipcRenderer.invoke(IPC.DASHBOARD_CREATE_PAIRING_CODE, payload ?? {}),
+  dashboardListDevices: (payload?: { baseUrl?: string }): Promise<
+    | {
+        success: true
+        devices: Array<{
+          id: string
+          name: string
+          os: string | null
+          enrolledAt: string
+          lastHeartbeat: string | null
+          inventoryCount: number
+          findingsCount: number
+          isolated: boolean
+          policyVersion: number
+          dnsGuardRequired: boolean
+          blockedDomains: string[]
+        }>
+      }
+    | { success: false; error: string }
+  > => ipcRenderer.invoke(IPC.DASHBOARD_LIST_DEVICES, payload ?? {}),
+  dashboardIsolate: (payload: { baseUrl?: string; deviceId: string; reason?: string }): Promise<
+    { success: true; policy: { isolated: boolean; version: number }; command: { type: string } } | { success: false; error: string }
+  > => ipcRenderer.invoke(IPC.DASHBOARD_ISOLATE, payload),
+  dashboardClearIsolation: (payload: { baseUrl?: string; deviceId: string }): Promise<
+    { success: true; policy: { isolated: boolean; version: number }; command: { type: string } } | { success: false; error: string }
+  > => ipcRenderer.invoke(IPC.DASHBOARD_CLEAR_ISOLATION, payload),
+  dashboardPutPolicy: (payload: {
+    baseUrl?: string
+    deviceId: string
+    blockedDomains?: string[]
+    dnsGuardRequired?: boolean
+    isolationAllowlist?: string[]
+    allowInstallUnknown?: boolean
+  }): Promise<
+    { success: true; policy: { isolated: boolean; version: number; blockedDomains: string[] }; command: { type: string } } | { success: false; error: string }
+  > => ipcRenderer.invoke(IPC.DASHBOARD_PUT_POLICY, payload),
+  dashboardListEvents: (payload?: { baseUrl?: string; deviceId?: string }): Promise<
+    | {
+        success: true
+        events: Array<{
+          id: string
+          deviceId: string
+          type: string
+          at: string
+          subject: string | null
+          detail: string | null
+          metadata: Record<string, unknown>
+        }>
+      }
+    | { success: false; error: string }
+  > => ipcRenderer.invoke(IPC.DASHBOARD_LIST_EVENTS, payload ?? {}),
+
   // Duplicate Finder
   duplicatesSelectDir: (): Promise<string | null> =>
     ipcRenderer.invoke(IPC.DUPLICATES_SELECT_DIR),

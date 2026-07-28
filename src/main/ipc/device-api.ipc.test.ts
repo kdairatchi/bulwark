@@ -16,6 +16,12 @@ vi.mock('../../shared/channels', () => ({
     DEVICE_API_UNENROLL: 'device-api:unenroll',
     DEVICE_API_GET_STATUS: 'device-api:get-status',
     DEVICE_API_POLL_NOW: 'device-api:poll-now',
+    DASHBOARD_CREATE_PAIRING_CODE: 'dashboard:create-pairing-code',
+    DASHBOARD_LIST_DEVICES: 'dashboard:list-devices',
+    DASHBOARD_ISOLATE: 'dashboard:isolate',
+    DASHBOARD_CLEAR_ISOLATION: 'dashboard:clear-isolation',
+    DASHBOARD_PUT_POLICY: 'dashboard:put-policy',
+    DASHBOARD_LIST_EVENTS: 'dashboard:list-events',
   },
 }))
 
@@ -28,8 +34,30 @@ vi.mock('../services/device-command-agent', () => ({
   },
 }))
 
+vi.mock('../services/dashboard-api-client', () => {
+  const instance = {
+    createPairingCode: vi.fn(),
+    listDevices: vi.fn(),
+    isolateDevice: vi.fn(),
+    clearIsolation: vi.fn(),
+    putPolicy: vi.fn(),
+    listNetworkEvents: vi.fn(),
+  }
+  class MockDashboardApiClient {
+    constructor() {
+      return instance
+    }
+  }
+  return {
+    DashboardApiClient: MockDashboardApiClient,
+    resolveDashboardBaseUrl: (v?: string) => v || 'http://127.0.0.1:8787',
+    __mockDashboard: instance,
+  }
+})
+
 import { registerDeviceApiIpc } from './device-api.ipc'
 import { deviceCommandAgent } from '../services/device-command-agent'
+import * as dashboardMod from '../services/dashboard-api-client'
 
 const mockAgent = deviceCommandAgent as unknown as {
   enroll: ReturnType<typeof vi.fn>
@@ -50,12 +78,15 @@ describe('device-api IPC', () => {
     vi.clearAllMocks()
   })
 
-  it('registers enroll/unenroll/status/poll handlers', () => {
+  it('registers enroll/unenroll/status/poll and dashboard handlers', () => {
     registerDeviceApiIpc()
     expect(handleMap.has('device-api:enroll')).toBe(true)
     expect(handleMap.has('device-api:unenroll')).toBe(true)
     expect(handleMap.has('device-api:get-status')).toBe(true)
     expect(handleMap.has('device-api:poll-now')).toBe(true)
+    expect(handleMap.has('dashboard:list-devices')).toBe(true)
+    expect(handleMap.has('dashboard:isolate')).toBe(true)
+    expect(handleMap.has('dashboard:list-events')).toBe(true)
   })
 
   it('rejects short pairing codes', async () => {
@@ -88,5 +119,21 @@ describe('device-api IPC', () => {
     const result = await invoke('device-api:poll-now')
     expect(mockAgent.tick).toHaveBeenCalled()
     expect(result).toEqual({ enrolled: true, running: true })
+  })
+
+  it('lists devices via dashboard client', async () => {
+    registerDeviceApiIpc()
+    const dash = (dashboardMod as unknown as { __mockDashboard: {
+      listDevices: ReturnType<typeof vi.fn>
+    } }).__mockDashboard
+    dash.listDevices.mockResolvedValue([{ id: 'dev_1', name: 'TV' }])
+    const result = await invoke('dashboard:list-devices', { baseUrl: 'http://127.0.0.1:8787' })
+    expect(result).toEqual({ success: true, devices: [{ id: 'dev_1', name: 'TV' }] })
+  })
+
+  it('requires deviceId for isolate', async () => {
+    registerDeviceApiIpc()
+    const result = await invoke('dashboard:isolate', { baseUrl: 'http://127.0.0.1:8787' })
+    expect(result).toEqual({ success: false, error: 'deviceId is required' })
   })
 })

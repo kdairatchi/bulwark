@@ -17,6 +17,9 @@ import {
   Unlink,
   Check,
   Crown,
+  Lock,
+  Unlock,
+  Radio,
   type LucideIcon,
 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -212,6 +215,7 @@ export function CloudPage() {
           onUnenroll={handleDeviceApiUnenroll}
           onPollNow={handleDeviceApiPollNow}
         />
+        <ParentControlPanel t={t} baseUrl={pairingBaseUrl} onBaseUrlChange={setPairingBaseUrl} />
       </div>
     )
   }
@@ -441,11 +445,338 @@ export function CloudPage() {
         onUnenroll={handleDeviceApiUnenroll}
         onPollNow={handleDeviceApiPollNow}
       />
+      <ParentControlPanel t={t} baseUrl={pairingBaseUrl} onBaseUrlChange={setPairingBaseUrl} />
     </div>
   )
 }
 
 /* ── Sub-components ─────────────────────────────────────────── */
+
+type ParentDevice = {
+  id: string
+  name: string
+  os: string | null
+  enrolledAt: string
+  lastHeartbeat: string | null
+  inventoryCount: number
+  findingsCount: number
+  isolated: boolean
+  policyVersion: number
+  dnsGuardRequired: boolean
+  blockedDomains: string[]
+}
+
+type ParentEvent = {
+  id: string
+  deviceId: string
+  type: string
+  at: string
+  subject: string | null
+  detail: string | null
+}
+
+function ParentControlPanel({
+  t, baseUrl, onBaseUrlChange,
+}: {
+  t: (key: string) => string
+  baseUrl: string
+  onBaseUrlChange: (v: string) => void
+}) {
+  const [devices, setDevices] = useState<ParentDevice[]>([])
+  const [events, setEvents] = useState<ParentEvent[]>([])
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [minting, setMinting] = useState(false)
+  const [mintedCode, setMintedCode] = useState<string | null>(null)
+  const [blockedText, setBlockedText] = useState('')
+  const [dnsGuard, setDnsGuard] = useState(false)
+  const [busy, setBusy] = useState(false)
+
+  const selected = devices.find((d) => d.id === selectedId) ?? null
+
+  const refresh = useCallback(async () => {
+    setLoading(true)
+    try {
+      const [devRes, evtRes] = await Promise.all([
+        window.kudu?.dashboardListDevices?.({ baseUrl: baseUrl.trim() || undefined }),
+        window.kudu?.dashboardListEvents?.({
+          baseUrl: baseUrl.trim() || undefined,
+          deviceId: selectedId || undefined,
+        }),
+      ])
+      if (devRes?.success) {
+        setDevices(devRes.devices)
+        if (selectedId && !devRes.devices.some((d) => d.id === selectedId)) {
+          setSelectedId(devRes.devices[0]?.id ?? null)
+        } else if (!selectedId && devRes.devices[0]) {
+          setSelectedId(devRes.devices[0].id)
+        }
+      } else if (devRes && !devRes.success) {
+        toast.error(t('parentLoadFailedToast'), { description: devRes.error })
+      }
+      if (evtRes?.success) setEvents(evtRes.events)
+    } catch {
+      toast.error(t('parentLoadFailedToast'))
+    }
+    setLoading(false)
+  }, [baseUrl, selectedId, t])
+
+  useEffect(() => {
+    refresh()
+    const timer = setInterval(refresh, 8000)
+    return () => clearInterval(timer)
+  }, [refresh])
+
+  useEffect(() => {
+    if (!selected) return
+    setBlockedText(selected.blockedDomains.join('\n'))
+    setDnsGuard(selected.dnsGuardRequired)
+  }, [selected?.id, selected?.policyVersion])
+
+  const handleMint = async () => {
+    setMinting(true)
+    try {
+      const res = await window.kudu?.dashboardCreatePairingCode?.({ baseUrl: baseUrl.trim() || undefined })
+      if (res?.success) {
+        setMintedCode(res.code)
+        toast.success(t('parentMintedToast'), { description: res.code })
+      } else {
+        toast.error(t('parentMintFailedToast'), { description: res && 'error' in res ? res.error : undefined })
+      }
+    } catch {
+      toast.error(t('parentMintFailedToast'))
+    }
+    setMinting(false)
+  }
+
+  const handleIsolate = async () => {
+    if (!selected) return
+    setBusy(true)
+    try {
+      const res = await window.kudu?.dashboardIsolate?.({
+        baseUrl: baseUrl.trim() || undefined,
+        deviceId: selected.id,
+        reason: 'parent emergency isolate',
+      })
+      if (res?.success) {
+        toast.success(t('parentIsolatedToast'))
+        await refresh()
+      } else {
+        toast.error(t('parentIsolateFailedToast'), { description: res && 'error' in res ? res.error : undefined })
+      }
+    } catch {
+      toast.error(t('parentIsolateFailedToast'))
+    }
+    setBusy(false)
+  }
+
+  const handleClear = async () => {
+    if (!selected) return
+    setBusy(true)
+    try {
+      const res = await window.kudu?.dashboardClearIsolation?.({
+        baseUrl: baseUrl.trim() || undefined,
+        deviceId: selected.id,
+      })
+      if (res?.success) {
+        toast.success(t('parentClearedToast'))
+        await refresh()
+      } else {
+        toast.error(t('parentIsolateFailedToast'), { description: res && 'error' in res ? res.error : undefined })
+      }
+    } catch {
+      toast.error(t('parentIsolateFailedToast'))
+    }
+    setBusy(false)
+  }
+
+  const handleSavePolicy = async () => {
+    if (!selected) return
+    setBusy(true)
+    const blockedDomains = blockedText.split(/[\n,]+/).map((s) => s.trim().toLowerCase()).filter(Boolean)
+    try {
+      const res = await window.kudu?.dashboardPutPolicy?.({
+        baseUrl: baseUrl.trim() || undefined,
+        deviceId: selected.id,
+        blockedDomains,
+        dnsGuardRequired: dnsGuard,
+      })
+      if (res?.success) {
+        toast.success(t('parentPolicySavedToast'))
+        await refresh()
+      } else {
+        toast.error(t('parentPolicyFailedToast'), { description: res && 'error' in res ? res.error : undefined })
+      }
+    } catch {
+      toast.error(t('parentPolicyFailedToast'))
+    }
+    setBusy(false)
+  }
+
+  return (
+    <div
+      className="rounded-2xl p-6 mb-4 mt-4"
+      style={{ background: 'var(--card-bg)', border: '1px solid var(--border-default)' }}
+    >
+      <div className="flex items-start justify-between gap-3 mb-1">
+        <div>
+          <h3 className="text-[15px] font-semibold text-white">{t('parentTitle')}</h3>
+          <p className="text-[12px]" style={{ color: 'var(--text-muted)' }}>{t('parentDescription')}</p>
+        </div>
+        <button
+          onClick={refresh}
+          disabled={loading}
+          className="flex items-center gap-1.5 rounded-xl px-3 py-2 text-[12px] font-medium disabled:opacity-40"
+          style={{ background: 'var(--bg-subtle)', border: '1px solid var(--border-medium)', color: 'var(--text-secondary)' }}
+        >
+          <RefreshCw className={cn('h-3.5 w-3.5', loading && 'animate-spin')} strokeWidth={1.8} />
+          {t('parentRefresh')}
+        </button>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2 mt-4 mb-4">
+        <input
+          type="text"
+          value={baseUrl}
+          onChange={(e) => onBaseUrlChange(e.target.value)}
+          placeholder={t('pairingBaseUrlPlaceholder')}
+          className="flex-1 min-w-[220px] rounded-xl px-4 py-2.5 text-[13px] text-zinc-300 outline-none placeholder:text-zinc-700"
+          style={{ background: 'var(--bg-subtle)', border: '1px solid var(--border-medium)' }}
+        />
+        <button
+          onClick={handleMint}
+          disabled={minting}
+          className="flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-[13px] font-medium disabled:opacity-40"
+          style={{ background: 'var(--accent)', color: 'var(--text-on-accent)' }}
+        >
+          <Radio className="h-3.5 w-3.5" strokeWidth={1.8} />
+          {minting ? t('parentCreatingCode') : t('parentCreateCode')}
+        </button>
+      </div>
+
+      {mintedCode && (
+        <div
+          className="mb-4 rounded-xl px-4 py-3 text-[14px] font-mono tracking-widest text-center"
+          style={{ background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)', color: '#fbbf24' }}
+        >
+          {mintedCode}
+        </div>
+      )}
+
+      {devices.length === 0 ? (
+        <p className="text-[12px]" style={{ color: 'var(--text-dim)' }}>{t('parentNoDevices')}</p>
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="space-y-2">
+            {devices.map((d) => (
+              <button
+                key={d.id}
+                type="button"
+                onClick={() => setSelectedId(d.id)}
+                className="w-full text-left rounded-xl px-4 py-3 transition-colors"
+                style={{
+                  background: selectedId === d.id ? 'rgba(245,158,11,0.08)' : 'var(--bg-subtle)',
+                  border: selectedId === d.id ? '1px solid rgba(245,158,11,0.35)' : '1px solid var(--border-medium)',
+                }}
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[13px] font-medium text-zinc-200">{d.name}</span>
+                  {d.isolated && (
+                    <span className="text-[9px] font-bold tracking-wider px-1.5 py-0.5 rounded" style={{ background: 'rgba(239,68,68,0.15)', color: '#f87171' }}>
+                      {t('parentIsolatedBadge')}
+                    </span>
+                  )}
+                </div>
+                <div className="text-[11px] mt-1" style={{ color: 'var(--text-muted)' }}>
+                  {d.os || 'unknown'} · {t('parentOnline')}: {d.lastHeartbeat ? new Date(d.lastHeartbeat).toLocaleString() : t('parentNever')}
+                </div>
+              </button>
+            ))}
+          </div>
+
+          <div className="space-y-3">
+            {selected && (
+              <>
+                <div className="flex flex-wrap gap-2">
+                  {selected.isolated ? (
+                    <button
+                      onClick={handleClear}
+                      disabled={busy}
+                      className="flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-[13px] font-medium disabled:opacity-40"
+                      style={{ background: 'var(--bg-subtle)', border: '1px solid var(--border-medium)', color: 'var(--text-secondary)' }}
+                    >
+                      <Unlock className="h-3.5 w-3.5" strokeWidth={1.8} />
+                      {t('parentClearIsolation')}
+                    </button>
+                  ) : (
+                    <button
+                      onClick={handleIsolate}
+                      disabled={busy}
+                      className="flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-[13px] font-medium disabled:opacity-40"
+                      style={{ background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.35)', color: '#f87171' }}
+                    >
+                      <Lock className="h-3.5 w-3.5" strokeWidth={1.8} />
+                      {t('parentIsolate')}
+                    </button>
+                  )}
+                </div>
+
+                <label className="flex items-center gap-2 text-[12px]" style={{ color: 'var(--text-secondary)' }}>
+                  <input type="checkbox" checked={dnsGuard} onChange={(e) => setDnsGuard(e.target.checked)} />
+                  {t('parentDnsGuard')}
+                </label>
+
+                <div>
+                  <div className="text-[11px] mb-1" style={{ color: 'var(--text-muted)' }}>{t('parentBlockedDomains')}</div>
+                  <textarea
+                    value={blockedText}
+                    onChange={(e) => setBlockedText(e.target.value)}
+                    rows={4}
+                    className="w-full rounded-xl px-3 py-2 text-[12px] text-zinc-300 outline-none font-mono"
+                    style={{ background: 'var(--bg-subtle)', border: '1px solid var(--border-medium)' }}
+                  />
+                  <button
+                    onClick={handleSavePolicy}
+                    disabled={busy}
+                    className="mt-2 rounded-xl px-4 py-2 text-[12px] font-medium disabled:opacity-40"
+                    style={{ background: 'var(--accent)', color: 'var(--text-on-accent)' }}
+                  >
+                    {t('parentSavePolicy')}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      <div className="mt-5">
+        <h4 className="text-[12px] font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--text-muted)' }}>
+          {t('parentEvents')}
+        </h4>
+        {events.length === 0 ? (
+          <p className="text-[12px]" style={{ color: 'var(--text-dim)' }}>{t('parentNoEvents')}</p>
+        ) : (
+          <div className="max-h-48 overflow-y-auto space-y-1.5">
+            {[...events].reverse().slice(0, 40).map((e) => (
+              <div
+                key={e.id}
+                className="rounded-lg px-3 py-2 text-[11px] font-mono"
+                style={{ background: 'var(--bg-subtle)', border: '1px solid var(--border-medium)', color: 'var(--text-secondary)' }}
+              >
+                <span style={{ color: e.type.includes('block') || e.type.includes('isolat') ? '#f87171' : '#a1a1aa' }}>{e.type}</span>
+                {' · '}
+                {e.subject || '—'}
+                {' · '}
+                <span style={{ color: 'var(--text-dim)' }}>{new Date(e.at).toLocaleString()}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
 
 function DeviceApiPairingCard({
   t, status, pairingCode, pairingBaseUrl, pairingEnrolling,
