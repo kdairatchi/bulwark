@@ -2,11 +2,12 @@ import { ipcMain } from 'electron'
 import { execFile } from 'child_process'
 import { promisify } from 'util'
 import { IPC } from '../../shared/channels'
-import type { BloatwareApp } from '../../shared/types'
+import type { BloatwareApp, CleanOptions } from '../../shared/types'
 import { randomUUID } from 'crypto'
 import type { WindowGetter } from './index'
-import { validateStringArray } from '../services/ipc-validation'
+import { validateStringArray, parseCleanOptions } from '../services/ipc-validation'
 import { psUtf8 } from '../services/exec-utf8'
+import { assertCleanAllowed } from '../services/gated-clean'
 
 const execFileAsync = promisify(execFile)
 
@@ -200,12 +201,34 @@ export async function scanBloatware(): Promise<BloatwareApp[]> {
 
 export async function removeBloatware(
   packageNames: string[],
-  onProgress?: (current: number, total: number, currentApp: string, status: 'removing' | 'done' | 'failed') => void
-): Promise<{ removed: number; failed: number }> {
+  onProgress?: (current: number, total: number, currentApp: string, status: 'removing' | 'done' | 'failed' | 'would-remove') => void,
+  options: CleanOptions = {},
+): Promise<{ removed: number; failed: number; dryRun?: boolean; blockedByRestoreGate?: boolean }> {
+  const dryRun = options.dryRun === true
   const knownNames = new Set(KNOWN_BLOATWARE.map(b => b.packageName))
   const validNames = packageNames.filter(name =>
     typeof name === 'string' && knownNames.has(name)
   )
+
+  const gate = await assertCleanAllowed({
+    dryRun,
+    force: options.force === true,
+    description: `Bulwark debloat — ${new Date().toISOString()}`,
+  })
+  if (!gate.allowed) {
+    return {
+      removed: 0,
+      failed: validNames.length,
+      blockedByRestoreGate: true,
+    }
+  }
+
+  if (dryRun) {
+    for (let i = 0; i < validNames.length; i++) {
+      onProgress?.(i + 1, validNames.length, validNames[i], 'would-remove')
+    }
+    return { removed: validNames.length, failed: 0, dryRun: true }
+  }
 
   let removed = 0
   let failed = 0
@@ -245,13 +268,14 @@ export function registerDebloaterIpc(getWindow: WindowGetter): void {
     return scanBloatware()
   })
 
-  ipcMain.handle(IPC.DEBLOATER_REMOVE, async (_event, packageNames: string[]): Promise<{ removed: number; failed: number }> => {
+  ipcMain.handle(IPC.DEBLOATER_REMOVE, async (_event, packageNames: string[], options?: unknown): Promise<{ removed: number; failed: number; dryRun?: boolean; blockedByRestoreGate?: boolean }> => {
     if (process.platform !== 'win32') return { removed: 0, failed: 0 }
     const valid = validateStringArray(packageNames, 500)
     if (!valid) return { removed: 0, failed: 0 }
+    const opts = parseCleanOptions(options)
     return removeBloatware(valid, (current, total, currentApp, status) => {
       const win = getWindow()
       if (win && !win.isDestroyed()) win.webContents.send(IPC.DEBLOATER_REMOVE_PROGRESS, { current, total, currentApp, status })
-    })
+    }, opts)
   })
 }

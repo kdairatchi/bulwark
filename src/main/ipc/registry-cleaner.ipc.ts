@@ -7,12 +7,13 @@ import { join } from 'path'
 import { getBackupDir } from '../services/backup-dir'
 import { getSettings, updateRegistryIgnoredTweaks } from '../services/settings-store'
 import { IPC } from '../../shared/channels'
-import type { RegistryEntry } from '../../shared/types'
+import type { RegistryEntry, CleanOptions } from '../../shared/types'
 import { applyIgnoredTweaks } from '../../shared/registry-tweaks'
 import { randomUUID } from 'crypto'
 import type { WindowGetter } from './index'
-import { validateStringArray } from '../services/ipc-validation'
+import { validateStringArray, parseCleanOptions } from '../services/ipc-validation'
 import { execNativeUtf8, execTracked, psUtf8 } from '../services/exec-utf8'
+import { assertCleanAllowed } from '../services/gated-clean'
 
 const execFileAsync = promisify(execFile)
 
@@ -1964,9 +1965,44 @@ export function isProtectedDeleteKey(key: string): boolean {
 export async function fixRegistryEntries(
   entries: RegistryEntry[],
   onProgress?: (current: number, total: number, label: string) => void,
-  signal?: AbortSignal
-): Promise<{ fixed: number; failed: number; failures: { issue: string; reason: string }[] }> {
+  signal?: AbortSignal,
+  options: CleanOptions = {},
+): Promise<{ fixed: number; failed: number; failures: { issue: string; reason: string }[]; dryRun?: boolean; blockedByRestoreGate?: boolean }> {
+    const dryRun = options.dryRun === true
     const total = entries.length
+
+    const gate = await assertCleanAllowed({
+      dryRun,
+      force: options.force === true,
+      description: `Bulwark registry fix — ${new Date().toISOString()}`,
+    })
+    if (!gate.allowed) {
+      return {
+        fixed: 0,
+        failed: total,
+        failures: [{ issue: 'Restore point', reason: gate.error || 'restore_point_required' }],
+        blockedByRestoreGate: true,
+      }
+    }
+
+    if (dryRun) {
+      let fixed = 0
+      let failed = 0
+      const failures: { issue: string; reason: string }[] = []
+      for (let i = 0; i < entries.length; i++) {
+        if (signal?.aborted) break
+        const entry = entries[i]
+        if (!entry || !entry.fix) {
+          failed++
+          failures.push({ issue: 'Unknown entry', reason: 'Entry data not found — try scanning again before fixing' })
+          continue
+        }
+        onProgress?.(i + 1, total, `Would fix: ${entry.issue.substring(0, 80)}...`)
+        fixed++
+      }
+      onProgress?.(total, total, 'Done')
+      return { fixed, failed, failures, dryRun: true }
+    }
 
     // Create backup first
     onProgress?.(0, total, 'Creating registry backup...')
@@ -2105,10 +2141,11 @@ export function registerRegistryCleanerIpc(getWindow: WindowGetter): void {
     return entries
   })
 
-  ipcMain.handle(IPC.REGISTRY_FIX, async (_event, entryIds: string[]): Promise<{ fixed: number; failed: number; failures: { issue: string; reason: string }[] }> => {
+  ipcMain.handle(IPC.REGISTRY_FIX, async (_event, entryIds: string[], options?: unknown): Promise<{ fixed: number; failed: number; failures: { issue: string; reason: string }[]; dryRun?: boolean; blockedByRestoreGate?: boolean }> => {
     if (process.platform !== 'win32') return { fixed: 0, failed: 0, failures: [] }
     const valid = validateStringArray(entryIds)
     if (!valid) return { fixed: 0, failed: 0, failures: [] }
+    const opts = parseCleanOptions(options)
 
     // Cancel any in-flight fix
     fixAbort?.abort()
@@ -2128,7 +2165,7 @@ export function registerRegistryCleanerIpc(getWindow: WindowGetter): void {
       return await fixRegistryEntries(entriesToFix, (current, total, currentEntry) => {
         const win = getWindow()
         if (win && !win.isDestroyed()) win.webContents.send(IPC.REGISTRY_FIX_PROGRESS, { current, total, currentEntry })
-      }, signal)
+      }, signal, opts)
     } catch (err: any) {
       if (signal.aborted) return { fixed: 0, failed: 0, failures: [{ issue: 'Cancelled', reason: 'Operation was cancelled by user' }] }
       throw err

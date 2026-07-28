@@ -614,15 +614,20 @@ async function handleRegistry(args: string[], ctx: CliContext): Promise<number |
       cliOut(ctx, ctx.json ? { message: 'No issues found' } : 'No registry issues found.')
       return
     }
+    const dryRun = args.includes('--dry-run')
+    const force = args.includes('--force')
     const toFix = args.includes('--all') ? entries : entries.filter(e => e.risk === 'high')
-    cliLog(ctx, `Fixing ${toFix.length} of ${entries.length} issues...`)
+    cliLog(ctx, dryRun
+      ? `Dry-run: would fix ${toFix.length} of ${entries.length} issues...`
+      : `Fixing ${toFix.length} of ${entries.length} issues...`)
     const result = await fixRegistryEntries(toFix, (current, total) => {
       if (showProgress(ctx)) process.stdout.write(`\r  Progress: ${current}/${total}`)
-    })
+    }, undefined, { dryRun, force })
     if (showProgress(ctx)) log('')
     cliOut(ctx, result)
+    if (result.blockedByRestoreGate) return ExitCode.GENERAL_ERROR
   } else {
-    cliUsage(ctx, 'kudu --cli registry <scan|fix> [--all] [--json]')
+    cliUsage(ctx, 'kudu --cli registry <scan|fix> [--all] [--dry-run] [--force] [--json]')
     return ExitCode.INVALID_ARGS
   }
 }
@@ -683,25 +688,29 @@ async function handleDebloat(args: string[], ctx: CliContext): Promise<number | 
     }
   } else if (sub === 'remove') {
     const allFlag = args.includes('--all')
+    const dryRun = args.includes('--dry-run')
+    const force = args.includes('--force')
     if (allFlag) {
       cliLog(ctx, 'Scanning for bloatware...')
       const apps = await scanBloatware()
       if (apps.length === 0) { cliOut(ctx, ctx.json ? { message: 'No bloatware found' } : 'No bloatware found.'); return }
       const packageNames = apps.map(a => a.packageName)
-      cliLog(ctx, `Removing ${packageNames.length} apps...`)
+      cliLog(ctx, dryRun ? `Dry-run: would remove ${packageNames.length} apps...` : `Removing ${packageNames.length} apps...`)
       const result = await removeBloatware(packageNames, (current, total, currentApp, status) => {
         cliLog(ctx, `  [${current}/${total}] ${currentApp}: ${status}`)
-      })
+      }, { dryRun, force })
       cliOut(ctx, result)
+      if (result.blockedByRestoreGate) return ExitCode.GENERAL_ERROR
     } else {
       const pkgArg = args.find(a => a !== 'remove' && !a.startsWith('--'))
-      if (!pkgArg) { cliUsage(ctx, 'kudu --cli debloat remove <pkg1,pkg2,...> or --all'); return ExitCode.INVALID_ARGS }
+      if (!pkgArg) { cliUsage(ctx, 'kudu --cli debloat remove <pkg1,pkg2,...> or --all [--dry-run]'); return ExitCode.INVALID_ARGS }
       const packageNames = pkgArg.split(',').map(s => s.trim()).filter(Boolean)
-      cliLog(ctx, `Removing ${packageNames.length} apps...`)
+      cliLog(ctx, dryRun ? `Dry-run: would remove ${packageNames.length} apps...` : `Removing ${packageNames.length} apps...`)
       const result = await removeBloatware(packageNames, (current, total, currentApp, status) => {
         cliLog(ctx, `  [${current}/${total}] ${currentApp}: ${status}`)
-      })
+      }, { dryRun, force })
       cliOut(ctx, result)
+      if (result.blockedByRestoreGate) return ExitCode.GENERAL_ERROR
     }
   } else {
     cliUsage(ctx, 'kudu --cli debloat <scan|remove> [packages|--all]')
@@ -804,9 +813,12 @@ async function handleMalware(args: string[], ctx: CliContext): Promise<number | 
     cliOut(ctx, result)
   } else if (sub === 'delete') {
     const path = args.slice(1).filter(a => !a.startsWith('--')).join(' ')
-    if (!path) { cliUsage(ctx, 'kudu --cli malware delete <path>'); return ExitCode.INVALID_ARGS }
-    const result = await deleteMalware([path])
+    if (!path) { cliUsage(ctx, 'kudu --cli malware delete <path> [--dry-run|--force]'); return ExitCode.INVALID_ARGS }
+    const dryRun = args.includes('--dry-run')
+    const force = args.includes('--force')
+    const result = await deleteMalware([path], { dryRun, force })
     cliOut(ctx, result)
+    if (result.blockedByRestoreGate) return ExitCode.GENERAL_ERROR
   } else {
     cliUsage(ctx, 'kudu --cli malware <scan|quarantine|delete> [path]')
     return ExitCode.INVALID_ARGS

@@ -158,8 +158,8 @@ const api = {
 
   // Registry
   registryScan: (): Promise<RegistryEntry[]> => ipcRenderer.invoke(IPC.REGISTRY_SCAN),
-  registryFix: (entryIds: string[]): Promise<{ fixed: number; failed: number; failures: { issue: string; reason: string }[] }> =>
-    ipcRenderer.invoke(IPC.REGISTRY_FIX, entryIds),
+  registryFix: (entryIds: string[], options?: { dryRun?: boolean; force?: boolean }): Promise<{ fixed: number; failed: number; failures: { issue: string; reason: string }[]; dryRun?: boolean; blockedByRestoreGate?: boolean }> =>
+    ipcRenderer.invoke(IPC.REGISTRY_FIX, entryIds, options),
   registryScanCancel: (): Promise<void> => ipcRenderer.invoke(IPC.REGISTRY_SCAN_CANCEL),
   registryFixCancel: (): Promise<void> => ipcRenderer.invoke(IPC.REGISTRY_FIX_CANCEL),
   registrySetTweakIgnored: (signatures: string[], ignored: boolean): Promise<void> =>
@@ -178,8 +178,8 @@ const api = {
 
   // Debloater
   debloaterScan: (): Promise<BloatwareApp[]> => ipcRenderer.invoke(IPC.DEBLOATER_SCAN),
-  debloaterRemove: (packageNames: string[]): Promise<{ removed: number; failed: number }> =>
-    ipcRenderer.invoke(IPC.DEBLOATER_REMOVE, packageNames),
+  debloaterRemove: (packageNames: string[], options?: { dryRun?: boolean; force?: boolean }): Promise<{ removed: number; failed: number; dryRun?: boolean; blockedByRestoreGate?: boolean }> =>
+    ipcRenderer.invoke(IPC.DEBLOATER_REMOVE, packageNames, options),
   onDebloaterRemoveProgress: (callback: (data: { current: number; total: number; currentApp: string; status: 'removing' | 'done' | 'failed' }) => void) => {
     const handler = (_event: Electron.IpcRendererEvent, data: { current: number; total: number; currentApp: string; status: 'removing' | 'done' | 'failed' }) => callback(data)
     ipcRenderer.on(IPC.DEBLOATER_REMOVE_PROGRESS, handler)
@@ -322,8 +322,8 @@ const api = {
   malwareScan: (): Promise<MalwareScanResult> => ipcRenderer.invoke(IPC.MALWARE_SCAN),
   malwareQuarantine: (paths: string[], meta?: import('../shared/types').QuarantineMeta[]): Promise<MalwareActionResult> =>
     ipcRenderer.invoke(IPC.MALWARE_QUARANTINE, paths, meta),
-  malwareDelete: (paths: string[]): Promise<MalwareActionResult> =>
-    ipcRenderer.invoke(IPC.MALWARE_DELETE, paths),
+  malwareDelete: (paths: string[], options?: { dryRun?: boolean; force?: boolean }): Promise<MalwareActionResult> =>
+    ipcRenderer.invoke(IPC.MALWARE_DELETE, paths, options),
   malwareRestore: (quarantinedPath: string, originalPath: string): Promise<boolean> =>
     ipcRenderer.invoke(IPC.MALWARE_RESTORE, quarantinedPath, originalPath),
   malwareQuarantineList: (): Promise<import('../shared/types').QuarantinedItem[]> =>

@@ -34,9 +34,27 @@ vi.mock('../services/ipc-validation', () => ({
     if (!input.every((v: unknown) => typeof v === 'string')) return null
     return input as string[]
   },
+  parseCleanOptions: (input: unknown) => {
+    if (!input || typeof input !== 'object' || Array.isArray(input)) return {}
+    const obj = input as Record<string, unknown>
+    const opts: { dryRun?: boolean; force?: boolean } = {}
+    if (obj.dryRun === true) opts.dryRun = true
+    if (obj.force === true) opts.force = true
+    return opts
+  },
+}))
+
+vi.mock('../services/gated-clean', () => ({
+  assertCleanAllowed: vi.fn(async () => ({
+    allowed: true,
+    restoreAttempted: false,
+    restoreSucceeded: false,
+    skipReason: 'disabled',
+  })),
 }))
 
 import { registerDebloaterIpc, scanBloatware, removeBloatware, KNOWN_BLOATWARE } from './debloater.ipc'
+import { assertCleanAllowed } from '../services/gated-clean'
 
 // ── Helpers ──
 
@@ -344,6 +362,28 @@ describe('removeBloatware', () => {
     // Should be called with 'removing' and 'done'
     expect(progressFn).toHaveBeenCalledWith(1, 1, 'Microsoft.BingNews', 'removing')
     expect(progressFn).toHaveBeenCalledWith(1, 1, 'Microsoft.BingNews', 'done')
+  })
+
+  it('dry-run counts would-remove without calling PowerShell', async () => {
+    const progressFn = vi.fn()
+    const result = await removeBloatware(['Microsoft.BingNews', 'Microsoft.BingWeather'], progressFn, { dryRun: true })
+    expect(result).toEqual({ removed: 2, failed: 0, dryRun: true })
+    expect(mockExecFile).not.toHaveBeenCalled()
+    expect(progressFn).toHaveBeenCalledWith(1, 2, 'Microsoft.BingNews', 'would-remove')
+  })
+
+  it('blocks when restore gate denies', async () => {
+    vi.mocked(assertCleanAllowed).mockResolvedValueOnce({
+      allowed: false,
+      restoreAttempted: true,
+      restoreSucceeded: false,
+      skipReason: 'restore_failed',
+      error: 'nope',
+    })
+    const result = await removeBloatware(['Microsoft.BingNews'])
+    expect(result.blockedByRestoreGate).toBe(true)
+    expect(result.removed).toBe(0)
+    expect(mockExecFile).not.toHaveBeenCalled()
   })
 
   it('reports failed status in onProgress when removal fails', async () => {
