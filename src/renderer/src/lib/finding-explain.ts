@@ -111,11 +111,13 @@ export function explainMalwareThreat(input: {
   const isSystemPolicy =
     path === '/etc/hosts'
     || path === 'crontab'
-    || path.startsWith('/etc/cron.d/')
+    || path === 'persistence'
+    || path.startsWith('/etc/cron.')
     || path === '/etc/ld.so.preload'
     || (detection.includes('linuxpersistence') && input.selected === false)
     || detection.includes('hoststamper')
     || detection.includes('hostsredirect')
+    || input.selected === false && (/^\/etc\//.test(path) || path === 'crontab')
 
   if (sev === 'critical' || sev === 'high') {
     why.push(isSystemPolicy
