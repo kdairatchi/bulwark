@@ -70,6 +70,8 @@ export interface StoredFinding {
   reason: string
   /** Optional taxonomy from agents (kev, osv, technique, lolbin, …). */
   category: string | null
+  /** Optional remediation hint from agents (KEV requiredAction / upgrade floor). */
+  fixRecommendation: string | null
   createdAt: string
   updatedAt: string | null
   status: StoredFindingStatus
@@ -82,6 +84,13 @@ export function normalizeFindingCategory(raw: unknown): string | null {
   if (typeof raw !== 'string') return null
   const c = raw.trim().toLowerCase().replace(/[^a-z0-9._-]+/g, '').slice(0, 40)
   return c || null
+}
+
+/** Sanitize optional remediation text (max 240 chars). */
+export function normalizeFixRecommendation(raw: unknown): string | null {
+  if (typeof raw !== 'string') return null
+  const t = raw.trim().replace(/\s+/g, ' ').slice(0, 240)
+  return t || null
 }
 
 /**
@@ -365,6 +374,7 @@ export class DeviceStore {
   addFindings(deviceId: string, findings: Array<Omit<StoredFinding, 'id' | 'deviceId' | 'createdAt' | 'updatedAt' | 'status' | 'reviewedAt' | 'reviewNote'> & {
     status?: string
     category?: string | null
+    fixRecommendation?: string | null
   }>): number {
     const d = this.devices.get(deviceId)
     if (!d) return 0
@@ -375,6 +385,7 @@ export class DeviceStore {
         ? f.status
         : (isFindingStatus(f.level) ? f.level : 'potential_match')
       const category = normalizeFindingCategory(f.category)
+      const fixRecommendation = normalizeFixRecommendation(f.fixRecommendation)
       const subjectName = f.subjectName
       const reason = f.reason
       const level = f.level
@@ -390,6 +401,7 @@ export class DeviceStore {
       if (openMatch) {
         openMatch.level = level
         openMatch.reason = reason
+        openMatch.fixRecommendation = fixRecommendation
         openMatch.updatedAt = nowIso
         // Keep existing status if it's a review-style open status; otherwise align with level.
         if (!isFindingStatus(openMatch.status) || openMatch.status === 'unknown') {
@@ -406,6 +418,7 @@ export class DeviceStore {
         subjectName,
         reason,
         category,
+        fixRecommendation,
         createdAt: nowIso,
         updatedAt: null,
         status,

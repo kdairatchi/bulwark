@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { findingPenalty, normalizeFindingCategory } from './store'
+import { findingPenalty, normalizeFindingCategory, normalizeFixRecommendation } from './store'
 
 describe('finding taxonomy helpers', () => {
   it('normalizes categories', () => {
@@ -7,6 +7,13 @@ describe('finding taxonomy helpers', () => {
     expect(normalizeFindingCategory('vuln heuristic!')).toBe('vulnheuristic')
     expect(normalizeFindingCategory('')).toBeNull()
     expect(normalizeFindingCategory(1)).toBeNull()
+  })
+
+  it('normalizes fix recommendations', () => {
+    expect(normalizeFixRecommendation('  Update curl  ')).toBe('Update curl')
+    expect(normalizeFixRecommendation('')).toBeNull()
+    expect(normalizeFixRecommendation(1)).toBeNull()
+    expect(normalizeFixRecommendation('x'.repeat(300))?.length).toBe(240)
   })
 
   it('weights KEV/ransomware higher than publisher noise', () => {

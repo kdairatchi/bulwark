@@ -120,6 +120,7 @@ APPLY_POLICY
 |---------|----------|
 | `UPDATE_THREAT_FEEDS` | Syncs enabled filter lists (URLhaus by default) into the local DoT blocklist; optional `domains[]` (+ `replace`) merges into remote blocks (Android-parity). Params: `syncLists` (default true), `listIds[]`, `domains[]`, `replace`. |
 | `QUARANTINE_FILE` | Moves `path` / `paths[]` into the app quarantine folder when under platform malware allowlist (`/tmp`, Downloads, …). |
+| `RESTART_AGENT` | Returns `{ ok, scheduled: true }` immediately, then relaunches the Electron process via `app.relaunch` + `app.exit(0)` after ~1s so the command result can be posted first. |
 
 **Android TV enforcement (non-stub):**
 
@@ -179,8 +180,9 @@ Shared implementation: `src/cloud/device-api/commands.ts`
 fixed · accepted_risk · false_positive · unknown`.
 
 Findings may include an optional `category` (`kev`, `osv`, `technique`, `lolbin`,
-`publisher`, …). Open findings are **deduped** on `(deviceId, subjectName, category)`
-— re-submits refresh `level`/`reason` instead of creating duplicates.
+`publisher`, …) and optional `fixRecommendation` (KEV `requiredAction` or
+`Upgrade <app> to <vulnerableBelow> or newer`). Open findings are **deduped** on `(deviceId, subjectName, category)`
+— re-submits refresh `level`/`reason`/`fixRecommendation` instead of creating duplicates.
 
 `POST /v1/findings/{id}/review` (Bearer) body: `{ "status": "false_positive"|"accepted_risk"|"fixed"|"not_exploitable"|…, "note"?: "…" }`.
 

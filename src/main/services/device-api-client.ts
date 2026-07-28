@@ -168,7 +168,13 @@ export class DeviceApiClient {
   async submitFindings(
     privateKeyPem: string,
     deviceId: string,
-    findings: Array<{ level: string; subjectName: string; reason: string; category?: string }>,
+    findings: Array<{
+      level: string
+      subjectName: string
+      reason: string
+      category?: string
+      fixRecommendation?: string
+    }>,
   ): Promise<number> {
     const { status, body } = await this.signed(
       privateKeyPem, deviceId, 'POST', `/v1/devices/${deviceId}/findings`, { findings },

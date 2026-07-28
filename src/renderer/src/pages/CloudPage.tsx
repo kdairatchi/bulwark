@@ -488,6 +488,7 @@ type ParentFinding = {
   subjectName: string
   reason: string
   category?: string | null
+  fixRecommendation?: string | null
   createdAt: string
   updatedAt?: string | null
   status?: string
@@ -1131,6 +1132,11 @@ function ParentControlPanel({
                       </>
                     )}
                   </div>
+                  {f.fixRecommendation && (
+                    <div className="mt-1 text-[10px] font-sans" style={{ color: 'var(--text-muted)' }}>
+                      Fix: {f.fixRecommendation}
+                    </div>
+                  )}
                   {!resolved && (
                     <div className="flex flex-wrap gap-1.5 mt-1.5">
                       <button

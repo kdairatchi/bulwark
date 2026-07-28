@@ -26,7 +26,7 @@ import {
 } from './device-policy-enforcer'
 import { collectDesktopInventory } from './desktop-inventory'
 import { executeRemoteScan } from './desktop-remote-scans'
-import { executeUpdateThreatFeeds, executeQuarantineFile } from './desktop-remote-actions'
+import { executeUpdateThreatFeeds, executeQuarantineFile, executeRestartAgent } from './desktop-remote-actions'
 import { getPlatform } from '../platform'
 import { cloudLog } from './logger'
 
@@ -143,7 +143,7 @@ export async function defaultCommandExecutor(
         parameters,
       }
     case 'RESTART_AGENT':
-      return { ok: true, stub: true, type, scheduled: false, parameters }
+      return executeRestartAgent(parameters)
     default:
       return { ok: false, error: 'unhandled command type', type }
   }
@@ -461,7 +461,13 @@ export class DeviceCommandAgent {
       ) {
         const result = await this.execute(type, parameters)
         const embedded = Array.isArray(result._findings)
-          ? result._findings as Array<{ level: string; subjectName: string; reason: string; category?: string }>
+          ? result._findings as Array<{
+            level: string
+            subjectName: string
+            reason: string
+            category?: string
+            fixRecommendation?: string
+          }>
           : []
         if (embedded.length > 0) {
           await client.submitFindings(identity.privateKeyPem, identity.deviceId, embedded)

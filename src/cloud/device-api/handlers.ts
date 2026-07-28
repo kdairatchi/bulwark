@@ -284,6 +284,7 @@ export function submitFindings(store: DeviceStore, deviceId: string, input: unkn
       reason: typeof r.reason === 'string' ? r.reason : '',
       status: typeof r.status === 'string' ? r.status : undefined,
       category: typeof r.category === 'string' ? r.category : null,
+      fixRecommendation: typeof r.fixRecommendation === 'string' ? r.fixRecommendation : null,
     }
   })
   const accepted = store.addFindings(deviceId, findings)

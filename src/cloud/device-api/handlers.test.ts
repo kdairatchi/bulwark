@@ -171,13 +171,17 @@ describe('device-api telemetry endpoints', () => {
     const { deviceId } = enrolledDevice(store)
     submitFindings(store, deviceId, {
       findings: [
-        { level: 'likely_affected', subjectName: 'CVE-2023-38545', reason: 'kev_version_match:curl@7.88.1', category: 'kev' },
+        { level: 'likely_affected', subjectName: 'CVE-2023-38545', reason: 'kev_version_match:curl@7.88.1', category: 'kev', fixRecommendation: 'Update curl/libcurl' },
         { level: 'potential_match', subjectName: 'Mystery', reason: 'unknown_publisher', category: 'publisher' },
       ],
     })
-    const listed1 = listFindings(store, deviceId).body as { findings: Array<{ category: string | null; subjectName: string }>; count: number }
+    const listed1 = listFindings(store, deviceId).body as {
+      findings: Array<{ category: string | null; subjectName: string; fixRecommendation?: string | null }>
+      count: number
+    }
     expect(listed1.count).toBe(2)
     expect(listed1.findings.find((f) => f.subjectName === 'CVE-2023-38545')?.category).toBe('kev')
+    expect(listed1.findings.find((f) => f.subjectName === 'CVE-2023-38545')?.fixRecommendation).toBe('Update curl/libcurl')
 
     const scoreWithKev = (getDevice(store, deviceId).body as { securityScore: number }).securityScore
 
