@@ -55,6 +55,22 @@ import type {
   UpdateProgress,
   UpdateRequestItem,
   UpdateResult,
+  UtilityInstallCatalogResult,
+  UtilityInstallActionResult,
+  UtilityInstallProgress,
+  UtilityWingetAction,
+  UtilityPowerPlanSetResult,
+  UtilityPowerPlanState,
+  UtilityPowerPlanTarget,
+  UtilityShutUpLaunchResult,
+  UtilityTweakActionResult,
+  UtilityTweakMetadata,
+  UtilityTweaksScanResult,
+  UtilityConfigActionResult,
+  UtilityConfigCatalogResult,
+  UtilityConfigFeatureStatusResult,
+  UtilityConfigOpenSshStatusResult,
+  UtilityLegacyPanelLaunchResult,
   FileTypeInfo,
   CloudActionEntry,
   ThreatSnapshot,
@@ -473,6 +489,55 @@ const api = {
     ipcRenderer.on(IPC.SOFTWARE_UPDATE_PROGRESS, handler)
     return () => { ipcRenderer.removeListener(IPC.SOFTWARE_UPDATE_PROGRESS, handler) }
   },
+
+  // Utility Tabs — Install (WinGet)
+  utilityInstallCatalog: (): Promise<UtilityInstallCatalogResult> =>
+    ipcRenderer.invoke(IPC.UTILITY_INSTALL_CATALOG),
+  utilityInstallRefresh: (): Promise<UtilityInstallCatalogResult> =>
+    ipcRenderer.invoke(IPC.UTILITY_INSTALL_REFRESH),
+  utilityInstallRun: (payload: { action: UtilityWingetAction; ids: string[] }): Promise<UtilityInstallActionResult> =>
+    ipcRenderer.invoke(IPC.UTILITY_INSTALL_RUN, payload),
+  utilityInstallUpgradeAll: (): Promise<UtilityInstallActionResult> =>
+    ipcRenderer.invoke(IPC.UTILITY_INSTALL_UPGRADE_ALL),
+  onUtilityInstallProgress: (callback: (data: UtilityInstallProgress) => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, data: UtilityInstallProgress) => callback(data)
+    ipcRenderer.on(IPC.UTILITY_INSTALL_PROGRESS, handler)
+    return () => { ipcRenderer.removeListener(IPC.UTILITY_INSTALL_PROGRESS, handler) }
+  },
+
+  // Utility Tabs — Tweaks
+  utilityTweaksCatalog: (): Promise<UtilityTweakMetadata[]> =>
+    ipcRenderer.invoke(IPC.UTILITY_TWEAKS_CATALOG),
+  utilityTweaksScan: (): Promise<UtilityTweaksScanResult> =>
+    ipcRenderer.invoke(IPC.UTILITY_TWEAKS_SCAN),
+  utilityTweaksApply: (ids: string[]): Promise<UtilityTweakActionResult> =>
+    ipcRenderer.invoke(IPC.UTILITY_TWEAKS_APPLY, ids),
+  utilityTweaksRevert: (ids: string[]): Promise<UtilityTweakActionResult> =>
+    ipcRenderer.invoke(IPC.UTILITY_TWEAKS_REVERT, ids),
+  utilityTweaksPowerPlanGet: (): Promise<UtilityPowerPlanState> =>
+    ipcRenderer.invoke(IPC.UTILITY_TWEAKS_POWER_PLAN_GET),
+  utilityTweaksPowerPlanSet: (target: UtilityPowerPlanTarget): Promise<UtilityPowerPlanSetResult> =>
+    ipcRenderer.invoke(IPC.UTILITY_TWEAKS_POWER_PLAN_SET, target),
+  utilityTweaksLaunchShutUp10: (): Promise<UtilityShutUpLaunchResult> =>
+    ipcRenderer.invoke(IPC.UTILITY_TWEAKS_SHUTUP10_LAUNCH),
+
+  // Utility Tabs - Config
+  utilityConfigCatalog: (): Promise<UtilityConfigCatalogResult> =>
+    ipcRenderer.invoke(IPC.UTILITY_CONFIG_CATALOG),
+  utilityConfigFeatureStatus: (id: string): Promise<UtilityConfigFeatureStatusResult> =>
+    ipcRenderer.invoke(IPC.UTILITY_CONFIG_FEATURE_STATUS, id),
+  utilityConfigFeatureEnable: (id: string): Promise<UtilityConfigActionResult> =>
+    ipcRenderer.invoke(IPC.UTILITY_CONFIG_FEATURE_ENABLE, id),
+  utilityConfigFeatureRevert: (id: string): Promise<UtilityConfigActionResult> =>
+    ipcRenderer.invoke(IPC.UTILITY_CONFIG_FEATURE_REVERT, id),
+  utilityConfigPanelLaunch: (id: string): Promise<UtilityLegacyPanelLaunchResult> =>
+    ipcRenderer.invoke(IPC.UTILITY_CONFIG_PANEL_LAUNCH, id),
+  utilityConfigOpenSshStatus: (): Promise<UtilityConfigOpenSshStatusResult> =>
+    ipcRenderer.invoke(IPC.UTILITY_CONFIG_OPENSSH_STATUS),
+  utilityConfigOpenSshEnable: (): Promise<UtilityConfigActionResult> =>
+    ipcRenderer.invoke(IPC.UTILITY_CONFIG_OPENSSH_ENABLE),
+  utilityConfigFixRun: (id: string): Promise<UtilityConfigActionResult> =>
+    ipcRenderer.invoke(IPC.UTILITY_CONFIG_FIX_RUN, id),
 
   // Cloud Agent
   cloudLink: (apiKey: string): Promise<{ success: boolean; error?: string }> =>

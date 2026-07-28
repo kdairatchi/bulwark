@@ -226,6 +226,32 @@ export const IPC = {
   SOFTWARE_UPDATE_RUN: 'software-update:run',
   SOFTWARE_UPDATE_PROGRESS: 'software-update:progress',
 
+  // Utility Tabs — Install (WinGet catalog)
+  UTILITY_INSTALL_CATALOG: 'utility-install:catalog',
+  UTILITY_INSTALL_REFRESH: 'utility-install:refresh',
+  UTILITY_INSTALL_RUN: 'utility-install:run',
+  UTILITY_INSTALL_UPGRADE_ALL: 'utility-install:upgrade-all',
+  UTILITY_INSTALL_PROGRESS: 'utility-install:progress',
+
+  // Utility Tabs — Tweaks (reversible Windows tweaks)
+  UTILITY_TWEAKS_CATALOG: 'utility-tweaks:catalog',
+  UTILITY_TWEAKS_SCAN: 'utility-tweaks:scan',
+  UTILITY_TWEAKS_APPLY: 'utility-tweaks:apply',
+  UTILITY_TWEAKS_REVERT: 'utility-tweaks:revert',
+  UTILITY_TWEAKS_POWER_PLAN_GET: 'utility-tweaks:power-plan:get',
+  UTILITY_TWEAKS_POWER_PLAN_SET: 'utility-tweaks:power-plan:set',
+  UTILITY_TWEAKS_SHUTUP10_LAUNCH: 'utility-tweaks:shutup10:launch',
+
+  // Utility Tabs - Config (WinUtil-style Windows features, panels, OpenSSH, fixes)
+  UTILITY_CONFIG_CATALOG: 'utility-config:catalog',
+  UTILITY_CONFIG_FEATURE_STATUS: 'utility-config:feature:status',
+  UTILITY_CONFIG_FEATURE_ENABLE: 'utility-config:feature:enable',
+  UTILITY_CONFIG_FEATURE_REVERT: 'utility-config:feature:revert',
+  UTILITY_CONFIG_PANEL_LAUNCH: 'utility-config:panel:launch',
+  UTILITY_CONFIG_OPENSSH_STATUS: 'utility-config:openssh:status',
+  UTILITY_CONFIG_OPENSSH_ENABLE: 'utility-config:openssh:enable',
+  UTILITY_CONFIG_FIX_RUN: 'utility-config:fix:run',
+
   // Cloud Agent
   CLOUD_LINK: 'cloud:link',
   CLOUD_UNLINK: 'cloud:unlink',

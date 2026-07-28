@@ -38,6 +38,7 @@ import {
   MousePointerClick,
   ScanSearch,
   Globe,
+  SlidersHorizontal,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { LucideIcon } from 'lucide-react'
@@ -124,6 +125,7 @@ const navGroups: NavGroup[] = [
     headingKey: 'toolsHeading',
     items: [
       { icon: Gamepad2, labelKey: 'gameMode', path: '/game-mode' },
+      { icon: SlidersHorizontal, labelKey: 'utilities', path: '/utilities' },
       { icon: Activity, labelKey: 'performance', path: '/performance' },
       {
         icon: HardDrive, labelKey: 'diskTools', path: '/disk',
@@ -211,6 +213,7 @@ export function Sidebar() {
   const filteredNavGroups = navGroups.map((group) => ({
     ...group,
     items: group.items.filter((item) => {
+      if (item.path === '/utilities' && !features.utilityTabs) return false
       return true
     }).map((item) => {
       if (!item.children) return item

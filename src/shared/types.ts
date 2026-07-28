@@ -9,6 +9,8 @@ export interface PlatformInfo {
     gameMode: boolean
     firewallAudit: boolean
     contextMenu: boolean
+    /** WinUtil-style Install / Tweaks / Config tabs (Windows only). */
+    utilityTabs: boolean
   }
 }
 
@@ -1011,6 +1013,162 @@ export interface UpToDateApp {
   name: string
   version: string
   source: string
+}
+
+/** Utility → Install: curated catalog entry (mirrors WinUtil Install tab). */
+export interface UtilityCatalogApp {
+  id: string
+  name: string
+  category: string
+  description?: string
+}
+
+export type UtilityInstalledMap = Record<string, { version: string; name: string }>
+
+export interface UtilityInstallCatalogResult {
+  wingetAvailable: boolean
+  apps: UtilityCatalogApp[]
+  installed: UtilityInstalledMap
+}
+
+export type UtilityWingetAction = 'install' | 'upgrade' | 'uninstall'
+
+export interface UtilityInstallProgress {
+  phase: 'running' | 'done'
+  action: UtilityWingetAction | 'upgrade-all'
+  currentId: string
+  current: number
+  total: number
+  message: string
+}
+
+export interface UtilityInstallActionResult {
+  succeeded: number
+  failed: number
+  errors: Array<{ id: string; reason: string }>
+}
+
+export type UtilityTweakGroup = 'essential' | 'advanced'
+
+export interface UtilityTweakMetadata {
+  id: string
+  name: string
+  description: string
+  group: UtilityTweakGroup
+  requiresAdmin: boolean
+}
+
+export type UtilityPowerPlanTarget = 'balanced' | 'ultimate-performance'
+export type UtilityPowerPlanActive = UtilityPowerPlanTarget | 'other' | 'unknown'
+
+export interface UtilityPowerPlanState {
+  available: boolean
+  active: UtilityPowerPlanActive
+  guid: string | null
+  error?: string
+}
+
+export interface UtilityPowerPlanSetResult {
+  success: boolean
+  state?: UtilityPowerPlanState
+  error?: string
+}
+
+export interface UtilityShutUpLaunchResult {
+  opened: boolean
+  fallback: boolean
+  path?: string
+  error?: string
+}
+
+export interface UtilityTweaksScanResult {
+  available: boolean
+  tweaks: UtilityTweakMetadata[]
+  applied: Record<string, boolean>
+  powerPlan: UtilityPowerPlanState
+}
+
+export interface UtilityTweakActionResult {
+  succeeded: number
+  failed: number
+  errors: Array<{ id: string; reason: string }>
+  restorePoint?: RestorePointResult
+}
+
+export type UtilityConfigFeatureKind = 'optional-feature' | 'boot' | 'scheduled-task'
+export type UtilityConfigFeatureStatus = 'enabled' | 'disabled' | 'partial' | 'unavailable' | 'unknown'
+
+export interface UtilityConfigFeatureMetadata {
+  id: string
+  name: string
+  description: string
+  kind: UtilityConfigFeatureKind
+  requiresAdmin: boolean
+  notes?: string
+}
+
+export interface UtilityLegacyPanelMetadata {
+  id: string
+  name: string
+  description: string
+}
+
+export interface UtilityConfigFixMetadata {
+  id: string
+  name: string
+  description: string
+  requiresAdmin: boolean
+  requiresReboot: boolean
+  notes?: string
+}
+
+export interface UtilityConfigOpenSshMetadata {
+  id: 'openssh-server'
+  name: string
+  description: string
+  requiresAdmin: boolean
+  capabilityName: string
+}
+
+export interface UtilityConfigCatalogResult {
+  available: boolean
+  features: UtilityConfigFeatureMetadata[]
+  legacyPanels: UtilityLegacyPanelMetadata[]
+  fixes: UtilityConfigFixMetadata[]
+  openSsh: UtilityConfigOpenSshMetadata | null
+}
+
+export interface UtilityConfigFeatureStatusResult {
+  id: string
+  available: boolean
+  enabled: boolean | null
+  status: UtilityConfigFeatureStatus
+  details: string
+  log?: string
+}
+
+export interface UtilityConfigActionResult {
+  id: string
+  success: boolean
+  summary: string
+  needsAdmin: boolean
+  requiresReboot: boolean
+  log?: string
+  error?: string
+}
+
+export interface UtilityLegacyPanelLaunchResult {
+  id: string
+  launched: boolean
+  error?: string
+}
+
+export interface UtilityConfigOpenSshStatusResult {
+  available: boolean
+  installed: boolean
+  serviceRunning: boolean
+  startupType: string | null
+  details: string
 }
 
 export interface UpdateCheckResult {

@@ -39,6 +39,7 @@ import { NetworkGuardPage } from './pages/NetworkGuardPage'
 import { AboutPage } from './pages/AboutPage'
 import { CloudPage } from './pages/CloudPage'
 import { BreachMonitorPage } from './pages/BreachMonitorPage'
+import { UtilityTabsPage } from './pages/UtilityTabsPage'
 import { Onboarding } from './components/Onboarding'
 import { useStatsStore } from './stores/stats-store'
 import { useHistoryStore } from './stores/history-store'
@@ -174,6 +175,7 @@ export function App() {
           <Route path="/updates" element={<SoftwareUpdaterPage />} />
           <Route path="/software" element={<UpdatesPage />} />
           <Route path="/schedules" element={<SchedulesPage />} />
+          <Route path="/utilities" element={<UtilityTabsPage />} />
           {/* Legacy redirect */}
           <Route path="/hardening" element={<Navigate to="/privacy" replace />} />
           <Route path="/updater" element={<SoftwareUpdaterPage />} />
@@ -233,6 +235,7 @@ const ROUTE_TITLES: Record<string, { key: string; ns?: string } | string> = {
   '/updates': 'Software Updates',
   '/software': 'Software',
   '/schedules': { key: 'schedules' },
+  '/utilities': { key: 'utilities' },
   '/drivers': 'Driver Updates',
   '/cloud': 'Bulwrk Cloud',
   '/breach-monitor': 'Breach Monitor',
