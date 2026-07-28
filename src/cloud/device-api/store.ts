@@ -114,6 +114,7 @@ export function normalizeFindingEvidence(raw: unknown): string[] {
 function defaultFindingConfidence(level: string, category: string | null): number {
   const cat = category || ''
   if (cat === 'kev') return 0.95
+  if (cat === 'advisory') return 0.9
   if (cat === 'osv') return 0.85
   if (cat === 'nvd' || cat === 'cve') return 0.75
   if (cat === 'technique' || cat === 'vuln_heuristic') return 0.65

@@ -153,6 +153,25 @@ console.log('\nsecurity:')
   } catch (e) {
     error(`kev.json: ${(e as Error).message}`)
   }
+
+  const advisorySchemaPath = path.join(RULES_DIR, 'schema', 'vendor-advisories.schema.json')
+  const advisoryPath = path.join(RULES_DIR, 'security', 'vendor-advisories.json')
+  try {
+    const advisorySchema = JSON.parse(readFileSync(advisorySchemaPath, 'utf-8'))
+    const advisoryValidate = ajv.compile(advisorySchema)
+    const advisoryData = JSON.parse(readFileSync(advisoryPath, 'utf-8'))
+    if (!advisoryValidate(advisoryData)) {
+      const msgs = advisoryValidate.errors?.map((e) => `${e.instancePath} ${e.message}`).join('; ')
+      error(`vendor-advisories.json: schema validation failed — ${msgs}`)
+    } else {
+      const ids = (advisoryData.entries as Array<{ id: string }>).map((e) => e.id)
+      const dupes = ids.filter((id, i) => ids.indexOf(id) !== i)
+      if (dupes.length) error(`vendor-advisories.json: duplicate ids: ${dupes.join(', ')}`)
+      else ok(`vendor-advisories.json passes schema (${ids.length} entries)`)
+    }
+  } catch (e) {
+    error(`vendor-advisories.json: ${(e as Error).message}`)
+  }
 }
 
 console.log('')

@@ -65,8 +65,30 @@ describe('desktop-remote-scans', () => {
     ])
     expect(r.stub).toBe(false)
     expect(r.scope).toMatch(/kev/)
+    expect(r.scope).toMatch(/advisories/)
     expect(r._findings.some((f) => f.category === 'kev' && f.subjectName === 'CVE-2023-38545')).toBe(true)
-    expect(r.note).toMatch(/NVD|incomplete/i)
+    // Same CVE from advisory catalog is suppressed when KEV already reported it
+    expect(r._findings.filter((f) => f.subjectName === 'CVE-2023-38545')).toHaveLength(1)
+    expect(r.note).toMatch(/advisories|NVD/i)
+  })
+
+  it('vulnerability scan emits advisory findings when KEV does not cover the CVE', async () => {
+    const r = await runVulnerabilityScanPosture([
+      app({ name: '7-Zip', version: '24.08', publisher: 'Igor Pavlov' }),
+    ])
+    expect(r.scope).toMatch(/advisories/)
+    const hit = r._findings.find((f) => f.category === 'advisory' && f.subjectName === 'CVE-2024-11477')
+    expect(hit).toBeTruthy()
+    expect(hit?.fixRecommendation).toMatch(/24\.09/)
+  })
+
+  it('vulnerability scan can disable advisories', async () => {
+    const r = await runVulnerabilityScanPosture(
+      [app({ name: '7-Zip', version: '24.08' })],
+      { advisories: false },
+    )
+    expect(r.scope).not.toMatch(/advisories/)
+    expect(r._findings.some((f) => f.category === 'advisory')).toBe(false)
   })
 
   it('vulnerability scan can attach EPSS tags when epss=true', async () => {

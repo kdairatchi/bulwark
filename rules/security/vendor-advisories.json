@@ -1,0 +1,83 @@
+{
+  "version": "1.0.0",
+  "updatedAt": "2026-07-28T00:00:00Z",
+  "source": "Curated offline vendor/distro advisory seed for Bulwrk version-range matching",
+  "description": "Not a live USN/MSRC feed. Entries exercise introduced/fixedIn/vulnerableBelow via evaluateAdvisoryVersion. Expand iteratively; live sync is a follow-up.",
+  "entries": [
+    {
+      "id": "curl-cve-2023-38545",
+      "cveId": "CVE-2023-38545",
+      "vendor": "curl",
+      "product": "curl",
+      "aliases": ["curl", "libcurl"],
+      "severity": "high",
+      "ecosystem": "generic",
+      "introduced": "7.69.0",
+      "fixedIn": "8.4.0",
+      "requiredAction": "Upgrade curl/libcurl to 8.4.0 or newer",
+      "reference": "https://curl.se/docs/CVE-2023-38545.html"
+    },
+    {
+      "id": "openssl-cve-2022-3602",
+      "cveId": "CVE-2022-3602",
+      "vendor": "OpenSSL",
+      "product": "OpenSSL",
+      "aliases": ["openssl", "libssl", "libssl3"],
+      "severity": "high",
+      "ecosystem": "linux",
+      "introduced": "3.0.0",
+      "fixedIn": "3.0.7",
+      "requiredAction": "Upgrade OpenSSL to 3.0.7 or newer",
+      "reference": "https://www.openssl.org/news/secadv/20221101.txt"
+    },
+    {
+      "id": "ubuntu-glibc-cve-2023-4911",
+      "cveId": "CVE-2023-4911",
+      "vendor": "GNU",
+      "product": "glibc",
+      "aliases": ["glibc", "libc6", "libc"],
+      "severity": "high",
+      "ecosystem": "ubuntu",
+      "vulnerableBelow": "2.31-0ubuntu9.15",
+      "requiredAction": "Apply Ubuntu glibc security updates (looney/tunables)",
+      "reference": "https://ubuntu.com/security/CVE-2023-4911"
+    },
+    {
+      "id": "7zip-cve-2024-11477",
+      "cveId": "CVE-2024-11477",
+      "vendor": "Igor Pavlov",
+      "product": "7-Zip",
+      "aliases": ["7-zip", "7zip", "7z"],
+      "severity": "high",
+      "ecosystem": "windows",
+      "vulnerableBelow": "24.09",
+      "requiredAction": "Upgrade 7-Zip to 24.09 or newer",
+      "reference": "https://www.7-zip.org/history.txt"
+    },
+    {
+      "id": "git-cve-2024-32002",
+      "cveId": "CVE-2024-32002",
+      "vendor": "Git",
+      "product": "Git",
+      "aliases": ["git", "git for windows"],
+      "severity": "critical",
+      "ecosystem": "generic",
+      "introduced": "2.0.0",
+      "fixedIn": "2.45.1",
+      "requiredAction": "Upgrade Git to 2.45.1 or newer",
+      "reference": "https://github.blog/2024-05-14-git-security-vulnerabilities-announced/"
+    },
+    {
+      "id": "nodejs-cve-2024-27980",
+      "cveId": "CVE-2024-27980",
+      "vendor": "Node.js",
+      "product": "Node.js",
+      "aliases": ["node.js", "nodejs", "node"],
+      "severity": "high",
+      "ecosystem": "generic",
+      "vulnerableBelow": "20.12.2",
+      "requiredAction": "Upgrade Node.js to a patched release (20.12.2+ on 20.x)",
+      "reference": "https://nodejs.org/en/blog/vulnerability/april-2024-security-releases"
+    }
+  ]
+}
