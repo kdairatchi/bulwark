@@ -39,6 +39,7 @@ jobs:
 
       - name: Package unsigned beta artifact
         run: npm run package:${{ matrix.target }} -- --publish never
+        run: npm run package:${{ matrix.target }}
 
       - name: Upload beta artifacts
         uses: actions/upload-artifact@v4
@@ -47,3 +48,4 @@ jobs:
           path: dist/
           if-no-files-found: error
           retention-days: 14
+
