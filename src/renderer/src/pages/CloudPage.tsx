@@ -32,6 +32,7 @@ import { FindingExplainPanel, FindingExpand } from '@/components/shared/FindingE
 import { FamilyPairingWizard } from '@/components/cloud/FamilyPairingWizard'
 import { EmergencyIsolateWizard } from '@/components/cloud/EmergencyIsolateWizard'
 import { explainFinding, familyStatusLabel } from '@/lib/finding-explain'
+import { explainParentEvent } from '@/lib/parent-event-explain'
 import { cn } from '@/lib/utils'
 import { useSettingsStore } from '@/stores/settings-store'
 import { usePlatform } from '@/hooks/usePlatform'
@@ -1384,19 +1385,9 @@ function ParentControlPanel({
         {events.length === 0 ? (
           <p className="text-[12px]" style={{ color: 'var(--text-dim)' }}>{t('parentNoEvents')}</p>
         ) : (
-          <div className="max-h-48 overflow-y-auto space-y-1.5">
+          <div className="max-h-72 overflow-y-auto space-y-2">
             {[...events].reverse().slice(0, 40).map((e) => (
-              <div
-                key={e.id}
-                className="rounded-lg px-3 py-2 text-[11px] font-mono"
-                style={{ background: 'var(--bg-subtle)', border: '1px solid var(--border-medium)', color: 'var(--text-secondary)' }}
-              >
-                <span style={{ color: e.type.includes('block') || e.type.includes('isolat') ? '#f87171' : '#a1a1aa' }}>{e.type}</span>
-                {' · '}
-                {e.subject || '—'}
-                {' · '}
-                <span style={{ color: 'var(--text-dim)' }}>{new Date(e.at).toLocaleString()}</span>
-              </div>
+              <ParentEventCard key={e.id} event={e} t={t} />
             ))}
           </div>
         )}
@@ -1414,6 +1405,67 @@ function ParentControlPanel({
           return handleClear()
         }}
       />
+    </div>
+  )
+}
+
+function ParentEventCard({
+  event: e,
+  t,
+}: {
+  event: ParentEvent
+  t: (key: string, opts?: Record<string, unknown>) => string
+}) {
+  const [open, setOpen] = useState(false)
+  const explained = explainParentEvent(e)
+
+  return (
+    <div
+      className="rounded-xl overflow-hidden"
+      style={{
+        background: 'var(--bg-subtle)',
+        border: `1px solid ${open ? explained.accent + '55' : 'var(--border-medium)'}`,
+      }}
+    >
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="flex w-full items-start gap-2 px-3 py-2 text-left"
+        aria-expanded={open}
+      >
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-1.5 mb-0.5">
+            <span
+              className="rounded-full px-2 py-0.5 text-[10px] font-semibold"
+              style={{ color: explained.accent, background: `${explained.accent}1a`, border: `1px solid ${explained.accent}40` }}
+            >
+              {explained.title}
+            </span>
+            <span className="text-[10px]" style={{ color: 'var(--text-dim)' }}>
+              {new Date(e.at).toLocaleString()}
+            </span>
+          </div>
+          <p className="text-[12px] truncate" style={{ color: 'var(--text-secondary)' }}>
+            {e.subject || e.type}
+          </p>
+        </div>
+        <span className="text-[11px] shrink-0 mt-1" style={{ color: 'var(--text-muted)' }}>
+          {open ? t('parentEventHide') : t('parentEventExplain')}
+        </span>
+      </button>
+      {open && (
+        <div className="px-3 pb-3 pt-0 border-t" style={{ borderColor: 'var(--border-medium)' }}>
+          <FindingExplainPanel
+            why={explained.why}
+            recommended={explained.recommended}
+            accent={explained.accent}
+            whyTitle={t('parentEventWhy')}
+            recommendedTitle={t('parentEventRecommended')}
+            animate={false}
+            className="pt-2"
+          />
+        </div>
+      )}
     </div>
   )
 }
