@@ -5,6 +5,7 @@ import { psUtf8 } from './exec-utf8'
 import { cleanOutput, isValidAppIdForSource, parseWingetListOutput } from './software-updater'
 import {
   UTILITY_APP_CATALOG,
+  isUtilityCatalogPackageId,
   type UtilityCatalogApp,
 } from './utility-apps.catalog'
 import type {
@@ -137,6 +138,9 @@ async function runWingetAction(
   packageId: string,
   alreadyAdmin: boolean,
 ): Promise<{ success: boolean; error?: string }> {
+  if (!isUtilityCatalogPackageId(packageId)) {
+    return { success: false, error: 'Package ID is not in the utility catalog' }
+  }
   if (!isValidAppIdForSource(packageId, 'winget')) {
     return { success: false, error: 'Invalid package ID' }
   }
@@ -170,31 +174,52 @@ export async function runUtilityInstallActions(
   packageIds: string[],
   onProgress?: (data: UtilityInstallProgress) => void,
 ): Promise<UtilityInstallActionResult> {
+  const unique = [...new Set(packageIds.filter((id) => typeof id === 'string' && id.length > 0))]
+  const rejectedIds = unique.filter((id) => !isUtilityCatalogPackageId(id))
+  const catalogIds = unique.filter(isUtilityCatalogPackageId)
+  const catalogErrors = rejectedIds.map((id) => ({
+    id,
+    reason: 'Package ID is not in the utility catalog',
+  }))
+
+  if (catalogIds.length === 0) {
+    return { succeeded: 0, failed: catalogErrors.length, errors: catalogErrors }
+  }
+
   if (process.platform !== 'win32') {
-    return { succeeded: 0, failed: packageIds.length, errors: packageIds.map((id) => ({ id, reason: 'Windows only' })) }
+    return {
+      succeeded: 0,
+      failed: catalogIds.length + catalogErrors.length,
+      errors: [
+        ...catalogErrors,
+        ...catalogIds.map((id) => ({ id, reason: 'Windows only' })),
+      ],
+    }
   }
   if (!(await isWingetAvailable())) {
     return {
       succeeded: 0,
-      failed: packageIds.length,
-      errors: packageIds.map((id) => ({ id, reason: 'winget not found — install App Installer from the Microsoft Store' })),
+      failed: catalogIds.length + catalogErrors.length,
+      errors: [
+        ...catalogErrors,
+        ...catalogIds.map((id) => ({ id, reason: 'winget not found — install App Installer from the Microsoft Store' })),
+      ],
     }
   }
 
-  const unique = [...new Set(packageIds.filter((id) => typeof id === 'string' && id.length > 0))]
   const alreadyAdmin = await isAdmin()
   let succeeded = 0
-  let failed = 0
-  const errors: UtilityInstallActionResult['errors'] = []
+  let failed = catalogErrors.length
+  const errors: UtilityInstallActionResult['errors'] = [...catalogErrors]
 
-  for (let i = 0; i < unique.length; i++) {
-    const id = unique[i]
+  for (let i = 0; i < catalogIds.length; i++) {
+    const id = catalogIds[i]
     onProgress?.({
       phase: 'running',
       action,
       currentId: id,
       current: i + 1,
-      total: unique.length,
+      total: catalogIds.length,
       message: `${action} ${id}`,
     })
     const result = await runWingetAction(action, id, alreadyAdmin)
@@ -209,8 +234,8 @@ export async function runUtilityInstallActions(
     phase: 'done',
     action,
     currentId: '',
-    current: unique.length,
-    total: unique.length,
+    current: catalogIds.length,
+    total: catalogIds.length,
     message: `Done — ${succeeded} succeeded, ${failed} failed`,
   })
 

@@ -78,3 +78,9 @@ export const UTILITY_CATEGORY_ORDER: UtilityAppCategory[] = [
   'development',
   'security',
 ]
+
+const UTILITY_APP_CATALOG_PACKAGE_IDS = new Set(UTILITY_APP_CATALOG.map((app) => app.id))
+
+export function isUtilityCatalogPackageId(id: string): boolean {
+  return UTILITY_APP_CATALOG_PACKAGE_IDS.has(id)
+}

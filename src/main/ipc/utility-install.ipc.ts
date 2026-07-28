@@ -14,7 +14,7 @@ import {
   runUtilityInstallActions,
   upgradeAllWingetPackages,
 } from '../services/utility-install'
-import { isValidAppIdForSource } from '../services/software-updater'
+import { isUtilityCatalogPackageId } from '../services/utility-apps.catalog'
 
 const ACTIONS = new Set<UtilityWingetAction>(['install', 'upgrade', 'uninstall'])
 
@@ -66,7 +66,7 @@ export function registerUtilityInstallIpc(getWindow: WindowGetter): void {
         return { succeeded: 0, failed: 0, errors: [] }
       }
       const ids = payload.ids
-        .filter((id): id is string => typeof id === 'string' && isValidAppIdForSource(id, 'winget'))
+        .filter((id): id is string => typeof id === 'string' && isUtilityCatalogPackageId(id))
         .slice(0, 100)
       if (ids.length === 0) {
         return { succeeded: 0, failed: 0, errors: [{ id: '*', reason: 'No valid package IDs' }] }

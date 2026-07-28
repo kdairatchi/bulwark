@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest'
-import { UTILITY_APP_CATALOG, UTILITY_CATEGORY_ORDER } from './utility-apps.catalog'
+import {
+  UTILITY_APP_CATALOG,
+  UTILITY_CATEGORY_ORDER,
+  isUtilityCatalogPackageId,
+} from './utility-apps.catalog'
 import { isValidAppIdForSource } from './software-updater'
 
 describe('utility-apps catalog', () => {
@@ -20,5 +24,12 @@ describe('utility-apps catalog', () => {
     for (const cat of UTILITY_CATEGORY_ORDER) {
       expect(UTILITY_APP_CATALOG.some((a) => a.category === cat), cat).toBe(true)
     }
+  })
+
+  it('identifies only package IDs from the curated catalog', () => {
+    expect(isUtilityCatalogPackageId('Google.Chrome')).toBe(true)
+    expect(isUtilityCatalogPackageId('Microsoft.VisualStudioCode')).toBe(true)
+    expect(isUtilityCatalogPackageId('Microsoft.Teams')).toBe(false)
+    expect(isUtilityCatalogPackageId('--source=msstore')).toBe(false)
   })
 })

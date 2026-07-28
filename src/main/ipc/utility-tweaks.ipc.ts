@@ -1,6 +1,6 @@
 import { ipcMain, shell } from 'electron'
 import { existsSync } from 'fs'
-import { join } from 'path'
+import { isAbsolute, relative, resolve } from 'path'
 import { IPC } from '../../shared/channels'
 import type {
   UtilityPowerPlanSetResult,
@@ -31,12 +31,38 @@ function validatePowerPlanTarget(input: unknown): UtilityPowerPlanTarget | null 
 
 const SHUTUP10_DOWNLOAD_URL = 'https://www.oo-software.com/en/shutup10'
 
-function getShutUp10Candidates(): string[] {
+function pathContainsParentSegment(value: string): boolean {
+  return value.split(/[\\/]+/).includes('..')
+}
+
+function isPathUnderRoot(candidate: string, root: string): boolean {
+  const rel = relative(root, candidate)
+  return rel === '' || (rel.length > 0 && !rel.startsWith('..') && !isAbsolute(rel))
+}
+
+export function getResolvedShutUp10Roots(env: NodeJS.ProcessEnv = process.env): string[] {
   const roots = [
-    process.env.ProgramFiles,
-    process.env['ProgramFiles(x86)'],
-    process.env.LOCALAPPDATA,
-  ].filter((value): value is string => typeof value === 'string' && value.length > 0)
+    env.ProgramFiles,
+    env['ProgramFiles(x86)'],
+    env.LOCALAPPDATA,
+  ].filter((value): value is string =>
+    typeof value === 'string'
+    && value.length > 0
+    && isAbsolute(value)
+    && !pathContainsParentSegment(value)
+  )
+
+  return [...new Set(roots.map((root) => resolve(root)))]
+}
+
+export function isShutUp10CandidatePathAllowed(candidate: string, roots = getResolvedShutUp10Roots()): boolean {
+  if (pathContainsParentSegment(candidate)) return false
+  const resolvedCandidate = resolve(candidate)
+  return roots.some((root) => isPathUnderRoot(resolvedCandidate, root))
+}
+
+export function getShutUp10Candidates(env: NodeJS.ProcessEnv = process.env): string[] {
+  const roots = getResolvedShutUp10Roots(env)
 
   const relativePaths = [
     ['O&O ShutUp10++', 'OOSU10.exe'],
@@ -45,15 +71,22 @@ function getShutUp10Candidates(): string[] {
     ['OOSU10', 'OOSU10.exe'],
   ]
 
-  return roots.flatMap((root) => relativePaths.map((parts) => join(root, ...parts)))
+  return roots.flatMap((root) =>
+    relativePaths
+      .map((parts) => resolve(root, ...parts))
+      .filter((candidate) => isShutUp10CandidatePathAllowed(candidate, roots))
+  )
 }
 
 async function launchShutUp10(): Promise<UtilityShutUpLaunchResult> {
   if (process.platform === 'win32') {
+    const roots = getResolvedShutUp10Roots()
     for (const candidate of getShutUp10Candidates()) {
-      if (!existsSync(candidate)) continue
-      const error = await shell.openPath(candidate)
-      if (!error) return { opened: true, fallback: false, path: candidate }
+      const resolvedCandidate = resolve(candidate)
+      if (!isShutUp10CandidatePathAllowed(resolvedCandidate, roots)) continue
+      if (!existsSync(resolvedCandidate)) continue
+      const error = await shell.openPath(resolvedCandidate)
+      if (!error) return { opened: true, fallback: false, path: resolvedCandidate }
     }
   }
 
