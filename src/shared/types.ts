@@ -303,13 +303,14 @@ export type MalwareScanStep =
 export interface MalwareCategoryProgress {
   id: MalwareScanStep
   label: string
-  status: 'pending' | 'running' | 'done' | 'skipped'
+  /** `error` = engine ran but some/all file scans failed (e.g. ClamAV exit 2). */
+  status: 'pending' | 'running' | 'done' | 'skipped' | 'error'
   /** 0-100 within this category */
   progress: number
   threatsFound: number
   itemsScanned: number
   totalItems: number
-  /** Why this category was skipped (e.g. ClamAV not installed). */
+  /** Why this category was skipped or failed (e.g. ClamAV not installed / scan errors). */
   skipReason?: string
 }
 
