@@ -6,6 +6,7 @@ import {
   explainEvent,
   explainOsError,
   formatEventHeadline,
+  groupEventsByDay,
   redactEvidence,
 } from './activity-explain'
 import type { BulwarkEvent } from './activity-event'
@@ -86,5 +87,23 @@ describe('activity-explain', () => {
     expect(redacted[0].value).toContain('x.x.x.x')
     expect(redacted[0].value).toContain('/…')
     expect(redacted[1].value).toBe('[redacted]')
+  })
+
+  it('groups events into Today / Yesterday / date buckets', () => {
+    const now = new Date('2026-07-28T15:00:00.000Z')
+    const groups = groupEventsByDay(
+      [
+        { id: '1', timestamp: '2026-07-28T12:00:00.000Z' },
+        { id: '2', timestamp: '2026-07-27T12:00:00.000Z' },
+        { id: '3', timestamp: '2026-07-20T12:00:00.000Z' },
+      ],
+      now,
+    )
+    expect(groups.map((g) => g.label)).toEqual([
+      'Today',
+      'Yesterday',
+      expect.stringMatching(/Jul/),
+    ])
+    expect(groups[0].events).toHaveLength(1)
   })
 })

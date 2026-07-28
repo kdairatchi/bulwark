@@ -20,6 +20,7 @@ import { matchKevAgainstApps, kevHitsToCloudFindings, getKevCatalogInfo } from '
 import { getEffectiveKevCatalog } from './kev-feed'
 import { scanAppsWithOsv } from './osv-client'
 import { fetchEpssScores, enrichFindingsWithEpss } from './epss-client'
+import { riskFindingToWire } from '../../shared/finding-adapters'
 
 export type CloudScanFinding = InventoryFinding
 
@@ -71,13 +72,7 @@ function riskToCloudFindings(
       continue
     }
     if (!familyOnly && f.score < minScore) continue
-    const reason = f.evidence[0] || f.recommendedAction || `risk_${f.level}`
-    out.push({
-      level: f.status === 'unknown' ? f.level : f.status,
-      subjectName: f.subjectName,
-      reason: reason.slice(0, 200),
-      category: 'risk',
-    })
+    out.push(riskFindingToWire(f))
   }
   return out
 }
@@ -92,7 +87,8 @@ export function runHealthAssessment(
   const findings: CloudScanFinding[] = [
     ...inventoryFindings,
     {
-      level: report.postureScore >= 80 ? 'safe' : report.postureScore >= 50 ? 'potential_match' : 'likely_affected',
+      level: report.postureScore >= 80 ? 'safe' : report.postureScore >= 50 ? 'medium' : 'high',
+      status: report.postureScore >= 80 ? 'unknown' : report.postureScore >= 50 ? 'potential_match' : 'likely_affected',
       subjectName: 'device_posture',
       reason: `posture_score_${report.postureScore}`,
       category: 'health',

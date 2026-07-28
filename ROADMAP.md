@@ -31,12 +31,14 @@ updater; add a dry-run mode everywhere; require restore points before destructiv
 actions; introduce a structured findings model.
 
 **Landed:** dry-run + restore-point gate for cleans / malware / debloat / registry;
-Activity & Logs foundation; Network Guard system-DNS enforcement on Linux + macOS
-(`networksetup`) + Windows (`netsh`) with `:53` helper, backups, and auto-revert.
+Activity & Logs foundation + UX polish (filters, day groups, empty states);
+structured findings unify (`UnifiedFinding` + adapters); Network Guard system-DNS
+enforcement on Linux + macOS (`networksetup`) + Windows (`netsh`) with `:53`
+helper, backups, and auto-revert.
 
-> **Priority note:** Remaining Phase 1 work is structured findings unify + deeper
-> explainability. Activity & Logs UX polish stays deferred. Phase 5 NVD CPE matching
-> is the next intelligence gap.
+> **Priority note:** Phase 1 is largely complete. Optional deeper finding
+> explainability in product UI remains. Phase 5 NVD CPE matching is the next
+> intelligence gap.
 
 ## Phase 2 — Extract the security core
 

@@ -103,7 +103,8 @@ export async function scanAppsWithOsv(
         if (seen.has(key)) continue
         seen.add(key)
         findings.push({
-          level: 'likely_affected',
+          level: 'high',
+          status: 'likely_affected',
           subjectName: v.id,
           reason: `osv_match:${pkg.ecosystem}:${pkg.name}@${pkg.version}`.slice(0, 200),
           category: 'osv',

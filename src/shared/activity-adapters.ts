@@ -4,6 +4,8 @@
 
 import type { BulwarkEvent } from './activity-event'
 import { buildCause } from './activity-explain'
+import { coerceRiskLevel, explainFinding } from './finding'
+import type { UnifiedFinding } from './finding'
 
 export interface AlertLike {
   id: string
@@ -352,3 +354,67 @@ export function networkEventToBulwarkEvent(
     raw: evt,
   }
 }
+
+/** UnifiedFinding → activity card (for Activity / parent surfaces). */
+export function findingToBulwarkEvent(
+  finding: UnifiedFinding,
+  opts: { deviceId?: string | null; deviceName?: string } = {},
+): BulwarkEvent {
+  const explained = explainFinding(finding)
+  const category: BulwarkEvent['category'] =
+    finding.type === 'malware' || finding.category === 'malware' || finding.category === 'lolbin' ? 'malware'
+      : finding.type === 'vulnerability' || ['kev', 'osv', 'cve'].includes(finding.category) ? 'vulnerability'
+        : finding.type === 'network' || finding.category === 'network' ? 'network'
+          : finding.type === 'privacy' || finding.category === 'privacy' ? 'privacy'
+            : finding.type === 'application_risk' || finding.category === 'risk' ? 'application'
+              : 'security'
+
+  const level = coerceRiskLevel(finding.level)
+
+  return {
+    id: finding.id,
+    deviceId: opts.deviceId ?? null,
+    timestamp: finding.createdAt,
+    category,
+    eventType: `finding.${finding.category || finding.type}`,
+    severity: level === 'safe' ? 'info' : level,
+    status: finding.status === 'fixed' || finding.status === 'false_positive' || finding.status === 'accepted_risk'
+      ? 'success'
+      : 'warning',
+    title: finding.type === 'malware' ? 'Malware finding'
+      : finding.type === 'vulnerability' ? 'Vulnerability finding'
+        : finding.type === 'network' ? 'Network finding'
+          : finding.type === 'privacy' ? 'Privacy finding'
+            : 'Security finding',
+    summary: `${finding.subjectName}: ${explained.why}`,
+    impact: explained.confidence,
+    actionTaken: 'Bulwark recorded a structured finding for review.',
+    source: {
+      component: 'findings',
+      application: finding.subjectName,
+      ruleId: finding.reason.slice(0, 80),
+      deviceName: opts.deviceName,
+    },
+    evidence: [
+      { label: 'Subject', value: finding.subjectName },
+      { label: 'Level', value: finding.level },
+      { label: 'Status', value: finding.status },
+      { label: 'Category', value: finding.category },
+      ...(finding.evidence || []).slice(0, 4).map((v, i) => ({ label: `Evidence ${i + 1}`, value: v })),
+    ],
+    cause: buildCause(
+      explained.why,
+      finding.status === 'confirmed_affected' ? 0.95
+        : finding.status === 'likely_affected' ? 0.85
+          : 0.6,
+    ),
+    remediation: {
+      available: true,
+      automatic: false,
+      reversible: finding.type === 'privacy' || finding.type === 'network',
+      nextStep: explained.nextStep,
+    },
+    raw: finding,
+  }
+}
+

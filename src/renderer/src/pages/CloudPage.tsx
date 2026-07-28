@@ -1085,7 +1085,12 @@ function ParentControlPanel({
         </h4>
         <p className="text-[11px] mb-2" style={{ color: 'var(--text-dim)' }}>{t('parentAlertsHint')}</p>
         {alerts.length === 0 ? (
-          <p className="text-[12px]" style={{ color: 'var(--text-dim)' }}>{t('parentAlertsEmpty')}</p>
+          <div className="rounded-xl px-3 py-4 text-center" style={{ background: 'var(--bg-subtle)', border: '1px solid var(--border-medium)' }}>
+            <p className="text-[12px]" style={{ color: 'var(--text-dim)' }}>{t('parentAlertsEmpty')}</p>
+            <p className="text-[11px] mt-1" style={{ color: 'var(--text-muted)' }}>
+              KEV matches, isolation changes, and DNS blocks will appear here as explainable cards.
+            </p>
+          </div>
         ) : (
           <div className="max-h-80 overflow-y-auto space-y-2">
             {alerts.slice(0, 25).map((a) => {
