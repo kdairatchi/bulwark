@@ -1,11 +1,16 @@
 import { describe, it, expect } from 'vitest'
-import { buildEnforcementPlan, buildResolvConf } from './dns-enforcement'
+import { buildEnforcementPlan, buildResolvConf, isBulwarkManagedResolvConf } from './dns-enforcement'
 
 describe('dns-enforcement · buildResolvConf', () => {
   it('produces a resolv.conf pointing at the given nameserver', () => {
     const out = buildResolvConf('127.0.0.1')
     expect(out).toMatch(/nameserver 127\.0\.0\.1/)
     expect(out).toMatch(/Bulwark/)
+  })
+
+  it('detects our own (potentially stale) resolv.conf via its marker', () => {
+    expect(isBulwarkManagedResolvConf(buildResolvConf('127.0.0.1'))).toBe(true)
+    expect(isBulwarkManagedResolvConf('nameserver 10.0.0.2\n')).toBe(false)
   })
 })
 

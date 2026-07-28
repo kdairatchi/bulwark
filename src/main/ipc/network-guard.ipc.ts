@@ -87,6 +87,9 @@ export interface PortScanRequest {
 // Local-first: destination metadata is matched against a caller-supplied
 // indicator feed entirely on-device. No payloads, no network calls.
 export function registerNetworkGuardIpc(): void {
+  // Clean up any DNS enforcement orphaned by a previous run (restart/crash).
+  void dnsEnforcement.reconcileOnStartup()
+
   ipcMain.handle(IPC.NETWORK_GUARD_CHECK, async (_e, req: NetworkGuardCheckRequest): Promise<NetworkEvent> => {
     const destination = typeof req?.destination === 'string' ? req.destination.trim() : ''
     if (!destination) throw new Error('A destination (domain or IP) is required')

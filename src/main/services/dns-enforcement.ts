@@ -26,8 +26,15 @@ const RESOLV_CONF = '/etc/resolv.conf'
 const LOOPBACK = '127.0.0.1'
 const AUTO_REVERT_MS = 10 * 60 * 1000 // 10 minutes safety backstop
 
+const BULWARK_MARKER = 'Written by Bulwark Network Guard'
+
 export function buildResolvConf(nameserver: string): string {
-  return `# Written by Bulwark Network Guard (system-wide DNS enforcement).\n# Original file backed up; disabling protection restores it.\nnameserver ${nameserver}\n`
+  return `# ${BULWARK_MARKER} (system-wide DNS enforcement).\n# Original file backed up; disabling protection restores it.\nnameserver ${nameserver}\n`
+}
+
+/** True if resolv.conf was written by our enforcement (i.e. potentially stale). */
+export function isBulwarkManagedResolvConf(text: string): boolean {
+  return text.includes(BULWARK_MARKER)
 }
 
 /** Pure: what enforcement would do on a given platform. Used by UI + tests. */
@@ -123,6 +130,35 @@ export class DnsEnforcement {
     const dir = join(app.getPath('userData'), 'enforcement')
     if (!existsSync(dir)) mkdirSync(dir, { recursive: true })
     return dir
+  }
+
+  /**
+   * On startup, clean up enforcement orphaned by a previous run: if resolv.conf
+   * still carries our marker but we aren't enforcing, an app restart lost the
+   * auto-revert timer and left DNS redirected. Restore the backup and kill any
+   * stale :53 helper so a crash/restart can never permanently hijack DNS.
+   */
+  async reconcileOnStartup(): Promise<void> {
+    if (process.platform !== 'linux' || this.enforcing) return
+    try {
+      const current = readFileSync(RESOLV_CONF, 'utf-8')
+      if (!isBulwarkManagedResolvConf(current)) return
+      const backup = join(this.dataDir(), 'resolv.conf.backup')
+      if (existsSync(backup)) {
+        await execFileAsync('sudo', ['-n', 'cp', backup, RESOLV_CONF])
+      }
+      await this.killStaleHelpers()
+      this.deps.audit('enforcement_reconciled', 'cleaned up stale enforcement from a previous run')
+    } catch { /* best effort */ }
+  }
+
+  private async killStaleHelpers(): Promise<void> {
+    try {
+      const { stdout } = await execFileAsync('bash', ['-lc', "ps -eo pid,args | grep 'dns-helper.cjs' | grep -v grep | awk '{print $1}'"])
+      for (const pid of stdout.split(/\s+/).filter(Boolean)) {
+        try { await execFileAsync('sudo', ['-n', 'kill', pid]) } catch { /* ignore */ }
+      }
+    } catch { /* ignore */ }
   }
 
   async apply(): Promise<EnforcementStatus> {
