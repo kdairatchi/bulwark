@@ -206,13 +206,29 @@ export function registerCleanerIpc(getWindow: WindowGetter): void {
       for (const key of ['DISPLAY', 'XAUTHORITY', 'WAYLAND_DISPLAY', 'XDG_RUNTIME_DIR', 'HOME', 'DBUS_SESSION_BUS_ADDRESS']) {
         if (process.env[key]) parts.push(`${key}=${sq(process.env[key])}`)
       }
-      parts.push(sq(exePath), '--no-sandbox', `--kudu-data-dir=${sq(userDataDir)}`)
-      execFile('pkexec', ['/bin/sh', '-c', `${parts.join(' ')} > /dev/null 2>&1 &`], (err) => {
-        if (!err) {
-          app.releaseSingleInstanceLock()
-          app.exit(0)
-        }
-        // If err, user declined or pkexec unavailable — don't quit
+      // In development, the executable is Electron itself and must receive
+      // the app path as its first argument. A packaged build can launch its
+      // executable directly. The old path omitted this distinction, so
+      // pkexec successfully launched Electron without Bulwrk and appeared to
+      // do nothing.
+      const launchTarget = app.isPackaged ? exePath : process.execPath
+      const launchArgs = app.isPackaged
+        ? ['--no-sandbox', `--kudu-data-dir=${userDataDir}`]
+        : [app.getAppPath(), '--no-sandbox', `--kudu-data-dir=${userDataDir}`]
+      parts.push(sq(launchTarget), ...launchArgs.map(sq))
+      return new Promise<void>((resolve, reject) => {
+        execFile('pkexec', ['/bin/sh', '-c', `${parts.join(' ')} > /dev/null 2>&1 &`], (err) => {
+          if (!err) {
+            app.releaseSingleInstanceLock()
+            app.exit(0)
+            resolve()
+            return
+          }
+          console.error('[elevation] Linux relaunch failed:', err.message)
+          // If err, user declined or pkexec is unavailable — keep the current
+          // process alive so the renderer can report the failure.
+          reject(new Error(`Linux administrator relaunch failed: ${err.message}`))
+        })
       })
     }
     // macOS: relaunch-as-admin is not supported — the osascript elevation

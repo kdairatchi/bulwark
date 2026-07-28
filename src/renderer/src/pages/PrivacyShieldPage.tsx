@@ -173,6 +173,14 @@ export function PrivacyShieldPage({ embedded }: { embedded?: boolean }) {
   const progressCleanupRef = useRef<(() => void) | null>(null)
   const [isElevated, setIsElevated] = useState(true)
 
+  const handleRelaunchAsAdmin = useCallback(async () => {
+    try {
+      await window.kudu.elevationRelaunch()
+    } catch {
+      toast.error(t('privacy.relaunchFailed'))
+    }
+  }, [t])
+
   useEffect(() => {
     window.kudu.elevationCheck().then(setIsElevated).catch(() => setIsElevated(false))
   }, [])
@@ -579,7 +587,7 @@ export function PrivacyShieldPage({ embedded }: { embedded?: boolean }) {
                 {t('privacy.adminWarning')}
               </p>
               <button
-                onClick={() => { void window.kudu.elevationRelaunch() }}
+                onClick={() => { void handleRelaunchAsAdmin() }}
                 className="shrink-0 rounded-lg px-3 py-1.5 text-[11px] font-medium text-amber-300 transition-colors hover:bg-amber-500/15"
                 style={{ border: '1px solid rgba(245,158,11,0.25)' }}
               >
@@ -751,7 +759,7 @@ export function PrivacyShieldPage({ embedded }: { embedded?: boolean }) {
             </p>
             {!isElevated && state.settings.some(s => !s.enabled && s.requiresAdmin) && (
               <button
-                onClick={() => { void window.kudu.elevationRelaunch() }}
+                onClick={() => { void handleRelaunchAsAdmin() }}
                 className="shrink-0 rounded-lg px-3 py-1.5 text-[11px] font-medium text-amber-300 transition-colors hover:bg-amber-500/15"
                 style={{ border: '1px solid rgba(245,158,11,0.25)' }}
               >
