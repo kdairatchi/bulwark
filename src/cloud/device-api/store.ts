@@ -296,6 +296,11 @@ export class DeviceStore {
     this.allowDashboardBootstrap = auth.allowBootstrap
   }
 
+  /** Injectable clock (tests pin time; production uses Date.now). */
+  now(): number {
+    return this.deps.now()
+  }
+
   /** Bearer token for dashboard write routes. */
   dashboardToken(): string {
     return this.dashboardTokenValue

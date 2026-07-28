@@ -355,6 +355,232 @@ export function listNetworkEvents(store: DeviceStore, deviceId?: string): Handle
   return { status: 200, body: { events, count: events.length } }
 }
 
+// ─── Fleet reports + alerts (dashboard Bearer) ──────────────
+
+const ONLINE_WINDOW_MS = 15 * 60 * 1000
+const DNS_BLOCKED_WINDOW_MS = 24 * 60 * 60 * 1000
+const KEV_CATEGORIES = new Set(['kev', 'cve', 'osv'])
+const DNS_ALERT_CAP = 50
+const ALERTS_DEFAULT_LIMIT = 100
+const ALERTS_MAX_LIMIT = 200
+
+function isKevCategory(category: string | null | undefined): boolean {
+  return !!category && KEV_CATEGORIES.has(category.toLowerCase())
+}
+
+function isDnsBlockedRecent(at: string, nowMs: number): boolean {
+  const t = Date.parse(at)
+  return Number.isFinite(t) && nowMs - t <= DNS_BLOCKED_WINDOW_MS && nowMs - t >= 0
+}
+
+function kevAlertSeverity(level: string): DashboardAlert['severity'] {
+  const l = level.toLowerCase()
+  if (l.includes('critical') || l.includes('likely') || l === 'dangerous') return 'critical'
+  if (l.includes('high') || l.includes('confirmed')) return 'high'
+  return 'medium'
+}
+
+export type DashboardAlert = {
+  id: string
+  severity: 'critical' | 'high' | 'medium' | 'low'
+  type: 'kev_finding' | 'isolation' | 'dns_blocked' | 'breach'
+  subject: string
+  detail?: string | null
+  at: string
+  deviceId: string | null
+  acknowledged: boolean
+}
+
+/**
+ * GET /v1/reports — fleet summary + per-device rows.
+ * `dnsBlockedCount` / `dnsBlockedRecent` use a rolling 24h window from store.now().
+ */
+export function getFleetReport(store: DeviceStore): HandlerResult {
+  const nowMs = store.now()
+  const generatedAt = new Date(nowMs).toISOString()
+  const allDevices = store.listDevices()
+  const allDns = store.listNetworkEvents().filter(
+    (e) => e.type === 'dns_blocked' && isDnsBlockedRecent(e.at, nowMs),
+  )
+  const dnsByDevice = new Map<string, number>()
+  for (const e of allDns) {
+    dnsByDevice.set(e.deviceId, (dnsByDevice.get(e.deviceId) ?? 0) + 1)
+  }
+
+  const breach = store.getBreachMonitorResult()
+  let unackedBreaches = 0
+  for (const email of breach.emails) {
+    for (const b of email.breaches) {
+      if (!b.acknowledgedAt) unackedBreaches++
+    }
+  }
+
+  let onlineCount = 0
+  let openFindingsTotal = 0
+  let openKevTotal = 0
+  let isolatedCount = 0
+  let scoreSum = 0
+  let worstSecurityScore = 100
+
+  const devices = allDevices.map((d) => {
+    const hb = d.lastHeartbeat ? Date.parse(d.lastHeartbeat) : NaN
+    const online = Number.isFinite(hb) && nowMs - hb <= ONLINE_WINDOW_MS && nowMs - hb >= 0
+    if (online) onlineCount++
+
+    const open = store.openFindings(d.id)
+    const openKevCount = open.filter((f) => isKevCategory(f.category)).length
+    openFindingsTotal += open.length
+    openKevTotal += openKevCount
+
+    const policy = store.getPolicy(d.id)
+    const isolated = policy?.isolated ?? false
+    if (isolated) isolatedCount++
+
+    const securityScore = store.securityScore(d.id)
+    scoreSum += securityScore
+    if (securityScore < worstSecurityScore) worstSecurityScore = securityScore
+
+    return {
+      id: d.id,
+      name: d.name,
+      os: d.os,
+      lastHeartbeat: d.lastHeartbeat,
+      securityScore,
+      openFindingsCount: open.length,
+      openKevCount,
+      isolated,
+      inventoryCount: d.inventoryCount,
+      /** Rolling 24h count of `dns_blocked` network events for this device. */
+      dnsBlockedCount: dnsByDevice.get(d.id) ?? 0,
+    }
+  })
+
+  const deviceCount = devices.length
+  const avgSecurityScore = deviceCount === 0 ? 0 : Math.round(scoreSum / deviceCount)
+  if (deviceCount === 0) worstSecurityScore = 100
+
+  return {
+    status: 200,
+    body: {
+      generatedAt,
+      summary: {
+        deviceCount,
+        onlineCount,
+        avgSecurityScore,
+        worstSecurityScore,
+        openFindingsTotal,
+        openKevTotal,
+        isolatedCount,
+        dnsBlockedRecent: allDns.length,
+        unackedBreaches,
+      },
+      devices,
+      count: devices.length,
+    },
+  }
+}
+
+/**
+ * GET /v1/alerts — materialize dashboard alerts on read (not persisted).
+ * Query: optional `deviceId`, `limit` (default 100, max 200).
+ */
+export function listAlerts(
+  store: DeviceStore,
+  opts?: { deviceId?: string; limit?: number },
+): HandlerResult {
+  const nowMs = store.now()
+  const deviceFilter = opts?.deviceId
+  const limitRaw = opts?.limit
+  const limit = Math.min(
+    ALERTS_MAX_LIMIT,
+    Math.max(1, typeof limitRaw === 'number' && Number.isFinite(limitRaw) ? Math.floor(limitRaw) : ALERTS_DEFAULT_LIMIT),
+  )
+
+  const alerts: DashboardAlert[] = []
+
+  // 1. Open KEV/CVE/OSV findings
+  for (const f of store.listFindings(deviceFilter)) {
+    if (!isKevCategory(f.category)) continue
+    // Only open findings (same set as openFindings, but listFindings may include resolved)
+    const open = store.openFindings(f.deviceId)
+    if (!open.some((o) => o.id === f.id)) continue
+    alerts.push({
+      id: `alert_kev_${f.id}`,
+      severity: kevAlertSeverity(f.level),
+      type: 'kev_finding',
+      subject: f.subjectName,
+      detail: f.reason || null,
+      at: f.updatedAt ?? f.createdAt,
+      deviceId: f.deviceId,
+      acknowledged: false,
+    })
+  }
+
+  // 2. Isolated devices
+  for (const d of store.listDevices()) {
+    if (deviceFilter && d.id !== deviceFilter) continue
+    const policy = store.getPolicy(d.id)
+    if (!policy?.isolated) continue
+    alerts.push({
+      id: `alert_isolation_${d.id}`,
+      severity: 'high',
+      type: 'isolation',
+      subject: d.name,
+      detail: 'Device is in emergency isolation',
+      at: policy.updatedAt,
+      deviceId: d.id,
+      acknowledged: false,
+    })
+  }
+
+  // 3. Recent dns_blocked (24h), dedupe by deviceId+subject, cap 50 before merge
+  const seenDns = new Set<string>()
+  const dnsAlerts: DashboardAlert[] = []
+  const dnsEvents = store.listNetworkEvents(deviceFilter)
+    .filter((e) => e.type === 'dns_blocked' && isDnsBlockedRecent(e.at, nowMs))
+    .sort((a, b) => Date.parse(b.at) - Date.parse(a.at))
+  for (const e of dnsEvents) {
+    const key = `${e.deviceId}\0${e.subject ?? ''}`
+    if (seenDns.has(key)) continue
+    seenDns.add(key)
+    dnsAlerts.push({
+      id: `alert_dns_${e.id}`,
+      severity: 'medium',
+      type: 'dns_blocked',
+      subject: e.subject ?? 'dns_blocked',
+      detail: e.detail,
+      at: e.at,
+      deviceId: e.deviceId,
+      acknowledged: false,
+    })
+    if (dnsAlerts.length >= DNS_ALERT_CAP) break
+  }
+  alerts.push(...dnsAlerts)
+
+  // 4. Unacked breaches (account-scoped; skip when filtering to a device)
+  if (!deviceFilter) {
+    const monitorsById = new Map(store.listBreachMonitors().map((m) => [m.id, m]))
+    for (const b of store.listBreachExposures()) {
+      if (b.acknowledgedAt) continue
+      const monitor = monitorsById.get(b.monitorId)
+      alerts.push({
+        id: `alert_breach_${b.id}`,
+        severity: 'high',
+        type: 'breach',
+        subject: b.title || b.name,
+        detail: monitor ? `${monitor.email} · ${b.domain || b.name}` : (b.domain || null),
+        at: b.firstSeenAt,
+        deviceId: null,
+        acknowledged: false,
+      })
+    }
+  }
+
+  alerts.sort((a, b) => Date.parse(b.at) - Date.parse(a.at))
+  const sliced = alerts.slice(0, limit)
+  return { status: 200, body: { alerts: sliced, count: sliced.length } }
+}
+
 // ─── Breach monitors (dashboard Bearer) ─────────────────────
 
 function hibpToExposureInput(b: HibpBreach) {

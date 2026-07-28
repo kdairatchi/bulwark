@@ -42,7 +42,8 @@ security score, findings, alerts, scan requests, email breach checks, basic repo
 
 **Landed in `src/cloud/device-api/`:** pairing enroll, device telemetry, findings +
 review/score, remote commands, policy/isolate, network events, **email breach
-monitors** (HIBP stub/live — `GET|POST /v1/breach-monitors`, ack, refresh).
+monitors** (HIBP stub/live — `GET|POST /v1/breach-monitors`, ack, refresh),
+**basic reports + alerts** (`GET /v1/reports`, `GET /v1/alerts` — computed on read).
 
 ## Phase 4 — Android TV agent (first unique feature)  *(scaffold in progress)*
 

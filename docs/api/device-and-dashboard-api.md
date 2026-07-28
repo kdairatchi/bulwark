@@ -18,6 +18,7 @@
 > - Event batch ingest: `node scripts/events-batch-demo.mjs`
 > - Finding review + score: `node scripts/finding-review-demo.mjs`
 > - Email breach monitors (stub HIBP): `node scripts/breach-monitor-demo.mjs`
+> - Fleet reports + alerts: `node scripts/reports-alerts-demo.mjs`
 >
 > The Electron app exposes pairing enroll / poll / status on the Cloud page
 > (`deviceCommandAgent` in `src/main/services/device-command-agent.ts`).
@@ -39,6 +40,7 @@
 > - `POST /v1/devices/{id}/isolate` · `DELETE …/isolate` (dashboard auth)
 > - `POST /v1/devices/{id}/network-events` (device-signed)
 > - `GET|POST /v1/breach-monitors` · `DELETE …/{email}` · `POST …/acknowledge` · `POST …/refresh` (dashboard auth; stub HIBP without key)
+> - `GET /v1/reports` · `GET /v1/alerts` (dashboard auth; alerts computed on read)
 
 ## Device APIs (agent → cloud)
 
@@ -74,9 +76,39 @@ POST /v1/breach-monitors                      # Bearer ({ email } — add + HIBP
 DELETE /v1/breach-monitors/{email}            # Bearer (URL-encoded email)
 POST /v1/breach-monitors/acknowledge          # Bearer ({ breachIds: string[] })
 POST /v1/breach-monitors/refresh              # Bearer (optional { email } — re-check one or all)
-GET  /v1/reports                              # planned
+GET  /v1/reports                              # Bearer (fleet summary + per-device rows)
+GET  /v1/alerts                               # Bearer (?deviceId=&limit= — computed on read)
 GET  /v1/audit-events                         # planned
 ```
+
+### Fleet report (`GET /v1/reports`)
+
+Returns `{ generatedAt, summary, devices, count }` where `summary` includes
+`deviceCount`, `onlineCount` (heartbeat within 15 minutes), `avgSecurityScore` /
+`worstSecurityScore`, `openFindingsTotal`, `openKevTotal`, `isolatedCount`,
+`dnsBlockedRecent` (fleet-wide `dns_blocked` events in the last 24h), and
+`unackedBreaches`. Per-device rows include `securityScore`, open finding/KEV
+counts, `isolated`, `inventoryCount`, and `dnsBlockedCount` (**rolling 24h**
+`dns_blocked` count for that device). Empty fleet: `avgSecurityScore` is `0`,
+`worstSecurityScore` is `100`.
+
+### Alerts (`GET /v1/alerts`)
+
+Computed on read (not persisted). Optional query: `deviceId`, `limit` (default
+100, max 200). Body: `{ alerts, count }`.
+
+Each alert: `{ id, severity, type, subject, detail?, at, deviceId, acknowledged }`.
+
+Materialized types:
+
+| type | source |
+|------|--------|
+| `kev_finding` | open findings with category `kev` / `cve` / `osv` |
+| `isolation` | devices with `policy.isolated` |
+| `dns_blocked` | recent `dns_blocked` events (24h, dedupe device+subject, cap 50) |
+| `breach` | unacked breach exposures (`deviceId` null; omitted when `deviceId` filter set) |
+
+Sorted by `at` descending.
 
 ## Email breach monitors
 

@@ -10,6 +10,7 @@ import {
   getServerKey, issueCommand, requestScan, pollCommands, commandResult,
   getPolicy, putPolicy, isolateDevice, clearIsolation,
   submitNetworkEvents, listNetworkEvents,
+  getFleetReport, listAlerts,
   listBreachMonitors, createBreachMonitor, deleteBreachMonitor,
   acknowledgeBreachExposures, refreshBreachMonitors,
   type HandlerResult, type SignedRequest,
@@ -98,6 +99,20 @@ export function createDeviceApiServer(store: DeviceStore, opts?: DeviceApiServer
         if (!requireDashboard(store, req, res)) return
         const deviceId = url.searchParams.get('deviceId') ?? undefined
         return send(res, listNetworkEvents(store, deviceId))
+      }
+      if (method === 'GET' && path === '/v1/reports') {
+        if (!requireDashboard(store, req, res)) return
+        return send(res, getFleetReport(store))
+      }
+      if (method === 'GET' && path === '/v1/alerts') {
+        if (!requireDashboard(store, req, res)) return
+        const deviceId = url.searchParams.get('deviceId') ?? undefined
+        const limitRaw = url.searchParams.get('limit')
+        const limit = limitRaw != null && limitRaw !== '' ? Number(limitRaw) : undefined
+        return send(res, listAlerts(store, {
+          deviceId,
+          limit: Number.isFinite(limit) ? limit : undefined,
+        }))
       }
       if (method === 'GET' && path === '/v1/server-key') return send(res, getServerKey(store))
       const deviceDetail = path.match(/^\/v1\/devices\/([^/]+)$/)
