@@ -2,12 +2,13 @@ import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   ShieldCheck, ShieldAlert, ShieldX, Search, Globe, Activity, Radar, Network,
-  RefreshCw, Lock, ChevronDown, ChevronRight,
+  RefreshCw, Lock, ChevronDown, ChevronRight, ShieldOff, Plus, Trash2, Power,
 } from 'lucide-react'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { useNetworkGuardStore } from '@/stores/network-guard-store'
 import type { NetworkDecision, NetworkEvent } from '@shared/network-guard'
 import type { AppConnections } from '@shared/network-monitor'
+import type { NetworkRule } from '@shared/policy'
 
 const DECISION_STYLE: Record<NetworkDecision, { label: string; color: string; bg: string; border: string; Icon: typeof ShieldCheck }> = {
   allow: { label: 'Allow', color: '#4ade80', bg: 'rgba(34,197,94,0.10)', border: 'rgba(34,197,94,0.30)', Icon: ShieldCheck },
@@ -15,7 +16,7 @@ const DECISION_STYLE: Record<NetworkDecision, { label: string; color: string; bg
   block: { label: 'Block', color: '#f87171', bg: 'rgba(239,68,68,0.10)', border: 'rgba(239,68,68,0.30)', Icon: ShieldX },
 }
 
-type Tab = 'connections' | 'scan' | 'check' | 'spn'
+type Tab = 'connections' | 'dns' | 'rules' | 'scan' | 'check' | 'spn'
 
 export function NetworkGuardPage() {
   const { t } = useTranslation('networkGuard')
@@ -23,9 +24,11 @@ export function NetworkGuardPage() {
 
   const tabs: { id: Tab; label: string; Icon: typeof Activity }[] = [
     { id: 'connections', label: t('tabConnections'), Icon: Activity },
+    { id: 'dns', label: t('tabDns'), Icon: Lock },
+    { id: 'rules', label: t('tabRules'), Icon: ShieldOff },
     { id: 'scan', label: t('tabScan'), Icon: Radar },
     { id: 'check', label: t('tabCheck'), Icon: Search },
-    { id: 'spn', label: t('tabSpn'), Icon: Lock },
+    { id: 'spn', label: t('tabSpn'), Icon: Globe },
   ]
 
   return (
@@ -48,6 +51,8 @@ export function NetworkGuardPage() {
       </div>
 
       {tab === 'connections' && <ConnectionsTab />}
+      {tab === 'dns' && <SecureDnsTab />}
+      {tab === 'rules' && <RulesTab />}
       {tab === 'scan' && <PortScanTab />}
       {tab === 'check' && <CheckTab />}
       {tab === 'spn' && <SpnTab />}
@@ -259,6 +264,139 @@ function VerdictCard({ event }: { event: NetworkEvent }) {
       {event.matchedIndicator && (
         <p className="mt-3 text-[12px]" style={{ color: 'var(--text-muted)' }}>{t('matched')}: <span className="font-mono text-zinc-300">{event.matchedIndicator}</span></p>
       )}
+    </div>
+  )
+}
+
+// ─── Secure DNS (DNS-over-TLS filtering resolver) ───────────
+
+function SecureDnsTab() {
+  const { t } = useTranslation('networkGuard')
+  const dns = useNetworkGuardStore((s) => s.dns)
+  const busy = useNetworkGuardStore((s) => s.dnsBusy)
+  const status = useNetworkGuardStore((s) => s.dnsStatus)
+  const toggle = useNetworkGuardStore((s) => s.dnsToggle)
+
+  useEffect(() => { status() }, [status])
+  const running = dns?.running
+
+  return (
+    <div>
+      <div className="glass-card flex items-center gap-5 rounded-2xl p-6">
+        <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl" style={{ background: running ? 'rgba(34,197,94,0.12)' : 'var(--bg-hover-2)', border: `1px solid ${running ? 'rgba(34,197,94,0.3)' : 'var(--border-default)'}` }}>
+          <Lock className="h-8 w-8" style={{ color: running ? '#22c55e' : 'var(--text-muted)' }} strokeWidth={1.6} />
+        </div>
+        <div className="flex-1">
+          <p className="text-[15px] font-semibold text-white">{t('dnsTitle')}</p>
+          <p className="mt-0.5 text-[12px]" style={{ color: 'var(--text-muted)' }}>
+            {running ? t('dnsRunningAt', { address: dns?.address }) : t('dnsStopped')}
+          </p>
+          <p className="mt-0.5 text-[12px]" style={{ color: 'var(--text-muted)' }}>{t('dnsUpstream', { upstream: dns?.upstream ?? '—' })}</p>
+        </div>
+        <button
+          onClick={() => toggle()}
+          disabled={busy}
+          className="flex items-center gap-2 rounded-xl px-5 py-2.5 text-[12px] font-medium transition-colors disabled:opacity-60"
+          style={{ background: running ? 'rgba(239,68,68,0.15)' : 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', color: running ? '#f87171' : '#fafafa', border: running ? '1px solid rgba(239,68,68,0.3)' : 'none' }}>
+          <Power className="h-3.5 w-3.5" strokeWidth={1.8} /> {running ? t('dnsStop') : t('dnsStart')}
+        </button>
+      </div>
+
+      {running && (
+        <>
+          <div className="mt-4 flex flex-wrap gap-3">
+            <Stat label={t('dnsTotal')} value={dns?.totalQueries ?? 0} />
+            <Stat label={t('dnsBlocked')} value={dns?.blockedQueries ?? 0} color="#f87171" />
+            <Stat label={t('dnsForwarded')} value={dns?.forwardedQueries ?? 0} color="#4ade80" />
+            <Stat label={t('dnsFilterSize')} value={dns?.filterListSize ?? 0} />
+            <button onClick={() => status()} className="flex items-center gap-2 self-center rounded-xl px-3 py-2 text-[12px]" style={{ color: 'var(--text-muted)', border: '1px solid var(--border-default)' }}>
+              <RefreshCw className="h-3.5 w-3.5" strokeWidth={1.8} /> {t('refresh')}
+            </button>
+          </div>
+          <p className="mt-4 rounded-xl px-4 py-3 text-[12px]" style={{ background: 'var(--bg-hover-2)', color: 'var(--text-muted)' }}>{t('dnsPointHint', { address: dns?.address })}</p>
+
+          {dns && dns.recent.length > 0 && (
+            <div className="mt-4">
+              <p className="mb-2 text-[12px] font-semibold uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>{t('dnsRecent')}</p>
+              <div className="space-y-1.5">
+                {dns.recent.slice(0, 15).map((e, i) => (
+                  <div key={i} className="flex items-center gap-3 rounded-lg px-4 py-2 font-mono text-[12px]" style={{ background: e.blocked ? 'rgba(239,68,68,0.06)' : 'var(--bg-hover-2)', border: `1px solid ${e.blocked ? 'rgba(239,68,68,0.2)' : 'var(--border-default)'}` }}>
+                    <span className="min-w-0 flex-1 truncate text-zinc-200">{e.name}</span>
+                    <span style={{ color: 'var(--text-muted)' }}>{e.type}</span>
+                    <span style={{ color: e.blocked ? '#f87171' : '#4ade80' }}>{e.blocked ? t('dnsBlockedTag') : e.via}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  )
+}
+
+// ─── Rules ──────────────────────────────────────────────────
+
+function RulesTab() {
+  const { t } = useTranslation('networkGuard')
+  const rules = useNetworkGuardStore((s) => s.rules)
+  const load = useNetworkGuardStore((s) => s.loadRules)
+  const save = useNetworkGuardStore((s) => s.saveRules)
+  const [domain, setDomain] = useState('')
+  const [action, setAction] = useState<'block' | 'allow'>('block')
+
+  useEffect(() => { load() }, [load])
+
+  const add = () => {
+    const d = domain.trim().toLowerCase()
+    if (!d) return
+    const rule: NetworkRule = {
+      id: `rule_${Date.now()}`,
+      name: `${action} ${d}`,
+      scope: { kind: 'global' },
+      match: { domain: d },
+      action,
+      enabled: true,
+    }
+    save([...rules, rule])
+    setDomain('')
+  }
+  const remove = (id: string) => save(rules.filter((r) => r.id !== id))
+  const toggle = (id: string) => save(rules.map((r) => (r.id === id ? { ...r, enabled: !r.enabled } : r)))
+
+  return (
+    <div className="glass-card rounded-2xl p-6">
+      <p className="mb-3 text-[13px]" style={{ color: 'var(--text-muted)' }}>{t('rulesHint')}</p>
+      <div className="flex gap-2.5">
+        <div className="flex flex-1 items-center gap-2 rounded-xl px-3.5" style={{ background: 'var(--bg-hover-2)', border: '1px solid var(--border-default)' }}>
+          <Globe className="h-4 w-4 shrink-0" style={{ color: 'var(--text-muted)' }} />
+          <input value={domain} onChange={(e) => setDomain(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') add() }} placeholder={t('rulesPlaceholder')} className="w-full bg-transparent py-2.5 text-[13px] text-zinc-100 outline-none" />
+        </div>
+        <select value={action} onChange={(e) => setAction(e.target.value as 'block' | 'allow')} className="rounded-xl px-3 text-[13px] text-zinc-100 outline-none" style={{ background: 'var(--bg-hover-2)', border: '1px solid var(--border-default)' }}>
+          <option value="block">{t('rulesBlock')}</option>
+          <option value="allow">{t('rulesAllow')}</option>
+        </select>
+        <button onClick={add} className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-[12px] font-medium text-zinc-100" style={{ background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)' }}>
+          <Plus className="h-3.5 w-3.5" strokeWidth={1.8} /> {t('rulesAdd')}
+        </button>
+      </div>
+
+      <div className="mt-5 space-y-2">
+        {rules.length === 0 && <p className="text-[13px]" style={{ color: 'var(--text-muted)' }}>{t('rulesEmpty')}</p>}
+        {rules.map((r) => {
+          const isBlock = r.action === 'block'
+          const color = isBlock ? '#f87171' : '#4ade80'
+          return (
+            <div key={r.id} className="flex items-center gap-3 rounded-xl px-4 py-2.5 text-[13px]" style={{ background: 'var(--bg-hover-2)', border: '1px solid var(--border-default)', opacity: r.enabled ? 1 : 0.5 }}>
+              <span className="rounded-full px-2.5 py-0.5 text-[11px] font-semibold" style={{ color, background: `${color}1a`, border: `1px solid ${color}40` }}>{isBlock ? t('rulesBlock') : t('rulesAllow')}</span>
+              <span className="min-w-0 flex-1 truncate font-mono text-zinc-200">{r.match.domain || r.match.ip || r.match.category || '*'}</span>
+              <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>{r.scope.kind === 'app' ? r.scope.app : t('rulesGlobal')}</span>
+              <button onClick={() => toggle(r.id)} className="text-[11px]" style={{ color: 'var(--text-muted)' }}>{r.enabled ? t('rulesOn') : t('rulesOff')}</button>
+              <button onClick={() => remove(r.id)} style={{ color: '#f87171' }}><Trash2 className="h-4 w-4" strokeWidth={1.8} /></button>
+            </div>
+          )
+        })}
+      </div>
     </div>
   )
 }

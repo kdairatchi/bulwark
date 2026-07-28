@@ -3,9 +3,23 @@ import * as si from 'systeminformation'
 import { IPC } from '../../shared/channels'
 import type { NetworkEvent } from '../../shared/network-guard'
 import type { ConnectionOverview, PortScanResult } from '../../shared/network-monitor'
+import type { DnsResolverConfig, DnsResolverStats } from '../../shared/dns'
+import type { NetworkRule } from '../../shared/policy'
 import { buildIndicatorIndex, evaluateDestination, sanitizeIndicators } from '../services/network-guard'
 import { buildConnectionOverview, parsePortSpec, scanPorts } from '../services/network-monitor'
+import { dnsResolver } from '../services/dns-resolver'
+import { STARTER_BLOCKLIST } from '../services/dns-filter'
+import { loadRules, saveRules } from '../services/network-rules-store'
 import { getPlatform } from '../platform'
+
+/** Build the resolver's block set from the starter list + user domain block rules. */
+function resolverBlocklist(rules: NetworkRule[]): string[] {
+  const domains = [...STARTER_BLOCKLIST]
+  for (const r of rules) {
+    if (r.enabled && r.action === 'block' && r.match.domain) domains.push(r.match.domain)
+  }
+  return domains
+}
 
 export interface NetworkGuardCheckRequest {
   destination: string
@@ -47,7 +61,27 @@ export function registerNetworkGuardIpc(): void {
       processNames.set(p.pid, p.name)
     }
     const indicators = sanitizeIndicators(indicatorsRaw)
-    return buildConnectionOverview(connections, listeningPorts, processNames, indicators)
+    return buildConnectionOverview(connections, listeningPorts, processNames, indicators, Date.now(), loadRules())
+  })
+
+  // ─── Secure DNS (DNS-over-TLS filtering resolver) ─────────
+  ipcMain.handle(IPC.DNS_RESOLVER_START, async (_e, config?: Partial<DnsResolverConfig>): Promise<DnsResolverStats> => {
+    dnsResolver.setBlocklist(resolverBlocklist(loadRules()))
+    return dnsResolver.start(config)
+  })
+  ipcMain.handle(IPC.DNS_RESOLVER_STOP, async (): Promise<DnsResolverStats> => {
+    await dnsResolver.stop()
+    return dnsResolver.getStats()
+  })
+  ipcMain.handle(IPC.DNS_RESOLVER_STATUS, async (): Promise<DnsResolverStats> => dnsResolver.getStats())
+
+  // ─── Network rules ────────────────────────────────────────
+  ipcMain.handle(IPC.NETWORK_RULES_GET, async (): Promise<NetworkRule[]> => loadRules())
+  ipcMain.handle(IPC.NETWORK_RULES_SET, async (_e, rules: NetworkRule[]): Promise<NetworkRule[]> => {
+    const saved = saveRules(rules)
+    // Keep the running resolver's blocklist in sync with domain block rules.
+    dnsResolver.setBlocklist(resolverBlocklist(saved))
+    return saved
   })
 
   // On-device TCP connect scanner. Defaults to localhost.

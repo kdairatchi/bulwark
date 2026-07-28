@@ -15,7 +15,9 @@ import type {
   OpenPort,
   PortScanResult,
 } from '../../shared/network-monitor'
-import { buildIndicatorIndex, evaluateDestination } from './network-guard'
+import type { NetworkRule } from '../../shared/policy'
+import { buildIndicatorIndex, evaluateDestination, isIpAddress } from './network-guard'
+import { applyPolicy } from './policy-engine'
 
 // ─── Port ↔ service naming ──────────────────────────────────
 
@@ -144,16 +146,26 @@ export function enrichConnections(
   connections: ActiveConnection[],
   processNames: Map<number, string>,
   indicators: ThreatIndicator[],
+  rules: NetworkRule[] = [],
 ): ConnectionRecord[] {
   const index = buildIndicatorIndex(indicators)
   return connections.map((c) => {
-    const event = evaluateDestination({ destination: c.remoteAddress, port: c.remotePort, protocol: 'tcp' }, index)
+    const process = (c.pid != null && processNames.get(c.pid)) || 'unknown'
+    const base = evaluateDestination({ destination: c.remoteAddress, port: c.remotePort, protocol: 'tcp' }, index)
+    // User rules override the automatic verdict.
+    const event = applyPolicy(base, {
+      domain: isIpAddress(c.remoteAddress) ? undefined : c.remoteAddress,
+      ip: isIpAddress(c.remoteAddress) ? c.remoteAddress : undefined,
+      port: c.remotePort,
+      category: base.category,
+      app: process,
+    }, rules)
     return {
       remoteAddress: c.remoteAddress,
       remotePort: c.remotePort,
       localPort: c.localPort,
       pid: c.pid,
-      process: (c.pid != null && processNames.get(c.pid)) || 'unknown',
+      process,
       decision: event.decision,
       reason: event.reason,
       category: event.category,
@@ -192,8 +204,9 @@ export async function buildConnectionOverview(
   processNames: Map<number, string>,
   indicators: ThreatIndicator[],
   now: number = Date.now(),
+  rules: NetworkRule[] = [],
 ): Promise<ConnectionOverview> {
-  const records = enrichConnections(connections, processNames, indicators)
+  const records = enrichConnections(connections, processNames, indicators, rules)
   const apps = groupByApp(records)
   return {
     apps,

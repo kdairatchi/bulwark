@@ -1,6 +1,8 @@
 import { create } from 'zustand'
 import type { NetworkEvent, ThreatIndicator } from '@shared/network-guard'
 import type { ConnectionOverview, PortScanResult } from '@shared/network-monitor'
+import type { DnsResolverStats } from '@shared/dns'
+import type { NetworkRule } from '@shared/policy'
 
 // A small, clearly-labeled EXAMPLE feed so the checker is usable out of the box.
 // These use RFC 2606 reserved names — they are placeholders that demonstrate the
@@ -34,6 +36,15 @@ interface NetworkGuardState {
   scanResult: PortScanResult | null
   scanning: boolean
   scanPorts: (host: string, ports: string) => Promise<void>
+  // Secure DNS resolver
+  dns: DnsResolverStats | null
+  dnsBusy: boolean
+  dnsStatus: () => Promise<void>
+  dnsToggle: () => Promise<void>
+  // Rules
+  rules: NetworkRule[]
+  loadRules: () => Promise<void>
+  saveRules: (rules: NetworkRule[]) => Promise<void>
 }
 
 function parseFeed(text: string): ThreatIndicator[] {
@@ -98,5 +109,30 @@ export const useNetworkGuardStore = create<NetworkGuardState>((set, get) => ({
     } catch (err) {
       set({ error: err instanceof Error ? err.message : 'Scan failed', scanning: false })
     }
+  },
+
+  dns: null,
+  dnsBusy: false,
+  dnsStatus: async () => {
+    try { set({ dns: await window.kudu.dnsResolverStatus() }) } catch { /* ignore */ }
+  },
+  dnsToggle: async () => {
+    set({ dnsBusy: true })
+    try {
+      const running = get().dns?.running
+      const dns = running ? await window.kudu.dnsResolverStop() : await window.kudu.dnsResolverStart()
+      set({ dns, dnsBusy: false })
+    } catch (err) {
+      set({ error: err instanceof Error ? err.message : 'DNS resolver error', dnsBusy: false })
+    }
+  },
+
+  rules: [],
+  loadRules: async () => {
+    try { set({ rules: await window.kudu.networkRulesGet() }) } catch { /* ignore */ }
+  },
+  saveRules: async (rules) => {
+    try { set({ rules: await window.kudu.networkRulesSet(rules) }) }
+    catch (err) { set({ error: err instanceof Error ? err.message : 'Failed to save rules' }) }
   },
 }))

@@ -92,6 +92,8 @@ import type {
 import type { AppRiskReport } from '../shared/risk'
 import type { NetworkEvent, ThreatIndicator } from '../shared/network-guard'
 import type { ConnectionOverview, PortScanResult } from '../shared/network-monitor'
+import type { DnsResolverConfig, DnsResolverStats } from '../shared/dns'
+import type { NetworkRule } from '../shared/policy'
 
 const api = {
   // Platform
@@ -435,6 +437,12 @@ const api = {
     ipcRenderer.invoke(IPC.NETWORK_MONITOR_LIST, indicators),
   networkPortScan: (req: { host?: string; ports?: string; timeoutMs?: number }): Promise<PortScanResult> =>
     ipcRenderer.invoke(IPC.NETWORK_PORT_SCAN, req),
+  dnsResolverStart: (config?: Partial<DnsResolverConfig>): Promise<DnsResolverStats> =>
+    ipcRenderer.invoke(IPC.DNS_RESOLVER_START, config),
+  dnsResolverStop: (): Promise<DnsResolverStats> => ipcRenderer.invoke(IPC.DNS_RESOLVER_STOP),
+  dnsResolverStatus: (): Promise<DnsResolverStats> => ipcRenderer.invoke(IPC.DNS_RESOLVER_STATUS),
+  networkRulesGet: (): Promise<NetworkRule[]> => ipcRenderer.invoke(IPC.NETWORK_RULES_GET),
+  networkRulesSet: (rules: NetworkRule[]): Promise<NetworkRule[]> => ipcRenderer.invoke(IPC.NETWORK_RULES_SET, rules),
   onProgramSafetyUpdated: (callback: (data: StartupSafetyResult) => void) => {
     const handler = (_event: Electron.IpcRendererEvent, data: StartupSafetyResult) => callback(data)
     ipcRenderer.on(IPC.PROGRAM_SAFETY_UPDATED, handler)

@@ -174,6 +174,11 @@ export const IPC = {
   NETWORK_GUARD_CHECK: 'network-guard:check',
   NETWORK_MONITOR_LIST: 'network-guard:monitor',
   NETWORK_PORT_SCAN: 'network-guard:port-scan',
+  DNS_RESOLVER_START: 'network-guard:dns-start',
+  DNS_RESOLVER_STOP: 'network-guard:dns-stop',
+  DNS_RESOLVER_STATUS: 'network-guard:dns-status',
+  NETWORK_RULES_GET: 'network-guard:rules-get',
+  NETWORK_RULES_SET: 'network-guard:rules-set',
 
   // Onboarding
   ONBOARDING_GET: 'onboarding:get',
