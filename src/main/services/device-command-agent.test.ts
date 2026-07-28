@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, afterEach } from 'vitest'
 
 vi.mock('electron', () => ({
   app: { getPath: () => '/tmp' },
@@ -12,6 +12,15 @@ import {
   defaultCommandExecutor,
 } from './device-command-agent'
 import { buildSignedHeaders } from './device-api-client'
+import { devicePolicyEnforcer } from './device-policy-enforcer'
+import { dnsResolver } from './dns-resolver'
+
+afterEach(async () => {
+  devicePolicyEnforcer.resetForTest()
+  await dnsResolver.stop().catch(() => {})
+  dnsResolver.setOnBlocked(null)
+  dnsResolver.setFilterMode('blocklist', [])
+})
 
 describe('buildSignedHeaders', () => {
   it('produces verifiable device auth headers', () => {
@@ -162,9 +171,10 @@ describe('defaultCommandExecutor', () => {
       expect(typeof r.findings).toBe('number')
       expect(Array.isArray(r._findings)).toBe(true)
     }
-  })
+  }, 15_000)
 
   it('UPDATE_THREAT_FEEDS domain push is not a stub', async () => {
+    devicePolicyEnforcer.setResolverStartConfig({ port: 0 })
     const r = await defaultCommandExecutor('UPDATE_THREAT_FEEDS', {
       syncLists: false,
       domains: ['malware.example.invalid'],

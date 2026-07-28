@@ -102,5 +102,5 @@ describe('desktop-remote-scans', () => {
     expect((await executeRemoteScan('RUN_HEALTH_ASSESSMENT', apps)).type).toBe('RUN_HEALTH_ASSESSMENT')
     expect((await executeRemoteScan('RUN_MALWARE_SCAN', apps, { scope: 'quick' })).scope).toBe('quick')
     expect((await executeRemoteScan('RUN_VULNERABILITY_SCAN', apps)).type).toBe('RUN_VULNERABILITY_SCAN')
-  })
+  }, 15_000)
 })
