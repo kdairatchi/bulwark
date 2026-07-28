@@ -174,6 +174,7 @@ APPLY_POLICY
 | `UPDATE_THREAT_FEEDS` | Syncs enabled filter lists (URLhaus by default) into the local DoT blocklist; optional `domains[]` (+ `replace`) merges into remote blocks (Android-parity). Params: `syncLists` (default true), `listIds[]`, `domains[]`, `replace`. |
 | `QUARANTINE_FILE` | Moves `path` / `paths[]` into the app quarantine folder when under platform malware allowlist (`/tmp`, Downloads, …). |
 | `RESTART_AGENT` | Returns `{ ok, scheduled: true }` immediately, then relaunches the Electron process via `app.relaunch` + `app.exit(0)` after ~1s so the command result can be posted first. |
+| `ISOLATE_DEVICE` / `CLEAR_ISOLATION` / `APPLY_POLICY` | Live via loopback DoT enforcer (`devicePolicyEnforcer`). Does **not** rewrite system DNS (`systemDnsUnchanged: true`). Agent-bound path still prefers a fresh `GET …/policy` pull. |
 
 **Android TV enforcement (non-stub):**
 
