@@ -1,3 +1,4 @@
+import { motion } from 'framer-motion'
 import { cn } from '@/lib/utils'
 import type { LucideIcon } from 'lucide-react'
 
@@ -11,7 +12,12 @@ interface EmptyStateProps {
 
 export function EmptyState({ icon: Icon, title, description, action, className }: EmptyStateProps) {
   return (
-    <div className={cn('flex flex-col items-center justify-center py-20', className)}>
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.25 }}
+      className={cn('flex flex-col items-center justify-center py-20', className)}
+    >
       <div
         className="mb-5 flex h-16 w-16 items-center justify-center rounded-2xl"
         style={{ background: 'var(--bg-subtle)' }}
@@ -23,7 +29,16 @@ export function EmptyState({ icon: Icon, title, description, action, className }
       <p className="mt-1.5 max-w-sm text-center text-[13px]" style={{ color: 'var(--text-muted)' }}>
         {description}
       </p>
-      {action && <div className="mt-5">{action}</div>}
-    </div>
+      {action && (
+        <motion.div
+          className="mt-5"
+          initial={{ opacity: 0, y: 4 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.08, duration: 0.2 }}
+        >
+          {action}
+        </motion.div>
+      )}
+    </motion.div>
   )
 }

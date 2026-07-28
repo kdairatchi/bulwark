@@ -2,14 +2,11 @@
   "pageTitle": "Bulwrk Cloud",
   "pageDescription": "Unlock powerful security features by connecting to Bulwrk Cloud",
   "pageDescriptionLinked": "Manage your cloud connection and device settings",
-
   "heroTitle": "Supercharge your system security",
   "heroSubtitle": "From $5/month · Cancel anytime",
   "heroDescription": "Link this device to Bulwrk Cloud for real-time threat monitoring, AI-powered safety analysis, vulnerability scanning, and a single dashboard to manage every device from anywhere. Plans start at just $5/month — cancel anytime, no commitment.",
-
   "localFeaturesTitle": "Unlocked locally on this device",
   "localFeaturesSubtitle": "These features activate directly in your Bulwrk app once linked",
-
   "featureThreatMonitorTitle": "Threat Monitoring",
   "featureThreatMonitorDesc": "Tracks and alerts you if your computer communicates with ransomware command servers, criminal infrastructure, botnets, or other known-malicious endpoints in real time.",
   "featureVulnerabilityTitle": "Vulnerability Scanner (CVE)",
@@ -20,15 +17,11 @@
   "featureBreachMonitorDesc": "Add the email addresses you care about and Bulwrk checks them against known data breaches — showing which sites leaked, what data was exposed, and how many accounts were affected. Get alerted the moment your details appear in a new breach, and mark each one reviewed.",
   "featureHealthReportsTitle": "Security Health Reports",
   "featureHealthReportsDesc": "Automated posture checks covering antivirus, firewall, encryption, Windows Update, password policy, and more — sent to the dashboard every 30 minutes.",
-
   "localFeaturesNote": "Features marked Basic or Pro unlock on that plan or higher. Everything else is included on every plan.",
-
   "upgradeCalloutTitle": "Even on one device, Pro unlocks more",
   "upgradeCalloutDesc": "Basic gives you dashboards, alerts, compliance, AI safety analysis, and breach monitoring. Upgrading to Pro adds threat monitoring, vulnerability scanning, and automated remediation — features that protect you locally, not just in the cloud.",
-
   "cloudFeaturesTitle": "Cloud Dashboard",
   "cloudFeaturesSubtitle": "Manage and monitor all your devices from your Bulwrk cloud dashboard",
-
   "featureRemoteTitle": "Remote Management",
   "featureRemoteDesc": "Trigger scans, cleaning, software updates, and power control on any linked device from the web dashboard — no physical access needed.",
   "featureTelemetryTitle": "Live Telemetry",
@@ -37,10 +30,8 @@
   "featureComplianceDesc": "Automated security posture analysis covering antivirus, firewall, encryption, updates, and password policy. Build custom compliance rules.",
   "featureAlertsTitle": "Advanced Alerts",
   "featureAlertsDesc": "Configurable notifications for threats, compliance drift, system offline events, and new vulnerabilities. Integrate with email, Slack, and webhooks.",
-
   "plansTitle": "Simple pricing",
   "plansSubtitle": "From $5/month · Cancel anytime, no contract",
-
   "planBasicName": "Basic",
   "planBasicPrice": "$5",
   "planBasicPeriod": "/ device / month",
@@ -51,7 +42,6 @@
   "planBasicFeature5": "API access",
   "planBasicFeature6": "30-day data retention",
   "planPopularBadge": "Popular",
-
   "planProName": "Pro",
   "planProPrice": "$9",
   "planProPeriod": "/ device / month",
@@ -62,7 +52,6 @@
   "planProFeature5": "Advanced alerts & scheduled reports",
   "planProFeature6": "SSO, audit logs & priority support",
   "planProFeature7": "90-day data retention",
-
   "connectTitle": "Get started",
   "connectDescription": "Create an account or paste your API key to link this device.",
   "signUpFree": "Create account",
@@ -72,7 +61,6 @@
   "linkDevice": "Link Device",
   "telemetryDisclaimer": "Only CPU & memory usage, disk space, network stats, uptime, and periodic health reports ({{registryExtra}}updates, privacy, malware). No file paths or personal data.",
   "telemetryRegistryExtra": "registry, drivers, ",
-
   "deviceLinkedToast": "Device linked to cloud dashboard",
   "linkFailedToast": "Failed to link device",
   "linkFailedDefaultDesc": "Check your API key and try again",
@@ -81,7 +69,6 @@
   "unlinkFailedToast": "Failed to unlink device",
   "reconnectFailedToast": "Failed to reconnect",
   "reconnectFailedDesc": "Check your network connection and try again",
-
   "sectionStatus": "Connection",
   "statusLabel": "Status",
   "statusLoading": "Loading...",
@@ -94,7 +81,6 @@
   "lastHealthReportLabel": "Last health report",
   "lastHealthReportDescWindows": "Registry, drivers, updates, privacy, malware",
   "lastHealthReportDescOther": "Updates, privacy, malware",
-
   "sectionMonitoring": "Monitoring & Data Sharing",
   "shareDiskHealthLabel": "Share disk health",
   "shareDiskHealthDesc": "Include disk SMART data in telemetry",
@@ -114,7 +100,6 @@
   "cveLibrarySize": "{{count}} CVEs tracked",
   "cveNoFindings": "No vulnerabilities found",
   "cveNotScanned": "Not scanned yet",
-
   "sectionRemoteControl": "Remote Control",
   "remotePowerLabel": "Remote power control",
   "remotePowerDesc": "Allow cloud to shutdown or restart this device",
@@ -126,7 +111,6 @@
   "remoteInstallsDescOther": "Allow cloud to install software and system updates",
   "remoteConfigLabel": "Remote config changes",
   "remoteConfigDesc": "Allow cloud to toggle startup items, services, and privacy settings",
-
   "sectionAdvanced": "Advanced",
   "telemetryIntervalLabel": "Telemetry interval",
   "telemetryIntervalDesc": "How often system stats are sent",
@@ -136,9 +120,30 @@
   "telemetryInterval15m": "15 minutes",
   "unlinking": "Unlinking...",
   "unlinkDevice": "Unlink Device",
-
   "pairingTitle": "Device pairing (Bulwrk control plane)",
   "pairingDescription": "Enroll with a short-lived pairing code. This device generates its own Ed25519 key pair — no shared API key. The agent then polls for server-signed, allowlisted remote commands.",
+  "pairingWizardTitle": "Add this device to your family",
+  "pairingWizardSubtitle": "A short guided setup — no shared passwords, just a one-time pairing code.",
+  "pairingWizardStepIntroTitle": "How pairing works",
+  "pairingWizardStepIntroBody": "Parents mint a code on the control plane. This device uses it once to enroll, then checks in with heartbeats.",
+  "pairingWizardStepIntroBullet1": "Start the control plane (or use your Bulwrk cloud host).",
+  "pairingWizardStepIntroBullet2": "Mint a short-lived pairing code for this device.",
+  "pairingWizardStepIntroBullet3": "Enter the code here — Bulwrk creates a unique key for this device.",
+  "pairingWizardStepCodeTitle": "Enter the pairing code",
+  "pairingWizardStepCodeBody": "Codes are short-lived. Paste the code from your parent dashboard or control plane.",
+  "pairingWizardStepEnrollTitle": "Connect this device",
+  "pairingWizardStepEnrollBody": "Ready when you are. Enrollment creates keys on this device and registers it with the control plane.",
+  "pairingWizardStepEnrollWorking": "Enrolling… hang tight while we register this device.",
+  "pairingWizardStepDoneTitle": "Device linked",
+  "pairingWizardStepDoneBody": "This device is enrolled. Request a health or malware scan from the parent panel below.",
+  "pairingWizardContinue": "Continue",
+  "pairingWizardBack": "Back",
+  "pairingWizardShowAdvanced": "Show control plane URL",
+  "pairingWizardHideAdvanced": "Hide control plane URL",
+  "pairingWizardEnrolledTitle": "This device is paired",
+  "pairingWizardEnrolledDesc": "Heartbeats and remote commands are active for this device.",
+  "pairingWizardFirstScan": "What to scan next",
+  "pairingWizardFirstScanHint": "Scroll to Parent controls below and request a Health or Malware scan for this device.",
   "pairingBaseUrlPlaceholder": "Control plane URL (e.g. http://127.0.0.1:8787)",
   "pairingCodePlaceholder": "PAIRING CODE",
   "pairingEnroll": "Enroll device",
@@ -159,7 +164,6 @@
   "pairingUnenrollFailedToast": "Failed to unenroll",
   "pairingPolledToast": "Polled control plane for commands",
   "pairingPollFailedToast": "Poll failed",
-
   "parentTitle": "Family devices",
   "parentDescription": "Parent control plane: mint pairing codes, isolate a kid’s TV, push DNS blocklists, and watch live network events.",
   "parentCreateCode": "Create pairing code",
@@ -193,7 +197,7 @@
   "parentMarkAcceptedRisk": "Accept risk",
   "parentReviewToast": "Finding reviewed",
   "parentReviewFailedToast": "Could not review finding",
-  "parentNoFindings": "No findings yet. Request inventory or run a scan from an enrolled device.",
+  "parentNoFindings": "Request inventory or run a scan from an enrolled device — results show up here with plain-language next steps.",
   "parentRequestInventory": "Request inventory",
   "parentInventoryQueuedToast": "REQUEST_INVENTORY queued — agent will sync apps + findings",
   "parentInventoryFailedToast": "Could not queue inventory request",
@@ -228,5 +232,8 @@
   "parentBreachRemovedToast": "Monitor removed",
   "parentBreachAckToast": "Breach marked reviewed",
   "parentBreachRefreshedToast": "Breach checks refreshed",
-  "parentBreachEmailRequired": "Enter an email address"
+  "parentBreachEmailRequired": "Enter an email address",
+  "parentFindingWhy": "Why this matters",
+  "parentFindingRecommended": "What to do",
+  "parentNoFindingsTitle": "No findings yet"
 }

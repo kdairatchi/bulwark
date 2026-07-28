@@ -53,6 +53,8 @@ export interface DashboardFinding {
   reason: string
   category?: string | null
   fixRecommendation?: string | null
+  confidence?: number | null
+  evidence?: string[]
   createdAt: string
   updatedAt?: string | null
   status: string

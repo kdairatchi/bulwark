@@ -45,7 +45,7 @@ export function Onboarding({ onComplete }: OnboardingProps) {
       // Best-effort
     }
     onComplete()
-    navigate('/')
+    navigate('/malware')
   }
 
   return (
@@ -362,7 +362,7 @@ function FinishStep({
             className="flex items-center gap-2 rounded-xl px-8 py-3 text-[14px] font-semibold text-zinc-900 transition-opacity hover:opacity-90"
             style={{ background: 'var(--accent)' }}
           >
-            {t('startCleaning')} <Rocket className="h-4 w-4" />
+            {t('startProtecting')} <Rocket className="h-4 w-4" />
           </button>
         </div>
       </div>
