@@ -19,6 +19,7 @@ import {
 import { matchKevAgainstApps, kevHitsToCloudFindings, getKevCatalogInfo } from './kev-matcher'
 import { getEffectiveKevCatalog } from './kev-feed'
 import { scanAppsWithOsv } from './osv-client'
+import { scanAppsWithNvd } from './nvd-client'
 import { fetchEpssScores, enrichFindingsWithEpss } from './epss-client'
 
 export type CloudScanFinding = InventoryFinding
@@ -164,7 +165,7 @@ export async function runMalwareScanQuick(
 /**
  * Vulnerability posture + KEV name/version match (+ optional live CISA sync) +
  * technique/vuln-heuristic grep. Optional OSV + EPSS enrichment (soft-fail, bounded).
- * Full NVD CPE matching remains incomplete Phase 5 work.
+ * NVD CPE matching is optional and bounded to known product mappings.
  */
 export async function runVulnerabilityScanPosture(
   apps: InstalledApp[],
@@ -194,8 +195,11 @@ export async function runVulnerabilityScanPosture(
   const enableOsv = parameters.osv === true || parameters.osv === 'true'
   const osvHits = enableOsv ? await scanAppsWithOsv(apps) : []
 
+  const enableNvd = parameters.nvd === true || parameters.nvd === 'true'
+  const nvdHits = enableNvd ? await scanAppsWithNvd(apps) : []
+
   const enableEpss = parameters.epss === true || parameters.epss === 'true'
-  let cveFindings = [...kevHits, ...osvHits]
+  let cveFindings = [...kevHits, ...osvHits, ...nvdHits]
   if (enableEpss && cveFindings.length > 0) {
     const scores = await fetchEpssScores(cveFindings.map((f) => f.subjectName))
     cveFindings = enrichFindingsWithEpss(cveFindings, scores)
@@ -206,6 +210,7 @@ export async function runVulnerabilityScanPosture(
   const scopeParts = ['kev']
   if (enableKevSync || kevEffective.source.startsWith('merged')) scopeParts.push(kevEffective.synced ? 'live' : 'cached')
   if (enableOsv) scopeParts.push('osv')
+  if (enableNvd) scopeParts.push('nvd')
   if (enableEpss) scopeParts.push('epss')
   scopeParts.push('posture', 'technique')
 
@@ -222,7 +227,7 @@ export async function runVulnerabilityScanPosture(
       + (enableOsv ? ' + OSV' : '')
       + (enableEpss ? ' + EPSS' : '')
       + (kevEffective.error ? ` [kev-sync: ${kevEffective.error}]` : '')
-      + ' — full NVD CPE matching still incomplete (not a live zero-day feed)',
+      + ' — NVD is bounded to known product mappings and is not a live zero-day feed',
     parameters,
     _findings: findings,
   }

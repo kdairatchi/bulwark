@@ -39,11 +39,12 @@ requires an explicit migration plan and backward-compatibility tests.
 - [ ] A separate migration proposal covers internal identifiers and data contracts.
 - [ ] Naming and signing identities are approved after trademark review.
 
-## Phase 1 — Stabilize the desktop agent
+## Phase 1 — Stabilize the desktop agent  *(complete)*
 
-Run all tests; build on Windows/Linux/macOS; review elevated commands, IPC, and the
-updater; add a dry-run mode everywhere; require restore points before destructive
-actions; introduce a structured findings model.
+Completed: dry-run cleanup paths, restore-point gates for destructive actions,
+structured findings, elevated-command and IPC hardening, updater safeguards, and
+desktop/remote scan smoke coverage. Cross-platform release builds remain a CI
+responsibility and are tracked under Phase 6 validation.
 
 ## Phase 2 — Extract the security core
 
@@ -72,11 +73,17 @@ PackageManager inventory with APK/cert hashes + static surface (exported/debugga
 targetSdk), posture findings, DnsGuard `VpnService` + local blocklist, remote policy
 sync + emergency isolation, network-event batching, JVM demo (`:core:runAgentDemo`).
 
-## Phase 5 — Vulnerability intelligence
+## Phase 5 — Vulnerability intelligence  *(in progress)*
 
-Software normalization; OSV/NVD adapters; CISA KEV + EPSS enrichment; vendor/distro
-advisory adapters; version-range evaluator; finding deduplication; fix-recommendation
-engine.
+- [x] Software inventory normalization and deterministic risk findings.
+- [x] CISA KEV sync, matching, deduplication, and fix recommendations.
+- [x] OSV adapter and optional bounded package queries.
+- [x] EPSS enrichment for CVE/KEV/OSV/NVD findings.
+- [x] Bounded NVD 2.0 CPE adapter for known product mappings.
+- [ ] Expand product/vendor normalization without loose-name false positives.
+- [ ] Add NVD cache/update workflow using last-modified windows and API-key support.
+- [ ] Add vendor/distro advisories and version-range evaluator beyond NVD CPE data.
+- [ ] Consolidate finding confidence, deduplication, and remediation evidence.
 
 ## Phase 6 — Public beta
 
