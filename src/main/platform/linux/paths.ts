@@ -61,7 +61,21 @@ export function createLinuxPaths(): PlatformPaths {
     },
 
     malwareSystemDirs(): string[] {
-      return ['/usr', '/lib', '/lib64', '/sbin', '/bin', '/opt']
+      // Trusted locations for suppressing Linux fake-binary name heuristics
+      // (e.g. FakeSystemd). Keep these narrow: /opt and /usr/local are scanned
+      // for third-party drops, so they must NOT count as "expected system paths".
+      // Bare `/usr` would also swallow `/usr/local/*` via prefix matching.
+      return [
+        '/usr/bin',
+        '/usr/sbin',
+        '/usr/lib',
+        '/usr/lib64',
+        '/usr/libexec',
+        '/lib',
+        '/lib64',
+        '/sbin',
+        '/bin',
+      ]
     },
 
     uninstallLeftoverDirs(): UninstallLeftoverDir[] {

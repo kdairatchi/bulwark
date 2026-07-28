@@ -51,16 +51,23 @@ describe('linux paths', () => {
   describe('malwareSystemDirs', () => {
     const dirs = paths.malwareSystemDirs()
 
-    it('includes standard system directories', () => {
-      expect(dirs).toContain('/usr')
+    it('includes expected OS binary prefixes (not third-party trees)', () => {
+      expect(dirs).toContain('/usr/bin')
+      expect(dirs).toContain('/usr/sbin')
+      expect(dirs).toContain('/usr/lib')
       expect(dirs).toContain('/lib')
       expect(dirs).toContain('/sbin')
       expect(dirs).toContain('/bin')
-      expect(dirs).toContain('/opt')
     })
 
-    it('includes /lib64', () => {
+    it('includes /lib64 and /usr/lib64', () => {
       expect(dirs).toContain('/lib64')
+      expect(dirs).toContain('/usr/lib64')
+    })
+
+    it('does not treat /opt or bare /usr as trusted (scan targets for drops)', () => {
+      expect(dirs).not.toContain('/opt')
+      expect(dirs).not.toContain('/usr')
     })
   })
 
