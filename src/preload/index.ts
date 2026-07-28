@@ -62,6 +62,7 @@ import type {
   UtilityPowerPlanSetResult,
   UtilityPowerPlanState,
   UtilityPowerPlanTarget,
+  UtilityShutUpLaunchResult,
   UtilityTweakActionResult,
   UtilityTweakMetadata,
   UtilityTweaksScanResult,
@@ -512,6 +513,8 @@ const api = {
     ipcRenderer.invoke(IPC.UTILITY_TWEAKS_POWER_PLAN_GET),
   utilityTweaksPowerPlanSet: (target: UtilityPowerPlanTarget): Promise<UtilityPowerPlanSetResult> =>
     ipcRenderer.invoke(IPC.UTILITY_TWEAKS_POWER_PLAN_SET, target),
+  utilityTweaksLaunchShutUp10: (): Promise<UtilityShutUpLaunchResult> =>
+    ipcRenderer.invoke(IPC.UTILITY_TWEAKS_SHUTUP10_LAUNCH),
 
   // Cloud Agent
   cloudLink: (apiKey: string): Promise<{ success: boolean; error?: string }> =>

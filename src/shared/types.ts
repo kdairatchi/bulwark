@@ -1074,6 +1074,13 @@ export interface UtilityPowerPlanSetResult {
   error?: string
 }
 
+export interface UtilityShutUpLaunchResult {
+  opened: boolean
+  fallback: boolean
+  path?: string
+  error?: string
+}
+
 export interface UtilityTweaksScanResult {
   available: boolean
   tweaks: UtilityTweakMetadata[]

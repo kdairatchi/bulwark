@@ -240,6 +240,7 @@ export const IPC = {
   UTILITY_TWEAKS_REVERT: 'utility-tweaks:revert',
   UTILITY_TWEAKS_POWER_PLAN_GET: 'utility-tweaks:power-plan:get',
   UTILITY_TWEAKS_POWER_PLAN_SET: 'utility-tweaks:power-plan:set',
+  UTILITY_TWEAKS_SHUTUP10_LAUNCH: 'utility-tweaks:shutup10:launch',
 
   // Cloud Agent
   CLOUD_LINK: 'cloud:link',
