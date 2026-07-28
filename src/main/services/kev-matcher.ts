@@ -7,7 +7,7 @@ import { readFileSync, statSync } from 'fs'
 import path from 'path'
 import type { InstalledApp } from '../platform/types'
 import type { InventoryFinding } from './desktop-inventory'
-import { isVersionAtLeast } from './cve-filter'
+import { evaluateAdvisoryVersion } from './vendor-advisories'
 
 export type KevSeverity = 'critical' | 'high' | 'medium' | 'low'
 
@@ -142,12 +142,10 @@ function versionStillVulnerable(installed: string, vulnerableBelow?: string): bo
     // No reliable version constraint — treat as potential (caller sets level)
     return true
   }
-  try {
-    // Flag when installed is NOT yet at/above the fix floor
-    return !isVersionAtLeast(installed, vulnerableBelow)
-  } catch {
-    return true
-  }
+  const status = evaluateAdvisoryVersion(installed, { vulnerableBelow })
+  // Prefer silence only when clearly fixed / not in range; unknown still surfaces
+  // (matches prior KEV behavior when version parse is incomplete).
+  return status === 'affected' || status === 'unknown'
 }
 
 export function matchKevAgainstApps(

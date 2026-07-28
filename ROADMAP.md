@@ -81,7 +81,8 @@ sync + emergency isolation, network-event batching, JVM demo (`:core:runAgentDem
 - [x] Bounded NVD 2.0 CPE adapter for known product mappings.
 - [x] Expand product/vendor normalization without loose-name false positives.
 - [x] Add NVD cache/update workflow using last-modified windows and API-key support.
-- [x] Add vendor/distro advisories and version-range evaluator beyond NVD CPE data.
+- [x] Add vendor/distro advisories and version-range evaluator beyond NVD CPE data
+      (curated offline catalog + matcher on `RUN_VULNERABILITY_SCAN`; live USN/MSRC sync later).
 - [x] Consolidate finding confidence, deduplication, and remediation evidence.
 
 ## Phase 6 — Public beta

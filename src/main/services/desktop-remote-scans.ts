@@ -17,6 +17,11 @@ import {
   getLolbinCatalogInfo,
 } from './lolbin-scanner'
 import { matchKevAgainstApps, kevHitsToCloudFindings, getKevCatalogInfo } from './kev-matcher'
+import {
+  matchVendorAdvisoriesAgainstApps,
+  advisoryHitsToCloudFindings,
+  getVendorAdvisoryCatalogInfo,
+} from './vendor-advisory-matcher'
 import { getEffectiveKevCatalog } from './kev-feed'
 import { scanAppsWithOsv } from './osv-client'
 import { getNvdCacheDir, scanAppsWithNvd } from './nvd-client'
@@ -164,7 +169,8 @@ export async function runMalwareScanQuick(
 
 /**
  * Vulnerability posture + KEV name/version match (+ optional live CISA sync) +
- * technique/vuln-heuristic grep. Optional OSV + EPSS enrichment (soft-fail, bounded).
+ * curated vendor/distro advisories + technique/vuln-heuristic grep.
+ * Optional OSV + EPSS enrichment (soft-fail, bounded).
  * NVD CPE matching is optional and bounded to known product mappings.
  */
 export async function runVulnerabilityScanPosture(
@@ -192,6 +198,15 @@ export async function runVulnerabilityScanPosture(
     matchKevAgainstApps(apps, { catalog: kevEffective.catalog }),
   )
 
+  const disableAdvisories = parameters.advisories === false || parameters.advisories === 'false'
+  const advisoryInfo = getVendorAdvisoryCatalogInfo()
+  const advisoryHitsRaw = disableAdvisories
+    ? []
+    : advisoryHitsToCloudFindings(matchVendorAdvisoriesAgainstApps(apps))
+  // Prefer KEV for the same CVE id when both fire (dedupe by subjectName).
+  const kevCves = new Set(kevHits.map((f) => f.subjectName))
+  const advisoryHits = advisoryHitsRaw.filter((f) => !kevCves.has(f.subjectName))
+
   const enableOsv = parameters.osv === true || parameters.osv === 'true'
   const osvHits = enableOsv ? await scanAppsWithOsv(apps) : []
 
@@ -199,7 +214,7 @@ export async function runVulnerabilityScanPosture(
   const nvdHits = enableNvd ? await scanAppsWithNvd(apps, { cacheDir: getNvdCacheDir() }) : []
 
   const enableEpss = parameters.epss === true || parameters.epss === 'true'
-  let cveFindings = [...kevHits, ...osvHits, ...nvdHits]
+  let cveFindings = [...kevHits, ...advisoryHits, ...osvHits, ...nvdHits]
   if (enableEpss && cveFindings.length > 0) {
     const scores = await fetchEpssScores(cveFindings.map((f) => f.subjectName))
     cveFindings = enrichFindingsWithEpss(cveFindings, scores)
@@ -209,6 +224,7 @@ export async function runVulnerabilityScanPosture(
   const cveLike = cveFindings.length
   const scopeParts = ['kev']
   if (enableKevSync || kevEffective.source.startsWith('merged')) scopeParts.push(kevEffective.synced ? 'live' : 'cached')
+  if (!disableAdvisories) scopeParts.push('advisories')
   if (enableOsv) scopeParts.push('osv')
   if (enableNvd) scopeParts.push('nvd')
   if (enableEpss) scopeParts.push('epss')
@@ -224,6 +240,7 @@ export async function runVulnerabilityScanPosture(
     appsAssessed: apps.length,
     scope: scopeParts.join('_'),
     note: `KEV match (${kevEffective.source}, catalog v${kevInfo.version}, ${kevInfo.entryCount} entries, ${cveLike} CVE-like hits)`
+      + (disableAdvisories ? '' : ` + advisories v${advisoryInfo.version} (${advisoryInfo.entryCount})`)
       + (enableOsv ? ' + OSV' : '')
       + (enableEpss ? ' + EPSS' : '')
       + (kevEffective.error ? ` [kev-sync: ${kevEffective.error}]` : '')

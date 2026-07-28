@@ -43,10 +43,14 @@ The mapping includes conservative aliases for common products such as Firefox,
 Apache HTTP Server, VS Code, Acrobat, VLC, Edge, and Docker Desktop; generic
 names are intentionally rejected rather than guessed.
 
-Vendor and distro feed adapters should normalize their native ranges through
-`vendor-advisories.ts`. It supports inclusive `introduced`/`fixedIn` bounds,
-KEV-style `vulnerableBelow`, Debian/RPM/Alpine revisions, and returns `unknown`
-when either side lacks enough version evidence.
+**Vendor/distro advisories:** curated offline catalog
+(`rules/security/vendor-advisories.json`) matched on every
+`RUN_VULNERABILITY_SCAN` (disable with `parameters.advisories=false`). Version
+decisions use `evaluateAdvisoryVersion` (`introduced` / `fixedIn` /
+`vulnerableBelow`, including Debian/RPM-style revisions). Findings use
+`category: 'advisory'`; when the same CVE is already reported as KEV, the
+advisory hit is suppressed. Live USN/MSRC downloaders are a follow-up (same
+pattern as `kev-feed`).
 
 Finding submissions retain a calibrated `confidence` score and bounded
 `evidence` tokens. Repeated open findings merge the strongest level and
@@ -61,6 +65,8 @@ confidence, preserve remediation text, and union evidence for review context.
 | EPSS enrichment | **Landed** (`epss`) |
 | Bounded OSV queries (`osv=true`) | **Landed (optional)** |
 | Bounded NVD 2.0 CPE matching | **Landed (opt-in)** |
+| Offline vendor/distro advisories | **Landed** (curated seed) |
+| Live USN/MSRC/distro advisory sync | Follow-up |
 | Full product/vendor normalization | Phase 5 in progress |
 | Live zero-day intel feed | Out of scope |
 | Full LOLBAS dump (~1000+ bins) | Seed catalog; expand iteratively |
@@ -70,5 +76,6 @@ confidence, preserve remediation text, and union evidence for review context.
 
 - `rules/schema/lolbins.schema.json`
 - `rules/schema/kev.schema.json`
+- `rules/schema/vendor-advisories.schema.json`
 
 Validated by `npm run validate:rules`.
