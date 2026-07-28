@@ -16,6 +16,8 @@
 > - Android TV agent core (JVM): `cd apps/android-tv && ./gradlew :core:runAgentDemo`
 > - Policy + emergency isolate: `node scripts/policy-isolate-demo.mjs`
 > - Event batch ingest: `node scripts/events-batch-demo.mjs`
+> - Finding review + score: `node scripts/finding-review-demo.mjs`
+> - Email breach monitors (stub HIBP): `node scripts/breach-monitor-demo.mjs`
 >
 > The Electron app exposes pairing enroll / poll / status on the Cloud page
 > (`deviceCommandAgent` in `src/main/services/device-command-agent.ts`).
@@ -36,6 +38,7 @@
 > - `GET /v1/devices/{id}/policy` (device-signed) · `PUT …/policy` (dashboard auth)
 > - `POST /v1/devices/{id}/isolate` · `DELETE …/isolate` (dashboard auth)
 > - `POST /v1/devices/{id}/network-events` (device-signed)
+> - `GET|POST /v1/breach-monitors` · `DELETE …/{email}` · `POST …/acknowledge` · `POST …/refresh` (dashboard auth; stub HIBP without key)
 
 ## Device APIs (agent → cloud)
 
@@ -66,11 +69,29 @@ POST /v1/devices/{id}/isolate                 # Bearer (emergency isolate + ISOL
 DELETE /v1/devices/{id}/isolate               # Bearer (clear + CLEAR_ISOLATION)
 POST /v1/findings/{id}/review                 # Bearer (status=false_positive|accepted_risk|…)
 POST /v1/devices/{id}/scan                    # Bearer (kind=health|malware|vulnerability|lolbins → RUN_*)
+GET  /v1/breach-monitors                      # Bearer (list monitors + exposures)
+POST /v1/breach-monitors                      # Bearer ({ email } — add + HIBP/stub lookup)
+DELETE /v1/breach-monitors/{email}            # Bearer (URL-encoded email)
+POST /v1/breach-monitors/acknowledge          # Bearer ({ breachIds: string[] })
+POST /v1/breach-monitors/refresh              # Bearer (optional { email } — re-check one or all)
 GET  /v1/reports                              # planned
-POST /v1/breach-monitors                      # planned
 GET  /v1/audit-events                         # planned
 ```
 
+## Email breach monitors
+
+Account-scoped monitors (no multi-tenant yet) backed by Have I Been Pwned.
+
+| Mode | When | Behavior |
+|------|------|----------|
+| **Stub** | No `HIBP_API_KEY`, or `HIBP_STUB=1`/`true` | Emails matching `/pwned\|breach\|leaked/i` or ending `@hibp-test.bulwark.local` return Adobe/LinkedIn-style fixtures; others return `[]` |
+| **Live** | `HIBP_API_KEY` set (and stub not forced) | `GET https://haveibeenpwned.com/api/v3/breachedaccount/{email}?truncateResponse=false` with `hibp-api-key` + `user-agent: Bulwark-Device-API`. 404 → no breaches. Network errors soft-fail. |
+
+Response shape matches desktop `BreachMonitorResult`: `{ emails: [{ email, lastCheckedAt, fresh, monitoringPaused, breaches: [{ id, name, title, domain, breachDate, dataClasses, pwnCount, isVerified, isSensitive, acknowledgedAt }] }], limit, usage }`. Limit is **10** monitors. `fresh` is true when `lastCheckedAt` is within 24h.
+
+**Reference store note:** the in-memory store keeps the **normalized email in plaintext** for demos; production must encrypt at rest (see [privacy](../privacy/README.md#breach-monitoring-privacy)) and retain only a lookup hash for dedupe.
+
+Create responses also include `source` (`stub` \| `hibp` \| `error`) and `created` (boolean).
 ## Enrollment (short-lived pairing code)
 
 ```

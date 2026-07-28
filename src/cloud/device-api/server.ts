@@ -10,8 +10,11 @@ import {
   getServerKey, issueCommand, requestScan, pollCommands, commandResult,
   getPolicy, putPolicy, isolateDevice, clearIsolation,
   submitNetworkEvents, listNetworkEvents,
+  listBreachMonitors, createBreachMonitor, deleteBreachMonitor,
+  acknowledgeBreachExposures, refreshBreachMonitors,
   type HandlerResult, type SignedRequest,
 } from './handlers'
+import { createHibpClientFromEnv, type HibpClient } from './hibp-client'
 
 function send(res: ServerResponse, result: HandlerResult): void {
   const json = JSON.stringify(result.body)
@@ -47,7 +50,14 @@ function requireDashboard(store: DeviceStore, req: IncomingMessage, res: ServerR
   return true
 }
 
-export function createDeviceApiServer(store: DeviceStore): Server {
+export interface DeviceApiServerOpts {
+  /** HIBP client; defaults to env-based stub/live client. */
+  hibp?: HibpClient
+}
+
+export function createDeviceApiServer(store: DeviceStore, opts?: DeviceApiServerOpts): Server {
+  const hibp = opts?.hibp ?? createHibpClientFromEnv()
+
   return createServer(async (req, res) => {
     try {
       const method = req.method ?? 'GET'
@@ -94,6 +104,36 @@ export function createDeviceApiServer(store: DeviceStore): Server {
       if (method === 'GET' && deviceDetail) {
         if (!requireDashboard(store, req, res)) return
         return send(res, getDevice(store, deviceDetail[1]))
+      }
+
+      // ── Breach monitors (dashboard Bearer) ──
+      // Match acknowledge/refresh before the generic email DELETE path.
+      if (method === 'GET' && path === '/v1/breach-monitors') {
+        if (!requireDashboard(store, req, res)) return
+        return send(res, listBreachMonitors(store))
+      }
+      if (method === 'POST' && path === '/v1/breach-monitors') {
+        if (!requireDashboard(store, req, res)) return
+        const body = parseJson(rawBody)
+        if (body === null) return send(res, { status: 400, body: { error: 'invalid JSON' } })
+        return send(res, await createBreachMonitor(store, body, hibp))
+      }
+      if (method === 'POST' && path === '/v1/breach-monitors/acknowledge') {
+        if (!requireDashboard(store, req, res)) return
+        const body = parseJson(rawBody)
+        if (body === null) return send(res, { status: 400, body: { error: 'invalid JSON' } })
+        return send(res, acknowledgeBreachExposures(store, body))
+      }
+      if (method === 'POST' && path === '/v1/breach-monitors/refresh') {
+        if (!requireDashboard(store, req, res)) return
+        const body = parseJson(rawBody)
+        if (body === null) return send(res, { status: 400, body: { error: 'invalid JSON' } })
+        return send(res, await refreshBreachMonitors(store, body, hibp))
+      }
+      const breachDelete = path.match(/^\/v1\/breach-monitors\/([^/]+)$/)
+      if (method === 'DELETE' && breachDelete) {
+        if (!requireDashboard(store, req, res)) return
+        return send(res, deleteBreachMonitor(store, decodeURIComponent(breachDelete[1])))
       }
 
       const enqueue = path.match(/^\/v1\/devices\/([^/]+)\/commands$/)
