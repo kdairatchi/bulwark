@@ -30,16 +30,16 @@ if (!cleanEntry || cleanEntry.breaches.length !== 0) {
 }
 
 // Pwned stub trigger — Adobe + LinkedIn fixtures.
-const pwned = await api('POST', '/v1/breach-monitors', { email: 'pwned@hibp-test.bulwark.local' })
+const pwned = await api('POST', '/v1/breach-monitors', { email: 'pwned@hibp-test.bulwrk.local' })
 console.log('pwned', {
   status: pwned.status,
   source: pwned.json.source,
   usage: pwned.json.usage,
   breaches: pwned.json.emails?.find((e) => e.email.includes('pwned'))?.breaches?.map((b) => b.name),
 })
-const pwnedEntry = pwned.json.emails.find((e) => e.email === 'pwned@hibp-test.bulwark.local')
+const pwnedEntry = pwned.json.emails.find((e) => e.email === 'pwned@hibp-test.bulwrk.local')
 if (!pwnedEntry || pwnedEntry.breaches.length < 1) {
-  throw new Error('expected stub breaches for pwned@hibp-test.bulwark.local')
+  throw new Error('expected stub breaches for pwned@hibp-test.bulwrk.local')
 }
 
 const listed = await api('GET', '/v1/breach-monitors')
@@ -51,8 +51,8 @@ const ack = await api('POST', '/v1/breach-monitors/acknowledge', { breachIds: [b
 console.log('ack', { acknowledged: ack.json.acknowledged })
 if (ack.json.acknowledged !== 1) throw new Error('expected 1 acknowledged')
 
-const refreshed = await api('POST', '/v1/breach-monitors/refresh', { email: 'pwned@hibp-test.bulwark.local' })
-const after = refreshed.json.emails.find((e) => e.email === 'pwned@hibp-test.bulwark.local')
+const refreshed = await api('POST', '/v1/breach-monitors/refresh', { email: 'pwned@hibp-test.bulwrk.local' })
+const after = refreshed.json.emails.find((e) => e.email === 'pwned@hibp-test.bulwrk.local')
 const stillAcked = after?.breaches.find((b) => b.id === breachId)
 console.log('refresh', { source: refreshed.json.source, stillAcked: !!stillAcked?.acknowledgedAt })
 if (!stillAcked?.acknowledgedAt) throw new Error('expected acknowledgedAt preserved after refresh')

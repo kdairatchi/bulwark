@@ -1,10 +1,10 @@
 {
-  "trayTooltip": "Bulwark",
-  "openKudu": "Bulwark openen",
+  "trayTooltip": "Bulwrk",
+  "openKudu": "Bulwrk openen",
   "quit": "Afsluiten",
-  "scheduledTaskNotificationTitle": "Bulwark - Geplande taak",
+  "scheduledTaskNotificationTitle": "Bulwrk - Geplande taak",
   "scheduledTaskNotificationBody": "\"{{name}}\" wordt uitgevoerd...",
-  "scanCompleteNotificationTitle": "Bulwark - Scan voltooid",
+  "scanCompleteNotificationTitle": "Bulwrk - Scan voltooid",
   "scanCompleteNotificationBody": "{{itemCount}} items ({{sizeMB}} MB) gevonden die kunnen worden opgeschoond.",
   "scheduledScanName": "Geplande scan"
 }

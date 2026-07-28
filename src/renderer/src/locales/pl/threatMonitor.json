@@ -3,7 +3,7 @@
   "pageDescription": "Monitorowanie połączeń sieciowych w czasie rzeczywistym względem znanych list zagrożeń.",
   "cloudNotConfigured": {
     "title": "Chmura nie jest skonfigurowana",
-    "description": "Połącz urządzenie z Bulwark Cloud w Ustawieniach, aby włączyć monitorowanie zagrożeń. Czarna lista zagrożeń jest dostarczana przez usługę chmurową."
+    "description": "Połącz urządzenie z Bulwrk Cloud w Ustawieniach, aby włączyć monitorowanie zagrożeń. Czarna lista zagrożeń jest dostarczana przez usługę chmurową."
   },
   "loading": "Ładowanie...",
   "inactive": {

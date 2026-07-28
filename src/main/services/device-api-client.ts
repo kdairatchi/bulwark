@@ -1,5 +1,5 @@
 /**
- * Thin HTTP client for the Bulwark device API.
+ * Thin HTTP client for the Bulwrk device API.
  * Reuses shared crypto helpers; does not import the Node http server.
  */
 

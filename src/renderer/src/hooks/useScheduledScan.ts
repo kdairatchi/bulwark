@@ -76,7 +76,7 @@ async function runSchedule(payload: ScheduleRunPayload): Promise<void> {
       const { createRestorePoint } = useSettingsStore.getState().settings.cleaner
       if (createRestorePoint) {
         try {
-          await window.kudu.createRestorePoint(`Bulwark scheduled clean — ${payload.scheduleName}`)
+          await window.kudu.createRestorePoint(`Bulwrk scheduled clean — ${payload.scheduleName}`)
         } catch {
           // Best-effort — don't block the clean
         }

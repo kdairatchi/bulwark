@@ -43,7 +43,7 @@ function shellEscape(arg: string): string {
 // Custom prompt shown in the macOS authentication dialog. Without this,
 // macOS falls back to "osascript wants to make changes", which looks
 // suspicious to non-technical users who don't recognize the binary name.
-const ELEVATION_PROMPT = 'Bulwark needs your administrator password to apply system hardening settings.'
+const ELEVATION_PROMPT = 'Bulwrk needs your administrator password to apply system hardening settings.'
 
 async function elevatedExec(cmd: string, args: string[]): Promise<string> {
   if (isRoot()) {

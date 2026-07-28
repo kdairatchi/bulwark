@@ -6,7 +6,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Thanks for helping Bulwark clean more junk! You don't need to write any code — just tell us what app to clean and where its cache lives. If you'd like to submit a PR yourself, check out the [Rules Contributing Guide](../../rules/RULES.md).
+        Thanks for helping Bulwrk clean more junk! You don't need to write any code — just tell us what app to clean and where its cache lives. If you'd like to submit a PR yourself, check out the [Rules Contributing Guide](../../rules/RULES.md).
 
   - type: input
     id: app-name

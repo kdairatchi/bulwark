@@ -34,7 +34,7 @@
     "unprotectedBadge": "{{count}} ubeskyttet",
     "protectAllCategoryButton": "Beskytt alle",
     "adminBadge": "Admin",
-    "adminWarning": "Noen innstillinger krever administratorrettigheter for å kunne endres. Kjør Bulwark som administrator for full beskyttelse.",
+    "adminWarning": "Noen innstillinger krever administratorrettigheter for å kunne endres. Kjør Bulwrk som administrator for full beskyttelse.",
     "scanFailed": "Personvernskanning mislyktes",
     "applyFailed": "Kunne ikke bruke personverninnstillinger",
     "applyFailedDescription": "Prøv å kjøre som administrator",

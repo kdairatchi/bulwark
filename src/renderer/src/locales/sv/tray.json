@@ -1,10 +1,10 @@
 {
-  "trayTooltip": "Bulwark",
-  "openKudu": "Öppna Bulwark",
+  "trayTooltip": "Bulwrk",
+  "openKudu": "Öppna Bulwrk",
   "quit": "Avsluta",
-  "scheduledTaskNotificationTitle": "Bulwark - Schemalagd aktivitet",
+  "scheduledTaskNotificationTitle": "Bulwrk - Schemalagd aktivitet",
   "scheduledTaskNotificationBody": "Kör \"{{name}}\"...",
-  "scanCompleteNotificationTitle": "Bulwark - Genomsökning slutförd",
+  "scanCompleteNotificationTitle": "Bulwrk - Genomsökning slutförd",
   "scanCompleteNotificationBody": "Hittade {{itemCount}} objekt ({{sizeMB}} MB) som kan rensas.",
   "scheduledScanName": "Schemalagd genomsökning"
 }

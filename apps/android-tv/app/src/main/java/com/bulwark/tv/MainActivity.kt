@@ -48,7 +48,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            BulwarkTvApp()
+            BulwrkTvApp()
         }
     }
 }
@@ -61,7 +61,7 @@ private val Text = Color(0xFFF8FAFC)
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
-fun BulwarkTvApp() {
+fun BulwrkTvApp() {
     val context = LocalContext.current
     val agent = remember { DeviceAgentService(context) }
     val blocklist = remember { BlocklistStore(context) }
@@ -129,7 +129,7 @@ fun BulwarkTvApp() {
         verticalArrangement = Arrangement.Top,
     ) {
         Text(
-            text = "Bulwark",
+            text = "Bulwrk",
             color = Accent,
             fontSize = 42.sp,
             fontWeight = FontWeight.Bold,
@@ -145,7 +145,7 @@ fun BulwarkTvApp() {
             Text(text = "Enroll this TV", color = Text, fontSize = 28.sp, fontWeight = FontWeight.SemiBold)
             Spacer(Modifier.height(8.dp))
             Text(
-                text = "Enter a pairing code from your Bulwark control plane (npm run cloud:dev).",
+                text = "Enter a pairing code from your Bulwrk control plane (npm run cloud:dev).",
                 color = Muted,
                 fontSize = 16.sp,
             )
@@ -167,7 +167,7 @@ fun BulwarkTvApp() {
                             onSuccess = {
                                 identity = it
                                 statusMessage = "Enrolled as ${it.deviceId}"
-                                (context.applicationContext as? BulwarkApp)?.scheduleAgentWork()
+                                (context.applicationContext as? BulwrkApp)?.scheduleAgentWork()
                             },
                             onFailure = {
                                 statusMessage = "Enroll failed: ${it.message}"

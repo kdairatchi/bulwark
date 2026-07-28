@@ -118,7 +118,7 @@
     "allUpToDateTitle": "Wszystkie sterowniki są aktualne",
     "allUpToDateDescription": "Brak dostępnych aktualizacji i nie znaleziono nieaktualnych pakietów.",
     "updatesDisabledTitle": "Aktualizacje sterowników są wyłączone w Windows",
-    "updatesDisabledText": "Windows jest ustawiony tak, aby wykluczać sterowniki z Windows Update, dlatego Bulwark nie sprawdzał aktualizacji sterowników. Czyszczenie nieaktualnych pakietów sterowników nadal działa. Możesz ponownie włączyć aktualizacje sterowników w ustawieniach instalacji urządzeń w Windows lub w zasadach grupy.",
+    "updatesDisabledText": "Windows jest ustawiony tak, aby wykluczać sterowniki z Windows Update, dlatego Bulwrk nie sprawdzał aktualizacji sterowników. Czyszczenie nieaktualnych pakietów sterowników nadal działa. Możesz ponownie włączyć aktualizacje sterowników w ustawieniach instalacji urządzeń w Windows lub w zasadach grupy.",
     "updatesAvailable": "Dostępne aktualizacje ({{count}})",
     "stalePackages": "Nieaktualne pakiety ({{count}})",
     "selectAll": "Zaznacz wszystko",

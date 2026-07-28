@@ -118,7 +118,7 @@
     "allUpToDateTitle": "所有驅動程式皆為最新狀態",
     "allUpToDateDescription": "沒有可用更新，也未找到過時套件。",
     "updatesDisabledTitle": "Windows 中的驅動程式更新已關閉",
-    "updatesDisabledText": "Windows 已設定為從 Windows Update 排除驅動程式，因此 Bulwark 未檢查驅動程式更新。過時驅動程式套件清理功能仍可使用。您可以在 Windows 裝置安裝設定或群組原則中重新啟用驅動程式更新。",
+    "updatesDisabledText": "Windows 已設定為從 Windows Update 排除驅動程式，因此 Bulwrk 未檢查驅動程式更新。過時驅動程式套件清理功能仍可使用。您可以在 Windows 裝置安裝設定或群組原則中重新啟用驅動程式更新。",
     "updatesAvailable": "可用更新（{{count}}）",
     "stalePackages": "過時套件（{{count}}）",
     "selectAll": "全選",

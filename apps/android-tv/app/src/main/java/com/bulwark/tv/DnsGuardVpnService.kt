@@ -54,7 +54,7 @@ class DnsGuardVpnService : VpnService() {
         // Advertise ourselves as the device DNS resolver; only that address is routed
         // into the TUN so non-DNS traffic stays on the physical network.
         val builder = Builder()
-            .setSession("Bulwark DNS Guard")
+            .setSession("Bulwrk DNS Guard")
             .addAddress("10.111.111.2", 32)
             .addDnsServer(LOCAL_DNS)
             .addRoute(LOCAL_DNS, 32)

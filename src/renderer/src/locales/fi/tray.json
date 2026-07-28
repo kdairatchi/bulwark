@@ -1,10 +1,10 @@
 {
-  "trayTooltip": "Bulwark",
-  "openKudu": "Avaa Bulwark",
+  "trayTooltip": "Bulwrk",
+  "openKudu": "Avaa Bulwrk",
   "quit": "Lopeta",
-  "scheduledTaskNotificationTitle": "Bulwark - Ajastettu tehtävä",
+  "scheduledTaskNotificationTitle": "Bulwrk - Ajastettu tehtävä",
   "scheduledTaskNotificationBody": "Suoritetaan \"{{name}}\"...",
-  "scanCompleteNotificationTitle": "Bulwark - Tarkistus valmis",
+  "scanCompleteNotificationTitle": "Bulwrk - Tarkistus valmis",
   "scanCompleteNotificationBody": "Löytyi {{itemCount}} kohdetta ({{sizeMB}} MB), jotka voidaan puhdistaa.",
   "scheduledScanName": "Ajastettu tarkistus"
 }

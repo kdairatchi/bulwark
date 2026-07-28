@@ -1,6 +1,6 @@
-# Product Vision — Bulwark
+# Product Vision — Bulwrk
 
-> **Brand.** **Bulwark** is the permanent product name.
+> **Brand.** **Bulwrk** is the permanent product name.
 > **Still open:** public marketing domain and support email — do not lock those
 > until chosen. Cloud hosts stay env-configured; defaults are non-resolving
 > placeholders.
@@ -9,7 +9,7 @@
 
 **Protect every device in your home — without needing to be a cybersecurity expert.**
 
-Bulwark is a **family-focused device security platform** that protects Windows,
+Bulwrk is a **family-focused device security platform** that protects Windows,
 macOS, Linux, Android phones/tablets, Android TV boxes, and home networks from
 malware, unsafe apps, vulnerable software, malicious traffic, and privacy risks.
 
@@ -74,16 +74,16 @@ MVP scope and explicit non-goals live in [`ROADMAP.md`](../../ROADMAP.md).
 
 ## Naming, domain & email
 
-**Product name:** Bulwark (permanent).
+**Product name:** Bulwrk (permanent).
 
 **Still open:** public marketing domain and support email. Do not invent or ship a
-locked `bulwark.com` / `support@…` until those are chosen. Cloud control-plane hosts
-remain env-configured (`BULWARK_CLOUD_URL` / `VITE_BULWARK_CLOUD_URL`) with
+locked `bulwrk.com` / `support@…` until those are chosen. Cloud control-plane hosts
+remain env-configured (`BULWRK_CLOUD_URL` / `VITE_BULWRK_CLOUD_URL`) with
 non-resolving placeholders by default.
 
-**Package IDs already in use:** `com.bulwark.app` (desktop), `com.bulwark.tv`
+**Package IDs already in use:** `com.bulwrk.app` (desktop), `com.bulwrk.tv`
 (Android TV). Prefer keeping these stable. Store signing may proceed under those
-IDs; public listing copy should say Bulwark.
+IDs; public listing copy should say Bulwrk.
 
 Optional hygiene before a public launch: USPTO / store / domain searches for
 conflicts on the chosen *domain and email*, plus counsel review.

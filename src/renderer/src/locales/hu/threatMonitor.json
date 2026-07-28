@@ -3,7 +3,7 @@
   "pageDescription": "A hálózati kapcsolatok valós idejű figyelése ismert fenyegetési listák alapján.",
   "cloudNotConfigured": {
     "title": "A felhő nincs beállítva",
-    "description": "A fenyegetésfigyelés engedélyezéséhez kapcsolja össze eszközét a Bulwark Cloud szolgáltatással a Beállításokban. A fenyegetési tiltólistát a felhőszolgáltatás biztosítja."
+    "description": "A fenyegetésfigyelés engedélyezéséhez kapcsolja össze eszközét a Bulwrk Cloud szolgáltatással a Beállításokban. A fenyegetési tiltólistát a felhőszolgáltatás biztosítja."
   },
   "loading": "Betöltés...",
   "inactive": {

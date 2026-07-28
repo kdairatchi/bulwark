@@ -1,10 +1,10 @@
 {
-  "trayTooltip": "Bulwark",
-  "openKudu": "Открыть Bulwark",
+  "trayTooltip": "Bulwrk",
+  "openKudu": "Открыть Bulwrk",
   "quit": "Выход",
-  "scheduledTaskNotificationTitle": "Bulwark — Запланированная задача",
+  "scheduledTaskNotificationTitle": "Bulwrk — Запланированная задача",
   "scheduledTaskNotificationBody": "Выполняется \"{{name}}\"...",
-  "scanCompleteNotificationTitle": "Bulwark — Сканирование завершено",
+  "scanCompleteNotificationTitle": "Bulwrk — Сканирование завершено",
   "scanCompleteNotificationBody": "Найдено {{itemCount}} элементов ({{sizeMB}} МБ), которые можно очистить.",
   "scheduledScanName": "Запланированное сканирование"
 }

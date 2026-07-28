@@ -3,7 +3,7 @@
   "pageDescription": "Real-time monitoring of network connections against known threat lists.",
   "cloudNotConfigured": {
     "title": "Cloud not configured",
-    "description": "Link your device to Bulwark Cloud in Settings to enable threat monitoring. The threat blacklist is provided by the cloud service."
+    "description": "Link your device to Bulwrk Cloud in Settings to enable threat monitoring. The threat blacklist is provided by the cloud service."
   },
   "loading": "Loading...",
   "inactive": {

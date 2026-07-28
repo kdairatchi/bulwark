@@ -23,7 +23,7 @@ data class DeviceIdentity(
 )
 
 /**
- * Thin HTTP client for the Bulwark device API.
+ * Thin HTTP client for the Bulwrk device API.
  * Uses HttpURLConnection so the same code runs on JVM demos and Android TV.
  */
 class DeviceApiClient(

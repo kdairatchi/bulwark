@@ -3,7 +3,7 @@
   "pageDescription": "Surveillance en temps réel des connexions réseau par rapport à des listes de menaces connues.",
   "cloudNotConfigured": {
     "title": "Cloud non configuré",
-    "description": "Liez votre appareil à Bulwark Cloud dans les Paramètres pour activer la surveillance des menaces. La liste noire des menaces est fournie par le service cloud."
+    "description": "Liez votre appareil à Bulwrk Cloud dans les Paramètres pour activer la surveillance des menaces. La liste noire des menaces est fournie par le service cloud."
   },
   "loading": "Chargement...",
   "inactive": {

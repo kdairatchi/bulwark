@@ -3,7 +3,7 @@
   "pageDescription": "即時監控網路連線，並比對已知威脅清單。",
   "cloudNotConfigured": {
     "title": "雲端尚未設定",
-    "description": "請在「設定」中將您的裝置連結至 Bulwark Cloud，以啟用威脅監控。威脅黑名單由雲端服務提供。"
+    "description": "請在「設定」中將您的裝置連結至 Bulwrk Cloud，以啟用威脅監控。威脅黑名單由雲端服務提供。"
   },
   "loading": "載入中...",
   "inactive": {

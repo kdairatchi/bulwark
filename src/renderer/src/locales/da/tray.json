@@ -1,10 +1,10 @@
 {
-  "trayTooltip": "Bulwark",
-  "openKudu": "Åbn Bulwark",
+  "trayTooltip": "Bulwrk",
+  "openKudu": "Åbn Bulwrk",
   "quit": "Afslut",
-  "scheduledTaskNotificationTitle": "Bulwark - Planlagt opgave",
+  "scheduledTaskNotificationTitle": "Bulwrk - Planlagt opgave",
   "scheduledTaskNotificationBody": "Kører \"{{name}}\"...",
-  "scanCompleteNotificationTitle": "Bulwark - Scanning fuldført",
+  "scanCompleteNotificationTitle": "Bulwrk - Scanning fuldført",
   "scanCompleteNotificationBody": "Fandt {{itemCount}} elementer ({{sizeMB}} MB), der kan ryddes op.",
   "scheduledScanName": "Planlagt scanning"
 }

@@ -1,8 +1,8 @@
 <p align="center">
-  <a href="https://github.com/kdairatchi/bulwark"><img src="logo.png" alt="Bulwark" width="128" /></a>
+  <a href="https://github.com/kdairatchi/bulwark"><img src="logo.png" alt="Bulwrk" width="128" /></a>
 </p>
 
-<h1 align="center">Bulwark</h1>
+<h1 align="center">Bulwrk</h1>
 
 <p align="center">
   <b>A family-focused device security platform for Windows, macOS, and Linux.</b><br/>
@@ -17,17 +17,17 @@
   <a href="CLI.md"><b>CLI Docs</b></a>
 </p>
 
-> **Brand.** **Bulwark** is the permanent product name. Public marketing **domain**
+> **Brand.** **Bulwrk** is the permanent product name. Public marketing **domain**
 > and **support email** stay open — do not lock those until chosen. Cloud hosts are
-> env-configured (`BULWARK_CLOUD_URL`); defaults are non-resolving placeholders.
+> env-configured (`BULWRK_CLOUD_URL`); defaults are non-resolving placeholders.
 > This repository is a fork of the upstream [Kudu](https://github.com/adventdevinc/kudu)
 > system cleaner and reuses its cleaning/scanning engine as the **desktop endpoint agent**.
 
 ---
 
-## What Bulwark is
+## What Bulwrk is
 
-Bulwark protects the devices in a home or small business from malware, unsafe apps,
+Bulwrk protects the devices in a home or small business from malware, unsafe apps,
 vulnerable software, malicious network traffic, and privacy risks. It is built as a
 **local-first security agent** with an optional cloud control plane:
 
@@ -57,7 +57,7 @@ architecture and [`ROADMAP.md`](ROADMAP.md) for the phased plan.
 
 ## Local-first & privacy
 
-Bulwark runs **local-first**. Cloud features are **opt-in** and require limited,
+Bulwrk runs **local-first**. Cloud features are **opt-in** and require limited,
 minimum-necessary telemetry (device metadata, security findings, destination
 indicators). File contents, passwords, private messages, packet payloads, and personal
 documents are **never** collected. See [`docs/privacy/README.md`](docs/privacy/README.md).
@@ -95,13 +95,13 @@ See [`CONTRIBUTING.md`](CONTRIBUTING.md) and [`AGENTS.md`](AGENTS.md) for detail
 
 ## Disclaimer
 
-Bulwark performs security actions and, via its cleaning engine, can remove files from
+Bulwrk performs security actions and, via its cleaning engine, can remove files from
 your system. You are responsible for reviewing items before removal. The software is
 provided "as is" without warranty.
 
 ## Credits
 
-Bulwark is a fork of [Kudu](https://github.com/adventdevinc/kudu) by the Kudu
+Bulwrk is a fork of [Kudu](https://github.com/adventdevinc/kudu) by the Kudu
 Contributors, reused under the MIT license as the desktop endpoint agent.
 
 ## License

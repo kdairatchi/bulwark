@@ -118,7 +118,7 @@
     "allUpToDateTitle": "Alle drivers zijn up-to-date",
     "allUpToDateDescription": "Geen updates beschikbaar en geen verouderde pakketten gevonden.",
     "updatesDisabledTitle": "Driverupdates zijn uitgeschakeld in Windows",
-    "updatesDisabledText": "Windows is ingesteld om drivers uit te sluiten van Windows Update, dus Bulwark heeft niet gecontroleerd op driverupdates. Het opschonen van verouderde driverpakketten werkt nog steeds. U kunt driverupdates opnieuw inschakelen in de Windows-instellingen voor apparaatinstallatie of via Groepsbeleid.",
+    "updatesDisabledText": "Windows is ingesteld om drivers uit te sluiten van Windows Update, dus Bulwrk heeft niet gecontroleerd op driverupdates. Het opschonen van verouderde driverpakketten werkt nog steeds. U kunt driverupdates opnieuw inschakelen in de Windows-instellingen voor apparaatinstallatie of via Groepsbeleid.",
     "updatesAvailable": "Beschikbare updates ({{count}})",
     "stalePackages": "Verouderde pakketten ({{count}})",
     "selectAll": "Alles selecteren",

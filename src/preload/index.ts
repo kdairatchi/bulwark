@@ -489,7 +489,7 @@ const api = {
     threatBlacklist: { version: string; updatedAt: string; domains: number; ips: number; cidrs: number } | null
   }> => ipcRenderer.invoke(IPC.CLOUD_GET_STATUS),
 
-  // Device API (pairing code / Ed25519 — Bulwark control plane)
+  // Device API (pairing code / Ed25519 — Bulwrk control plane)
   deviceApiEnroll: (payload: { code: string; name?: string; baseUrl?: string }): Promise<
     { success: true; deviceId: string } | { success: false; error: string }
   > => ipcRenderer.invoke(IPC.DEVICE_API_ENROLL, payload),

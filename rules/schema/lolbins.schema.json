@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "Bulwark LotL / technique grep catalog",
+  "title": "Bulwrk LotL / technique grep catalog",
   "type": "object",
   "required": ["version", "updatedAt", "rules"],
   "additionalProperties": false,

@@ -9,7 +9,7 @@
 // ─── Sysctl config editing ─────────────────────────────────
 
 const SYSCTL_HEADER = [
-  '# Bulwark system hardening — managed automatically',
+  '# Bulwrk system hardening — managed automatically',
 ]
 
 /**

@@ -1,10 +1,10 @@
 {
-  "trayTooltip": "Bulwark",
-  "openKudu": "Otevřít Bulwark",
+  "trayTooltip": "Bulwrk",
+  "openKudu": "Otevřít Bulwrk",
   "quit": "Ukončit",
-  "scheduledTaskNotificationTitle": "Bulwark – Naplánovaná úloha",
+  "scheduledTaskNotificationTitle": "Bulwrk – Naplánovaná úloha",
   "scheduledTaskNotificationBody": "Spouští se „{{name}}“…",
-  "scanCompleteNotificationTitle": "Bulwark – Kontrola dokončena",
+  "scanCompleteNotificationTitle": "Bulwrk – Kontrola dokončena",
   "scanCompleteNotificationBody": "Bylo nalezeno {{itemCount}} položek ({{sizeMB}} MB), které lze vyčistit.",
   "scheduledScanName": "Naplánovaná kontrola"
 }

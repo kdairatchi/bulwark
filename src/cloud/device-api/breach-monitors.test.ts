@@ -84,7 +84,7 @@ describe('breach monitor handlers', () => {
   it('acknowledges breaches and preserves ack on refresh upsert', async () => {
     const store = freshStore()
     const hibp = stubHibp()
-    await createBreachMonitor(store, { email: 'breach@hibp-test.bulwark.local' }, hibp)
+    await createBreachMonitor(store, { email: 'breach@hibp-test.bulwrk.local' }, hibp)
     const listed = listBreachMonitors(store).body as {
       emails: Array<{ breaches: Array<{ id: string; name: string; acknowledgedAt: string | null }> }>
     }
@@ -101,7 +101,7 @@ describe('breach monitor handlers', () => {
     const acked = afterAck.emails[0].breaches.find((b) => b.id === ids[0])
     expect(acked?.acknowledgedAt).toBeTruthy()
 
-    await refreshBreachMonitors(store, { email: 'breach@hibp-test.bulwark.local' }, hibp)
+    await refreshBreachMonitors(store, { email: 'breach@hibp-test.bulwrk.local' }, hibp)
     const afterRefresh = listBreachMonitors(store).body as {
       emails: Array<{ breaches: Array<{ id: string; acknowledgedAt: string | null }> }>
     }
@@ -158,7 +158,7 @@ describe('breach monitor HTTP routes', () => {
       const created = await fetch(`${base}/v1/breach-monitors`, {
         method: 'POST',
         headers,
-        body: JSON.stringify({ email: 'leaked@hibp-test.bulwark.local' }),
+        body: JSON.stringify({ email: 'leaked@hibp-test.bulwrk.local' }),
       })
       expect(created.status).toBe(201)
       const createdBody = (await created.json()) as {
@@ -187,7 +187,7 @@ describe('breach monitor HTTP routes', () => {
       expect(refresh.status).toBe(200)
 
       const del = await fetch(
-        `${base}/v1/breach-monitors/${encodeURIComponent('leaked@hibp-test.bulwark.local')}`,
+        `${base}/v1/breach-monitors/${encodeURIComponent('leaked@hibp-test.bulwrk.local')}`,
         { method: 'DELETE', headers },
       )
       expect(del.status).toBe(200)

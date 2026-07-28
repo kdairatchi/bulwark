@@ -3,7 +3,7 @@
   "pageDescription": "Realtime bewaking van netwerkverbindingen aan de hand van bekende dreigingslijsten.",
   "cloudNotConfigured": {
     "title": "Cloud niet geconfigureerd",
-    "description": "Koppel uw apparaat in Instellingen aan Bulwark Cloud om bedreigingsbewaking in te schakelen. De zwarte lijst met bedreigingen wordt geleverd door de cloudservice."
+    "description": "Koppel uw apparaat in Instellingen aan Bulwrk Cloud om bedreigingsbewaking in te schakelen. De zwarte lijst met bedreigingen wordt geleverd door de cloudservice."
   },
   "loading": "Laden...",
   "inactive": {

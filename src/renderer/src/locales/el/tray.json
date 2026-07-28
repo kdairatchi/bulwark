@@ -1,10 +1,10 @@
 {
-  "trayTooltip": "Bulwark",
-  "openKudu": "Άνοιγμα του Bulwark",
+  "trayTooltip": "Bulwrk",
+  "openKudu": "Άνοιγμα του Bulwrk",
   "quit": "Έξοδος",
-  "scheduledTaskNotificationTitle": "Bulwark - Προγραμματισμένη εργασία",
+  "scheduledTaskNotificationTitle": "Bulwrk - Προγραμματισμένη εργασία",
   "scheduledTaskNotificationBody": "Εκτέλεση του \"{{name}}\"...",
-  "scanCompleteNotificationTitle": "Bulwark - Η σάρωση ολοκληρώθηκε",
+  "scanCompleteNotificationTitle": "Bulwrk - Η σάρωση ολοκληρώθηκε",
   "scanCompleteNotificationBody": "Βρέθηκαν {{itemCount}} στοιχεία ({{sizeMB}} MB) που μπορούν να καθαριστούν.",
   "scheduledScanName": "Προγραμματισμένη σάρωση"
 }

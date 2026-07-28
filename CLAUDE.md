@@ -1,8 +1,8 @@
-# Bulwark
+# Bulwrk
 
 A modern, open-source system cleaner and family device-security platform for
 Windows, macOS, and Linux built with Electron. (Desktop cleaning engine forked
-from Kudu; product name is Bulwark. Public domain/email stay open.)
+from Kudu; product name is Bulwrk. Public domain/email stay open.)
 
 ## Releasing
 

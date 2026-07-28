@@ -231,7 +231,7 @@ const ROUTE_TITLES: Record<string, { key: string; ns?: string } | string> = {
   '/updates': 'Software Updates',
   '/schedules': { key: 'schedules' },
   '/drivers': 'Driver Updates',
-  '/cloud': 'Bulwark Cloud',
+  '/cloud': 'Bulwrk Cloud',
   '/breach-monitor': 'Breach Monitor',
 }
 
@@ -246,7 +246,7 @@ function PageTitleUpdater() {
     } else if (entry) {
       name = t(entry.key)
     }
-    document.title = name ? `${name} - Bulwark` : 'Bulwark'
+    document.title = name ? `${name} - Bulwrk` : 'Bulwrk'
   }, [location.pathname, t])
   return null
 }

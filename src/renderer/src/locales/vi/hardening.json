@@ -34,7 +34,7 @@
     "unprotectedBadge": "{{count}} chưa được bảo vệ",
     "protectAllCategoryButton": "Bảo vệ tất cả",
     "adminBadge": "Quản trị viên",
-    "adminWarning": "Một số cài đặt yêu cầu quyền quản trị viên để chỉnh sửa. Hãy chạy Bulwark với quyền quản trị viên để được bảo vệ đầy đủ.",
+    "adminWarning": "Một số cài đặt yêu cầu quyền quản trị viên để chỉnh sửa. Hãy chạy Bulwrk với quyền quản trị viên để được bảo vệ đầy đủ.",
     "scanFailed": "Quét quyền riêng tư thất bại",
     "applyFailed": "Không thể áp dụng cài đặt quyền riêng tư",
     "applyFailedDescription": "Hãy thử chạy với quyền quản trị viên",

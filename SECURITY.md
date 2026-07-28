@@ -7,11 +7,11 @@
 | Latest release | Yes |
 | Older versions | No |
 
-We recommend always running the latest version of Bulwark.
+We recommend always running the latest version of Bulwrk.
 
 ## Reporting a Vulnerability
 
-If you discover a security vulnerability in Bulwark, **please do not open a public issue.**
+If you discover a security vulnerability in Bulwrk, **please do not open a public issue.**
 
 Instead, report it privately via [GitHub Security Advisories](https://github.com/kdairatchi/bulwark/security/advisories/new).
 
@@ -26,11 +26,11 @@ We will acknowledge your report within 48 hours and aim to release a fix as quic
 
 ## Scope
 
-This policy covers the Bulwark desktop application and its source code. It does not cover third-party dependencies — please report those to the respective maintainers.
+This policy covers the Bulwrk desktop application and its source code. It does not cover third-party dependencies — please report those to the respective maintainers.
 
 ## Security Design
 
-Bulwark is a device security agent that operates with elevated permissions. We take this responsibility seriously:
+Bulwrk is a device security agent that operates with elevated permissions. We take this responsibility seriously:
 
 - **Local-first** — Scans and security checks run locally. Cloud features are opt-in and, when enabled, collect only minimum-necessary metadata (never file contents, passwords, or packet payloads). See [docs/privacy/README.md](docs/privacy/README.md).
 - **Minimal network use** — Network access is used for update checks and the optional cloud features you explicitly enable.

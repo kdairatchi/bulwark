@@ -68,7 +68,7 @@ const feedsCmd = await (await fetch(`${BASE}/v1/devices/${deviceId}/commands`, {
 })).json()
 console.log('queued feeds', feedsCmd.command?.type || feedsCmd)
 
-const qPath = join(tmpdir(), `bulwark-quarantine-demo-${Date.now()}.bin`)
+const qPath = join(tmpdir(), `bulwrk-quarantine-demo-${Date.now()}.bin`)
 writeFileSync(qPath, 'demo malware payload')
 const quarCmd = await (await fetch(`${BASE}/v1/devices/${deviceId}/commands`, {
   method: 'POST',

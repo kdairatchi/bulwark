@@ -12,7 +12,7 @@ import { join } from 'path'
 import type { AddressInfo } from 'net'
 import type { Server } from 'http'
 
-const userData = mkdtempSync(join(tmpdir(), 'bulwark-e2e-'))
+const userData = mkdtempSync(join(tmpdir(), 'bulwrk-e2e-'))
 
 vi.mock('electron', () => ({
   app: { getPath: () => userData },

@@ -1,5 +1,5 @@
 /**
- * Parent / operator dashboard client for the Bulwark device API.
+ * Parent / operator dashboard client for the Bulwrk device API.
  * Dashboard read + write routes require Authorization: Bearer <dashboard-token>
  * (except GET /v1/dashboard-bootstrap and GET /v1/server-key).
  * Local/dev servers expose GET /v1/dashboard-bootstrap when the token was auto-generated.

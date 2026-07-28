@@ -258,7 +258,7 @@ export function CloudPage() {
 onClick={() => {
               openPublicCloudDashboard('', () => {
                 toast.message(t('cloudDashboardNotConfigured', {
-                  defaultValue: 'No public cloud dashboard URL is configured yet. Domain stays open — use device pairing below, or set VITE_BULWARK_CLOUD_URL when you have a host.',
+                  defaultValue: 'No public cloud dashboard URL is configured yet. Domain stays open — use device pairing below, or set VITE_BULWRK_CLOUD_URL when you have a host.',
                 }))
               })
             }}
@@ -410,7 +410,7 @@ onClick={() => {
 onClick={() => {
               openPublicCloudDashboard('', () => {
                 toast.message(t('cloudDashboardNotConfigured', {
-                  defaultValue: 'No public cloud dashboard URL is configured yet. Domain stays open — use device pairing below, or set VITE_BULWARK_CLOUD_URL when you have a host.',
+                  defaultValue: 'No public cloud dashboard URL is configured yet. Domain stays open — use device pairing below, or set VITE_BULWRK_CLOUD_URL when you have a host.',
                 }))
               })
             }}
@@ -448,7 +448,7 @@ onClick={() => {
         </p>
       </div>
 
-      {/* Device API pairing (Ed25519 — preferred Bulwark path) */}
+      {/* Device API pairing (Ed25519 — preferred Bulwrk path) */}
       <DeviceApiPairingCard
         t={t}
         status={deviceApiStatus}

@@ -32,13 +32,13 @@ function option(key: string, name: string): string | undefined {
 
 describe('electron-builder.yml', () => {
   it('requests admin for the app executable', () => {
-    // Bulwark edits HKLM, system directories and other machine-wide state, so the
+    // Bulwrk edits HKLM, system directories and other machine-wide state, so the
     // manifest asks for elevation rather than re-launching at runtime.
     expect(option('win', 'requestedExecutionLevel')).toBe('requireAdministrator')
   })
 
   it('installs per-machine whenever the app manifest requires admin', () => {
-    // requestedExecutionLevel is applied to Bulwark.exe only; the NSIS installer
+    // requestedExecutionLevel is applied to Bulwrk.exe only; the NSIS installer
     // has a separate execution level derived from nsis.perMachine. If they
     // disagree, the installer runs unelevated and installs an auto-elevating
     // binary into user-writable %LOCALAPPDATA%\Programs — which both breaks the

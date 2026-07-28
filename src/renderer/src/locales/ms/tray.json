@@ -1,10 +1,10 @@
 {
-  "trayTooltip": "Bulwark",
-  "openKudu": "Buka Bulwark",
+  "trayTooltip": "Bulwrk",
+  "openKudu": "Buka Bulwrk",
   "quit": "Keluar",
-  "scheduledTaskNotificationTitle": "Bulwark - Tugas Berjadual",
+  "scheduledTaskNotificationTitle": "Bulwrk - Tugas Berjadual",
   "scheduledTaskNotificationBody": "Menjalankan \"{{name}}\"...",
-  "scanCompleteNotificationTitle": "Bulwark - Imbasan Selesai",
+  "scanCompleteNotificationTitle": "Bulwrk - Imbasan Selesai",
   "scanCompleteNotificationBody": "Menemui {{itemCount}} item ({{sizeMB}} MB) yang boleh dibersihkan.",
   "scheduledScanName": "Imbasan Berjadual"
 }

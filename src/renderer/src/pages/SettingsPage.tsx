@@ -306,7 +306,7 @@ function BackupFolderRow({
       <div>
         <p className="text-[13px] font-medium text-zinc-300">{t('backupFolderLabel', 'Backup folder')}</p>
         <p className="mt-0.5 text-[12px]" style={{ color: 'var(--text-muted)' }}>
-          {t('backupFolderDesc', 'Where Bulwark writes registry and shell-extension backups before making changes. Existing backups stay in their previous location when you switch folders.')}
+          {t('backupFolderDesc', 'Where Bulwrk writes registry and shell-extension backups before making changes. Existing backups stay in their previous location when you switch folders.')}
         </p>
       </div>
       <div className="flex items-center gap-2.5">

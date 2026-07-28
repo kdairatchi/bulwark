@@ -34,7 +34,7 @@
     "unprotectedBadge": "{{count}} neprotejate",
     "protectAllCategoryButton": "Protejați tot",
     "adminBadge": "Admin",
-    "adminWarning": "Unele setări necesită privilegii de administrator pentru a fi modificate. Rulați Bulwark ca administrator pentru protecție completă.",
+    "adminWarning": "Unele setări necesită privilegii de administrator pentru a fi modificate. Rulați Bulwrk ca administrator pentru protecție completă.",
     "scanFailed": "Scanarea confidențialității a eșuat",
     "applyFailed": "Aplicarea setărilor de confidențialitate a eșuat",
     "applyFailedDescription": "Încercați să rulați ca administrator",

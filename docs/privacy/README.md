@@ -1,7 +1,7 @@
-# Privacy Architecture — Bulwark
+# Privacy Architecture — Bulwrk
 
 Our biggest competitor is not another cleaner — it is **user distrust**. The upstream
-project promoted "no telemetry"; Bulwark must be explicit that **cloud features
+project promoted "no telemetry"; Bulwrk must be explicit that **cloud features
 require limited telemetry** and that users can stay in **local-only mode**.
 
 ## Principles
@@ -47,6 +47,6 @@ captures (by default), personal documents, media streams.
 ## Current fork status
 
 The desktop agent is local-first today. The cloud control-plane endpoint is **not**
-part of this fork: `BULWARK_CLOUD_URL` defaults to a non-resolving placeholder and
+part of this fork: `BULWRK_CLOUD_URL` defaults to a non-resolving placeholder and
 cloud features stay dormant until a user opts in with an API key pointed at their own
 control plane.

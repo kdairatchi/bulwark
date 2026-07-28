@@ -17,7 +17,7 @@ const { writeFileSync, mkdirSync, existsSync, readdirSync, unlinkSync } = requir
 const { join } = require('path')
 const { createHash } = require('crypto')
 
-const RULES_URL = process.env.BULWARK_RULES_URL || 'https://cloud.invalid/api/yara-rules'
+const RULES_URL = process.env.BULWRK_RULES_URL || 'https://cloud.invalid/api/yara-rules'
 const OUT_DIR = join(__dirname, '..', 'resources', 'yara-rules')
 const TIMEOUT_MS = 30_000
 

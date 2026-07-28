@@ -303,7 +303,7 @@ class DeviceAgentService(
                     val appCtx = context.applicationContext
                     val wm = WorkManager.getInstance(appCtx)
                     wm.cancelUniqueWork(AgentWorker.UNIQUE_NAME)
-                    (appCtx as? BulwarkApp)?.scheduleAgentWork()
+                    (appCtx as? BulwrkApp)?.scheduleAgentWork()
                     val oneShot = OneTimeWorkRequestBuilder<AgentWorker>().build()
                     wm.enqueueUniqueWork(
                         "bulwark-device-agent-now",

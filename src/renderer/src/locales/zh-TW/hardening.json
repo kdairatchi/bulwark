@@ -34,7 +34,7 @@
     "unprotectedBadge": "{{count}} 項未受保護",
     "protectAllCategoryButton": "全部保護",
     "adminBadge": "管理員",
-    "adminWarning": "部分設定需要系統管理員權限才能修改。請以系統管理員身分執行 Bulwark 以獲得完整保護。",
+    "adminWarning": "部分設定需要系統管理員權限才能修改。請以系統管理員身分執行 Bulwrk 以獲得完整保護。",
     "scanFailed": "隱私掃描失敗",
     "applyFailed": "套用隱私設定失敗",
     "applyFailedDescription": "請嘗試以系統管理員身分執行",

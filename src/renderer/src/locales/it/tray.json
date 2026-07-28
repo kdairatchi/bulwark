@@ -1,10 +1,10 @@
 {
-  "trayTooltip": "Bulwark",
-  "openKudu": "Apri Bulwark",
+  "trayTooltip": "Bulwrk",
+  "openKudu": "Apri Bulwrk",
   "quit": "Esci",
-  "scheduledTaskNotificationTitle": "Bulwark - Attività pianificata",
+  "scheduledTaskNotificationTitle": "Bulwrk - Attività pianificata",
   "scheduledTaskNotificationBody": "Esecuzione di \"{{name}}\"...",
-  "scanCompleteNotificationTitle": "Bulwark - Scansione completata",
+  "scanCompleteNotificationTitle": "Bulwrk - Scansione completata",
   "scanCompleteNotificationBody": "Trovati {{itemCount}} elementi ({{sizeMB}} MB) che possono essere puliti.",
   "scheduledScanName": "Scansione pianificata"
 }

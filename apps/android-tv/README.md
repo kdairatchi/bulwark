@@ -1,6 +1,6 @@
-# Bulwark Android TV Agent
+# Bulwrk Android TV Agent
 
-Phase 4 of the Bulwark roadmap: a ten-foot Android TV agent that enrolls with the
+Phase 4 of the Bulwrk roadmap: a ten-foot Android TV agent that enrolls with the
 device API (pairing code + per-device Ed25519 keys), reports installed-app
 inventory / sideload findings, and polls for **server-signed, allowlisted**
 remote commands.

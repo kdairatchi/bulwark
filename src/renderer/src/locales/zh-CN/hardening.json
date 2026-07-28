@@ -34,7 +34,7 @@
     "unprotectedBadge": "{{count}} 项未受保护",
     "protectAllCategoryButton": "全部保护",
     "adminBadge": "管理员",
-    "adminWarning": "某些设置需要管理员权限才能修改。请以管理员身份运行 Bulwark 以获得完整保护。",
+    "adminWarning": "某些设置需要管理员权限才能修改。请以管理员身份运行 Bulwrk 以获得完整保护。",
     "scanFailed": "隐私扫描失败",
     "applyFailed": "应用隐私设置失败",
     "applyFailedDescription": "请尝试以管理员身份运行",

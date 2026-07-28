@@ -118,7 +118,7 @@
     "allUpToDateTitle": "Tất cả trình điều khiển đều đã được cập nhật",
     "allUpToDateDescription": "Không có bản cập nhật khả dụng và không tìm thấy gói cũ nào.",
     "updatesDisabledTitle": "Cập nhật trình điều khiển đã bị tắt trong Windows",
-    "updatesDisabledText": "Windows được đặt để loại trừ trình điều khiển khỏi Windows Update, vì vậy Bulwark không kiểm tra bản cập nhật trình điều khiển. Tính năng dọn dẹp gói trình điều khiển cũ vẫn hoạt động. Bạn có thể bật lại cập nhật trình điều khiển trong cài đặt cài đặt thiết bị của Windows hoặc Group Policy.",
+    "updatesDisabledText": "Windows được đặt để loại trừ trình điều khiển khỏi Windows Update, vì vậy Bulwrk không kiểm tra bản cập nhật trình điều khiển. Tính năng dọn dẹp gói trình điều khiển cũ vẫn hoạt động. Bạn có thể bật lại cập nhật trình điều khiển trong cài đặt cài đặt thiết bị của Windows hoặc Group Policy.",
     "updatesAvailable": "Bản cập nhật khả dụng ({{count}})",
     "stalePackages": "Gói cũ ({{count}})",
     "selectAll": "Chọn tất cả",

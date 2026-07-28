@@ -1,10 +1,10 @@
 {
-  "trayTooltip": "Bulwark",
-  "openKudu": "開啟 Bulwark",
+  "trayTooltip": "Bulwrk",
+  "openKudu": "開啟 Bulwrk",
   "quit": "結束",
-  "scheduledTaskNotificationTitle": "Bulwark - 排程工作",
+  "scheduledTaskNotificationTitle": "Bulwrk - 排程工作",
   "scheduledTaskNotificationBody": "正在執行「{{name}}」...",
-  "scanCompleteNotificationTitle": "Bulwark - 掃描完成",
+  "scanCompleteNotificationTitle": "Bulwrk - 掃描完成",
   "scanCompleteNotificationBody": "找到 {{itemCount}} 個可清理的項目（{{sizeMB}} MB）。",
   "scheduledScanName": "排程掃描"
 }

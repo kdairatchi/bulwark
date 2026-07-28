@@ -118,7 +118,7 @@
     "allUpToDateTitle": "Tutti i driver sono aggiornati",
     "allUpToDateDescription": "Nessun aggiornamento disponibile e nessun pacchetto obsoleto trovato.",
     "updatesDisabledTitle": "Gli aggiornamenti dei driver sono disattivati in Windows",
-    "updatesDisabledText": "Windows è configurato per escludere i driver da Windows Update, quindi Bulwark non ha controllato gli aggiornamenti dei driver. La pulizia dei pacchetti driver obsoleti continua comunque a funzionare. Puoi riattivare gli aggiornamenti dei driver nelle impostazioni di installazione dei dispositivi di Windows o nei Criteri di gruppo.",
+    "updatesDisabledText": "Windows è configurato per escludere i driver da Windows Update, quindi Bulwrk non ha controllato gli aggiornamenti dei driver. La pulizia dei pacchetti driver obsoleti continua comunque a funzionare. Puoi riattivare gli aggiornamenti dei driver nelle impostazioni di installazione dei dispositivi di Windows o nei Criteri di gruppo.",
     "updatesAvailable": "Aggiornamenti disponibili ({{count}})",
     "stalePackages": "Pacchetti obsoleti ({{count}})",
     "selectAll": "Seleziona tutto",

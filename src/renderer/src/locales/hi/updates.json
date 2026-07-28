@@ -118,7 +118,7 @@
     "allUpToDateTitle": "सभी ड्राइवर अद्यतित हैं",
     "allUpToDateDescription": "कोई अपडेट उपलब्ध नहीं है और कोई पुराना पैकेज नहीं मिला।",
     "updatesDisabledTitle": "Windows में ड्राइवर अपडेट बंद हैं",
-    "updatesDisabledText": "Windows को Windows Update से ड्राइवरों को बाहर रखने के लिए सेट किया गया है, इसलिए Bulwark ने ड्राइवर अपडेट की जाँच नहीं की। पुराने ड्राइवर पैकेजों की सफ़ाई अभी भी काम करती है। आप Windows डिवाइस स्थापना सेटिंग्स या Group Policy में ड्राइवर अपडेट फिर से सक्षम कर सकते हैं।",
+    "updatesDisabledText": "Windows को Windows Update से ड्राइवरों को बाहर रखने के लिए सेट किया गया है, इसलिए Bulwrk ने ड्राइवर अपडेट की जाँच नहीं की। पुराने ड्राइवर पैकेजों की सफ़ाई अभी भी काम करती है। आप Windows डिवाइस स्थापना सेटिंग्स या Group Policy में ड्राइवर अपडेट फिर से सक्षम कर सकते हैं।",
     "updatesAvailable": "उपलब्ध अपडेट ({{count}})",
     "stalePackages": "पुराने पैकेज ({{count}})",
     "selectAll": "सभी चुनें",

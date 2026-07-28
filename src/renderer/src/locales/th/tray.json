@@ -1,10 +1,10 @@
 {
-  "trayTooltip": "Bulwark",
-  "openKudu": "เปิด Bulwark",
+  "trayTooltip": "Bulwrk",
+  "openKudu": "เปิด Bulwrk",
   "quit": "ออก",
-  "scheduledTaskNotificationTitle": "Bulwark - งานที่กำหนดเวลาไว้",
+  "scheduledTaskNotificationTitle": "Bulwrk - งานที่กำหนดเวลาไว้",
   "scheduledTaskNotificationBody": "กำลังเรียกใช้ \"{{name}}\"...",
-  "scanCompleteNotificationTitle": "Bulwark - การสแกนเสร็จสมบูรณ์",
+  "scanCompleteNotificationTitle": "Bulwrk - การสแกนเสร็จสมบูรณ์",
   "scanCompleteNotificationBody": "พบ {{itemCount}} รายการ ({{sizeMB}} MB) ที่สามารถล้างได้",
   "scheduledScanName": "การสแกนตามกำหนดเวลา"
 }

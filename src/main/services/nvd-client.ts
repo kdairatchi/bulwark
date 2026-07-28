@@ -162,7 +162,7 @@ export function getNvdCacheDir(): string {
     const { app } = require('electron') as { app: { getPath: (name: string) => string } }
     return join(app.getPath('userData'), 'nvd-cache')
   } catch {
-    return join(tmpdir(), 'bulwark-nvd-cache')
+    return join(tmpdir(), 'bulwrk-nvd-cache')
   }
 }
 

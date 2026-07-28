@@ -118,7 +118,7 @@
     "allUpToDateTitle": "Todos los controladores están actualizados",
     "allUpToDateDescription": "No hay actualizaciones disponibles ni se encontraron paquetes obsoletos.",
     "updatesDisabledTitle": "Las actualizaciones de controladores están desactivadas en Windows",
-    "updatesDisabledText": "Windows está configurado para excluir los controladores de Windows Update, por lo que Bulwark no buscó actualizaciones de controladores. La limpieza de paquetes de controladores obsoletos sigue funcionando. Puede volver a activar las actualizaciones de controladores en la configuración de instalación de dispositivos de Windows o en la Directiva de grupo.",
+    "updatesDisabledText": "Windows está configurado para excluir los controladores de Windows Update, por lo que Bulwrk no buscó actualizaciones de controladores. La limpieza de paquetes de controladores obsoletos sigue funcionando. Puede volver a activar las actualizaciones de controladores en la configuración de instalación de dispositivos de Windows o en la Directiva de grupo.",
     "updatesAvailable": "Actualizaciones disponibles ({{count}})",
     "stalePackages": "Paquetes obsoletos ({{count}})",
     "selectAll": "Seleccionar todo",

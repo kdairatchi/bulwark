@@ -3,7 +3,7 @@
   "pageDescription": "Sanntidsovervåking av nettverkstilkoblinger mot kjente trussellister.",
   "cloudNotConfigured": {
     "title": "Cloud er ikke konfigurert",
-    "description": "Koble enheten din til Bulwark Cloud i Innstillinger for å aktivere trusselovervåking. Svartelisten for trusler leveres av skytjenesten."
+    "description": "Koble enheten din til Bulwrk Cloud i Innstillinger for å aktivere trusselovervåking. Svartelisten for trusler leveres av skytjenesten."
   },
   "loading": "Laster inn...",
   "inactive": {

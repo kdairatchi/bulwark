@@ -3,7 +3,7 @@
   "pageDescription": "Övervakning i realtid av nätverksanslutningar mot kända hotlistor.",
   "cloudNotConfigured": {
     "title": "Molnet är inte konfigurerat",
-    "description": "Länka din enhet till Bulwark Cloud i Inställningar för att aktivera hotövervakning. Hotets svartlista tillhandahålls av molntjänsten."
+    "description": "Länka din enhet till Bulwrk Cloud i Inställningar för att aktivera hotövervakning. Hotets svartlista tillhandahålls av molntjänsten."
   },
   "loading": "Läser in...",
   "inactive": {

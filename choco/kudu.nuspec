@@ -3,8 +3,8 @@
   <metadata>
     <id>bulwark</id>
     <version>1.4.8</version>
-    <title>Bulwark</title>
-    <authors>Bulwark Contributors</authors>
+    <title>Bulwrk</title>
+    <authors>Bulwrk Contributors</authors>
     <owners>kdairatchi</owners>
     <projectUrl>https://github.com/kdairatchi/bulwark</projectUrl>
     <projectSourceUrl>https://github.com/kdairatchi/bulwark</projectSourceUrl>
@@ -14,7 +14,7 @@
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <tags>device-security malware-scanner vulnerability-management network-security family-security open-source</tags>
     <summary>A family-focused device security platform for Windows</summary>
-    <description>Bulwark is a local-first device security agent that scans for malware, audits vulnerable software, checks security posture, and helps protect every device in your home. Forked from the open-source Kudu system cleaner.</description>
+    <description>Bulwrk is a local-first device security agent that scans for malware, audits vulnerable software, checks security posture, and helps protect every device in your home. Forked from the open-source Kudu system cleaner.</description>
     <releaseNotes>https://github.com/kdairatchi/bulwark/releases/tag/v1.4.8</releaseNotes>
   </metadata>
 </package>

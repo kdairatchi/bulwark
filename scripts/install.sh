@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Bulwark Linux installer
+# Bulwrk Linux installer
 # Usage:
 #   curl -fsSL https://raw.githubusercontent.com/kdairatchi/bulwark/main/scripts/install.sh | bash
 #   curl -fsSL ... | bash -s -- --api-key YOUR_KEY
@@ -9,9 +9,9 @@
 set -euo pipefail
 
 REPO="kdairatchi/bulwark"
-INSTALL_DIR="/opt/bulwark"
-BIN_LINK="/usr/local/bin/bulwark"
-SERVICE_NAME="bulwark-daemon"
+INSTALL_DIR="/opt/bulwrk"
+BIN_LINK="/usr/local/bin/bulwrk"
+SERVICE_NAME="bulwrk-daemon"
 
 API_KEY=""
 NO_DAEMON=false
@@ -86,10 +86,10 @@ apt-get install -y -qq \
 ok "Dependencies installed."
 
 # ── Fetch latest release ────────────────────────────────────────
-log "Finding latest Bulwark release..."
+log "Finding latest Bulwrk release..."
 RELEASE_JSON=$(curl -fsSL "https://api.github.com/repos/${REPO}/releases/latest")
 VERSION=$(echo "$RELEASE_JSON" | jq -r '.tag_name')
-ASSET_NAME="Bulwark-${VERSION#v}-${ARCH_LABEL}.AppImage"
+ASSET_NAME="Bulwrk-${VERSION#v}-${ARCH_LABEL}.AppImage"
 DOWNLOAD_URL=$(echo "$RELEASE_JSON" | jq -r \
   --arg name "$ASSET_NAME" \
   '.assets[] | select(.name == $name) | .browser_download_url')
@@ -106,10 +106,10 @@ log "Downloading $ASSET_NAME..."
 
 # ── Download and install ─────────────────────────────────────────
 mkdir -p "$INSTALL_DIR"
-APPIMAGE_PATH="${INSTALL_DIR}/Bulwark.AppImage"
+APPIMAGE_PATH="${INSTALL_DIR}/Bulwrk.AppImage"
 
 # Download to temp file first, then move atomically
-TMP_FILE=$(mktemp "${INSTALL_DIR}/.bulwark-download.XXXXXX")
+TMP_FILE=$(mktemp "${INSTALL_DIR}/.bulwrk-download.XXXXXX")
 trap 'rm -f "$TMP_FILE"' EXIT
 
 curl -fSL --progress-bar "$DOWNLOAD_URL" -o "$TMP_FILE"
@@ -144,11 +144,11 @@ for arg in "$@"; do
 done
 # Run without FUSE mount (avoids hang on servers without libfuse)
 export APPIMAGE_EXTRACT_AND_RUN=1
-exec /opt/bulwark/Bulwark.AppImage "${EXTRA_ARGS[@]}" "$@"
+exec /opt/bulwrk/Bulwrk.AppImage "${EXTRA_ARGS[@]}" "$@"
 WRAPPER
 chmod +x "$BIN_LINK"
 
-ok "Installed Bulwark $VERSION to $APPIMAGE_PATH"
+ok "Installed Bulwrk $VERSION to $APPIMAGE_PATH"
 
 # ── Configure API key / server URL ───────────────────────────────
 if [[ -n "$API_KEY" ]]; then
@@ -164,7 +164,7 @@ if [[ "$NO_BOOT" == false ]] && command -v systemctl &>/dev/null; then
 
   cat > "/etc/systemd/system/${SERVICE_NAME}.service" <<UNIT
 [Unit]
-Description=Bulwark Daemon
+Description=Bulwrk Daemon
 After=network-online.target
 Wants=network-online.target
 
@@ -195,22 +195,22 @@ else
     log "Skipping boot service (--no-boot)."
   else
     log "systemd not found — skipping boot service."
-    log "You can run the daemon manually: bulwark --no-sandbox --daemon"
+    log "You can run the daemon manually: bulwrk --no-sandbox --daemon"
   fi
 fi
 
 # ── Summary ──────────────────────────────────────────────────────
 echo ""
-ok "Bulwark $VERSION installation complete!"
+ok "Bulwrk $VERSION installation complete!"
 echo ""
 echo "  Binary:   $APPIMAGE_PATH"
 echo "  Symlink:  $BIN_LINK"
 [[ "$NO_BOOT" == false ]] && command -v systemctl &>/dev/null && \
 echo "  Service:  systemctl status $SERVICE_NAME"
 echo ""
-echo "  Run GUI:        bulwark --no-sandbox"
-echo "  Run CLI:        bulwark --no-sandbox --cli"
-echo "  Run daemon:     bulwark --no-sandbox --daemon"
+echo "  Run GUI:        bulwrk --no-sandbox"
+echo "  Run CLI:        bulwrk --no-sandbox --cli"
+echo "  Run daemon:     bulwrk --no-sandbox --daemon"
 echo "  Check status:   systemctl status $SERVICE_NAME"
 echo "  View logs:      journalctl -u $SERVICE_NAME -f"
 echo ""

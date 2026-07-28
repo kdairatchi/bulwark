@@ -34,7 +34,7 @@
     "unprotectedBadge": "{{count}} غير محمي",
     "protectAllCategoryButton": "حماية الكل",
     "adminBadge": "المسؤول",
-    "adminWarning": "تتطلب بعض الإعدادات صلاحيات المسؤول لتعديلها. شغّل Bulwark كمسؤول للحصول على حماية كاملة.",
+    "adminWarning": "تتطلب بعض الإعدادات صلاحيات المسؤول لتعديلها. شغّل Bulwrk كمسؤول للحصول على حماية كاملة.",
     "scanFailed": "فشل فحص الخصوصية",
     "applyFailed": "فشل تطبيق إعدادات الخصوصية",
     "applyFailedDescription": "حاول التشغيل كمسؤول",

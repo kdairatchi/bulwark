@@ -1,4 +1,4 @@
-// Entrypoint: run the Bulwark device API. `npm run cloud:dev` (via tsx).
+// Entrypoint: run the Bulwrk device API. `npm run cloud:dev` (via tsx).
 // In-memory store for local dev; production swaps in PostgreSQL (see docs).
 
 import { DeviceStore } from './store'
@@ -9,7 +9,7 @@ const store = new DeviceStore()
 const server = createDeviceApiServer(store)
 
 server.listen(PORT, () => {
-  process.stdout.write(`Bulwark device API listening on http://127.0.0.1:${PORT}\n`)
+  process.stdout.write(`Bulwrk device API listening on http://127.0.0.1:${PORT}\n`)
   process.stdout.write(`Dashboard token: ${store.dashboardToken()}\n`)
   if (store.canBootstrapDashboard()) {
     process.stdout.write('Dashboard bootstrap: GET /v1/dashboard-bootstrap (local/dev)\n')
