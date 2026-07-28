@@ -23,6 +23,8 @@ import {
   Download,
   FolderLock,
   Mail,
+  ClipboardList,
+  BellRing,
   type LucideIcon,
 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -518,6 +520,29 @@ type ParentMonitoredEmail = {
   breaches: ParentBreachEntry[]
 }
 
+type ParentFleetSummary = {
+  deviceCount: number
+  onlineCount: number
+  avgSecurityScore: number
+  worstSecurityScore: number
+  openFindingsTotal: number
+  openKevTotal: number
+  isolatedCount: number
+  dnsBlockedRecent: number
+  unackedBreaches: number
+}
+
+type ParentAlert = {
+  id: string
+  severity: string
+  type: string
+  subject: string
+  detail?: string | null
+  at: string
+  deviceId: string | null
+  acknowledged: boolean
+}
+
 function ParentControlPanel({
   t, baseUrl, onBaseUrlChange,
 }: {
@@ -532,6 +557,8 @@ function ParentControlPanel({
   const [breachUsage, setBreachUsage] = useState(0)
   const [breachLimit, setBreachLimit] = useState(10)
   const [breachEmailInput, setBreachEmailInput] = useState('')
+  const [fleetSummary, setFleetSummary] = useState<ParentFleetSummary | null>(null)
+  const [alerts, setAlerts] = useState<ParentAlert[]>([])
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [minting, setMinting] = useState(false)
@@ -568,7 +595,7 @@ function ParentControlPanel({
     try {
       const token = await ensureToken()
       const base = { baseUrl: baseUrl.trim() || undefined, token: token || undefined }
-      const [devRes, evtRes, findRes, breachRes] = await Promise.all([
+      const [devRes, evtRes, findRes, breachRes, reportRes, alertRes] = await Promise.all([
         window.kudu?.dashboardListDevices?.(base),
         window.kudu?.dashboardListEvents?.({
           ...base,
@@ -579,6 +606,12 @@ function ParentControlPanel({
           deviceId: selectedId || undefined,
         }),
         window.kudu?.dashboardListBreachMonitors?.(base),
+        window.kudu?.dashboardGetReport?.(base),
+        window.kudu?.dashboardListAlerts?.({
+          ...base,
+          deviceId: selectedId || undefined,
+          limit: 40,
+        }),
       ])
       if (devRes?.success) {
         setDevices(devRes.devices)
@@ -597,6 +630,8 @@ function ParentControlPanel({
         setBreachUsage(breachRes.usage)
         setBreachLimit(breachRes.limit)
       }
+      if (reportRes?.success) setFleetSummary(reportRes.report.summary)
+      if (alertRes?.success) setAlerts(alertRes.alerts)
     } catch {
       toast.error(t('parentLoadFailedToast'))
     }
@@ -1004,6 +1039,80 @@ function ParentControlPanel({
           {mintedCode}
         </div>
       )}
+
+      {fleetSummary && (
+        <div className="mb-4">
+          <h4 className="text-[12px] font-semibold uppercase tracking-wider mb-1" style={{ color: 'var(--text-muted)' }}>
+            <ClipboardList className="inline h-3.5 w-3.5 mr-1.5 -mt-0.5" strokeWidth={1.8} />
+            {t('parentReportTitle')}
+          </h4>
+          <p className="text-[11px] mb-2" style={{ color: 'var(--text-dim)' }}>{t('parentReportHint')}</p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+            {([
+              [t('parentReportDevices'), `${fleetSummary.onlineCount}/${fleetSummary.deviceCount}`],
+              [t('parentReportAvgScore'), String(fleetSummary.avgSecurityScore)],
+              [t('parentReportWorstScore'), String(fleetSummary.worstSecurityScore)],
+              [t('parentReportOpenFindings'), String(fleetSummary.openFindingsTotal)],
+              [t('parentReportOpenKev'), String(fleetSummary.openKevTotal)],
+              [t('parentReportIsolated'), String(fleetSummary.isolatedCount)],
+              [t('parentReportDnsBlocked'), String(fleetSummary.dnsBlockedRecent)],
+              [t('parentReportBreaches'), String(fleetSummary.unackedBreaches)],
+            ] as const).map(([label, value]) => (
+              <div
+                key={label}
+                className="rounded-lg px-3 py-2"
+                style={{ background: 'var(--bg-subtle)', border: '1px solid var(--border-medium)' }}
+              >
+                <div className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>{label}</div>
+                <div className="text-[16px] font-semibold font-mono mt-0.5" style={{ color: 'var(--text-secondary)' }}>{value}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="mb-4">
+        <h4 className="text-[12px] font-semibold uppercase tracking-wider mb-1" style={{ color: 'var(--text-muted)' }}>
+          <BellRing className="inline h-3.5 w-3.5 mr-1.5 -mt-0.5" strokeWidth={1.8} />
+          {t('parentAlertsTitle')}
+          {alerts.length > 0 && (
+            <span className="ml-2 text-[10px] font-mono normal-case tracking-normal" style={{ color: '#f87171' }}>
+              {alerts.length}
+            </span>
+          )}
+        </h4>
+        <p className="text-[11px] mb-2" style={{ color: 'var(--text-dim)' }}>{t('parentAlertsHint')}</p>
+        {alerts.length === 0 ? (
+          <p className="text-[12px]" style={{ color: 'var(--text-dim)' }}>{t('parentAlertsEmpty')}</p>
+        ) : (
+          <div className="max-h-40 overflow-y-auto space-y-1.5">
+            {alerts.slice(0, 25).map((a) => (
+              <div
+                key={a.id}
+                className="rounded-lg px-3 py-2 text-[11px] font-mono"
+                style={{ background: 'var(--bg-subtle)', border: '1px solid var(--border-medium)', color: 'var(--text-secondary)' }}
+              >
+                <span style={{
+                  color: a.severity === 'critical' || a.severity === 'high' ? '#f87171'
+                    : a.severity === 'medium' ? '#fbbf24' : 'var(--text-muted)',
+                }}
+                >
+                  {a.severity}
+                </span>
+                {' · '}
+                <span style={{ color: '#93c5fd' }}>{a.type}</span>
+                {' · '}
+                {a.subject}
+                {a.detail && (
+                  <span style={{ color: 'var(--text-dim)' }}> · {a.detail}</span>
+                )}
+                {' · '}
+                <span style={{ color: 'var(--text-dim)' }}>{new Date(a.at).toLocaleString()}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
       {devices.length === 0 ? (
         <p className="text-[12px]" style={{ color: 'var(--text-dim)' }}>{t('parentNoDevices')}</p>

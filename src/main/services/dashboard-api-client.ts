@@ -89,6 +89,49 @@ export interface DashboardBreachMonitorResult {
   created?: boolean
 }
 
+export interface DashboardFleetSummary {
+  deviceCount: number
+  onlineCount: number
+  avgSecurityScore: number
+  worstSecurityScore: number
+  openFindingsTotal: number
+  openKevTotal: number
+  isolatedCount: number
+  dnsBlockedRecent: number
+  unackedBreaches: number
+}
+
+export interface DashboardFleetDeviceRow {
+  id: string
+  name: string
+  os: string | null
+  lastHeartbeat: string | null
+  securityScore: number
+  openFindingsCount: number
+  openKevCount: number
+  isolated: boolean
+  inventoryCount: number
+  dnsBlockedCount: number
+}
+
+export interface DashboardFleetReport {
+  generatedAt: string
+  summary: DashboardFleetSummary
+  devices: DashboardFleetDeviceRow[]
+  count: number
+}
+
+export interface DashboardAlert {
+  id: string
+  severity: 'critical' | 'high' | 'medium' | 'low' | string
+  type: 'kev_finding' | 'isolation' | 'dns_blocked' | 'breach' | string
+  subject: string
+  detail?: string | null
+  at: string
+  deviceId: string | null
+  acknowledged: boolean
+}
+
 export interface DashboardApiClientOptions {
   baseUrl: string
   /** Bearer token for dashboard read/write routes. */
@@ -342,6 +385,40 @@ export class DashboardApiClient {
       usage: typeof o.usage === 'number' ? o.usage : 0,
       source: o.source,
     }
+  }
+
+  async getFleetReport(): Promise<DashboardFleetReport> {
+    const { status, body } = await this.request('GET', '/v1/reports')
+    if (status < 200 || status >= 300) throw new DeviceApiHttpError(status, body)
+    const o = body as DashboardFleetReport
+    return {
+      generatedAt: typeof o.generatedAt === 'string' ? o.generatedAt : new Date().toISOString(),
+      summary: o.summary ?? {
+        deviceCount: 0,
+        onlineCount: 0,
+        avgSecurityScore: 0,
+        worstSecurityScore: 100,
+        openFindingsTotal: 0,
+        openKevTotal: 0,
+        isolatedCount: 0,
+        dnsBlockedRecent: 0,
+        unackedBreaches: 0,
+      },
+      devices: Array.isArray(o.devices) ? o.devices : [],
+      count: typeof o.count === 'number' ? o.count : (Array.isArray(o.devices) ? o.devices.length : 0),
+    }
+  }
+
+  async listAlerts(opts?: { deviceId?: string; limit?: number }): Promise<DashboardAlert[]> {
+    const params = new URLSearchParams()
+    if (opts?.deviceId) params.set('deviceId', opts.deviceId)
+    if (typeof opts?.limit === 'number') params.set('limit', String(opts.limit))
+    const q = params.toString()
+    const path = q ? `/v1/alerts?${q}` : '/v1/alerts'
+    const { status, body } = await this.request('GET', path)
+    if (status < 200 || status >= 300) throw new DeviceApiHttpError(status, body)
+    const alerts = (body as { alerts?: unknown }).alerts
+    return Array.isArray(alerts) ? (alerts as DashboardAlert[]) : []
   }
 }
 

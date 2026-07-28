@@ -751,6 +751,62 @@ const api = {
     | { success: false; error: string }
   > => ipcRenderer.invoke(IPC.DASHBOARD_REFRESH_BREACH_MONITORS, payload ?? {}),
 
+  dashboardGetReport: (payload?: { baseUrl?: string; token?: string }): Promise<
+    | {
+      success: true
+      report: {
+        generatedAt: string
+        summary: {
+          deviceCount: number
+          onlineCount: number
+          avgSecurityScore: number
+          worstSecurityScore: number
+          openFindingsTotal: number
+          openKevTotal: number
+          isolatedCount: number
+          dnsBlockedRecent: number
+          unackedBreaches: number
+        }
+        devices: Array<{
+          id: string
+          name: string
+          os: string | null
+          lastHeartbeat: string | null
+          securityScore: number
+          openFindingsCount: number
+          openKevCount: number
+          isolated: boolean
+          inventoryCount: number
+          dnsBlockedCount: number
+        }>
+        count: number
+      }
+    }
+    | { success: false; error: string }
+  > => ipcRenderer.invoke(IPC.DASHBOARD_GET_REPORT, payload ?? {}),
+
+  dashboardListAlerts: (payload?: {
+    baseUrl?: string
+    token?: string
+    deviceId?: string
+    limit?: number
+  }): Promise<
+    | {
+      success: true
+      alerts: Array<{
+        id: string
+        severity: string
+        type: string
+        subject: string
+        detail?: string | null
+        at: string
+        deviceId: string | null
+        acknowledged: boolean
+      }>
+    }
+    | { success: false; error: string }
+  > => ipcRenderer.invoke(IPC.DASHBOARD_LIST_ALERTS, payload ?? {}),
+
   // Duplicate Finder
   duplicatesSelectDir: (): Promise<string | null> =>
     ipcRenderer.invoke(IPC.DUPLICATES_SELECT_DIR),

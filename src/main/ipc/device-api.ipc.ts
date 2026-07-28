@@ -261,4 +261,25 @@ export function registerDeviceApiIpc(): void {
       return httpErr(err)
     }
   })
+
+  ipcMain.handle(IPC.DASHBOARD_GET_REPORT, async (_event, payload: unknown) => {
+    try {
+      const report = await clientFromPayload(payload).getFleetReport()
+      return { success: true as const, report }
+    } catch (err) {
+      return httpErr(err)
+    }
+  })
+
+  ipcMain.handle(IPC.DASHBOARD_LIST_ALERTS, async (_event, payload: unknown) => {
+    const o = asRecord(payload)
+    const deviceId = typeof o.deviceId === 'string' ? o.deviceId : undefined
+    const limit = typeof o.limit === 'number' ? o.limit : undefined
+    try {
+      const alerts = await clientFromPayload(payload).listAlerts({ deviceId, limit })
+      return { success: true as const, alerts }
+    } catch (err) {
+      return httpErr(err)
+    }
+  })
 }

@@ -228,5 +228,19 @@
   "parentBreachRemovedToast": "Monitor removed",
   "parentBreachAckToast": "Breach marked reviewed",
   "parentBreachRefreshedToast": "Breach checks refreshed",
-  "parentBreachEmailRequired": "Enter an email address"
+  "parentBreachEmailRequired": "Enter an email address",
+  "parentReportTitle": "Fleet report",
+  "parentReportHint": "Live summary from enrolled devices, findings, DNS blocks (24h), and breach monitors",
+  "parentReportDevices": "Devices",
+  "parentReportOnline": "Online",
+  "parentReportAvgScore": "Avg score",
+  "parentReportWorstScore": "Worst score",
+  "parentReportOpenFindings": "Open findings",
+  "parentReportOpenKev": "Open KEV",
+  "parentReportIsolated": "Isolated",
+  "parentReportDnsBlocked": "DNS blocked (24h)",
+  "parentReportBreaches": "Unacked breaches",
+  "parentAlertsTitle": "Alerts",
+  "parentAlertsEmpty": "No active alerts",
+  "parentAlertsHint": "Computed from KEV findings, isolation, DNS blocks, and unacked breaches"
 }
