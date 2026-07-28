@@ -78,15 +78,25 @@ export function enrollDevice(store: DeviceStore, input: unknown): HandlerResult 
 
 function deviceDashboardView(store: DeviceStore, d: NonNullable<ReturnType<DeviceStore['getDevice']>>) {
   const policy = store.getPolicy(d.id)
+  const agent = d.agentStatus
+  const isolated = policy?.isolated ?? false
+  // Only surface VPN pending when the agent has reported DNS Guard status (TV).
+  const dnsGuardRunning = agent?.dnsGuardRunning ?? null
+  const vpnConsentPending = agent
+    ? (agent.vpnConsentPending || (isolated && !agent.dnsGuardRunning))
+    : false
   return {
     id: d.id, name: d.name, os: d.os, enrolledAt: d.enrolledAt,
     lastHeartbeat: d.lastHeartbeat, inventoryCount: d.inventoryCount, findingsCount: d.findingsCount,
     openFindingsCount: store.openFindings(d.id).length,
     securityScore: store.securityScore(d.id),
-    isolated: policy?.isolated ?? false,
+    isolated,
     policyVersion: policy?.version ?? 1,
     dnsGuardRequired: policy?.dnsGuardRequired ?? false,
     blockedDomains: policy?.blockedDomains ?? [],
+    dnsGuardRunning,
+    vpnConsentPending,
+    agentStatus: agent,
   }
 }
 
@@ -173,7 +183,16 @@ export function submitInventory(store: DeviceStore, deviceId: string, input: unk
   const o = (input ?? {}) as Record<string, unknown>
   const items = Array.isArray(o.items) ? o.items : Array.isArray(o.apps) ? o.apps : []
   const count = typeof o.count === 'number' ? o.count : items.length
-  store.addInventory(deviceId, count)
+  const dns = (o.dnsGuard && typeof o.dnsGuard === 'object')
+    ? o.dnsGuard as Record<string, unknown>
+    : null
+  const agentStatus = dns ? {
+    dnsGuardRunning: dns.running === true,
+    vpnConsentPending: dns.vpnConsentPending === true,
+    isolatedReported: dns.isolated === true,
+    filterMode: typeof dns.mode === 'string' ? dns.mode : null,
+  } : null
+  store.addInventory(deviceId, count, agentStatus)
   return { status: 202, body: { accepted: count } }
 }
 

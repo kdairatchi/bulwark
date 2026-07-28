@@ -224,6 +224,32 @@ class DnsGuardVpnService : VpnService() {
             )
         }
 
+        /**
+         * Best-effort start from a background tick. Returns whether the TUN is up
+         * and whether the system still needs an Activity-driven VpnService.prepare().
+         */
+        fun tryStart(context: android.content.Context): TryStartResult {
+            if (isRunning) {
+                return TryStartResult(running = true, needsConsent = false)
+            }
+            val prepare = prepare(context)
+            if (prepare != null) {
+                return TryStartResult(running = false, needsConsent = true)
+            }
+            start(context)
+            repeat(30) {
+                if (isRunning) {
+                    return TryStartResult(running = true, needsConsent = false)
+                }
+                try {
+                    Thread.sleep(50)
+                } catch (_: InterruptedException) {
+                    return TryStartResult(running = isRunning, needsConsent = false)
+                }
+            }
+            return TryStartResult(running = isRunning, needsConsent = false)
+        }
+
         fun trafficSummary(): Map<String, Any?> = mapOf(
             "running" to isRunning,
             "queries" to queries.get(),
@@ -231,4 +257,9 @@ class DnsGuardVpnService : VpnService() {
             "lastBlockedHost" to lastBlockedHost,
         )
     }
+
+    data class TryStartResult(
+        val running: Boolean,
+        val needsConsent: Boolean,
+    )
 }

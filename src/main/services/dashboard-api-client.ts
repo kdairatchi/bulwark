@@ -21,6 +21,8 @@ export interface DashboardDevice {
   policyVersion: number
   dnsGuardRequired: boolean
   blockedDomains: string[]
+  dnsGuardRunning?: boolean
+  vpnConsentPending?: boolean
 }
 
 export interface DashboardPolicy {

@@ -15,6 +15,14 @@ export interface PairingCode {
   used: boolean
 }
 
+export interface DeviceAgentStatus {
+  dnsGuardRunning: boolean
+  vpnConsentPending: boolean
+  isolatedReported: boolean
+  filterMode: string | null
+  updatedAt: string
+}
+
 export interface Device {
   id: string
   name: string
@@ -24,6 +32,8 @@ export interface Device {
   lastHeartbeat: string | null
   inventoryCount: number
   findingsCount: number
+  /** Last agent-reported DNS Guard / consent snapshot from inventory. */
+  agentStatus: DeviceAgentStatus | null
 }
 
 /** Review / lifecycle statuses for dashboard findings (see docs/api). */
@@ -278,6 +288,7 @@ export class DeviceStore {
       lastHeartbeat: null,
       inventoryCount: 0,
       findingsCount: 0,
+      agentStatus: null,
     }
     this.devices.set(device.id, device)
     this.log('device_enrolled', device.id)
@@ -297,9 +308,20 @@ export class DeviceStore {
     if (d) d.lastHeartbeat = new Date(this.deps.now()).toISOString()
   }
 
-  addInventory(deviceId: string, count: number): void {
+  addInventory(deviceId: string, count: number, agentStatus?: Partial<DeviceAgentStatus> | null): void {
     const d = this.devices.get(deviceId)
-    if (d) d.inventoryCount += count
+    if (d) {
+      d.inventoryCount += count
+      if (agentStatus) {
+        d.agentStatus = {
+          dnsGuardRunning: agentStatus.dnsGuardRunning === true,
+          vpnConsentPending: agentStatus.vpnConsentPending === true,
+          isolatedReported: agentStatus.isolatedReported === true,
+          filterMode: typeof agentStatus.filterMode === 'string' ? agentStatus.filterMode : null,
+          updatedAt: new Date(this.deps.now()).toISOString(),
+        }
+      }
+    }
     this.log('inventory_received', `${deviceId} +${count}`)
   }
 

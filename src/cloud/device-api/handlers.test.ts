@@ -127,6 +127,24 @@ describe('device-api telemetry endpoints', () => {
     expect((listFindings(store).body as { count: number }).count).toBe(1)
   })
 
+  it('surfaces vpnConsentPending from inventory dnsGuard snapshot', () => {
+    const store = freshStore()
+    const { deviceId } = enrolledDevice(store)
+    store.isolateDevice(deviceId, 'test')
+    submitInventory(store, deviceId, {
+      apps: [{ name: 'TV App' }],
+      dnsGuard: { running: false, vpnConsentPending: true, isolated: true, mode: 'ALLOWLIST' },
+    })
+    const d = getDevice(store, deviceId).body as {
+      vpnConsentPending: boolean
+      dnsGuardRunning: boolean | null
+      isolated: boolean
+    }
+    expect(d.isolated).toBe(true)
+    expect(d.dnsGuardRunning).toBe(false)
+    expect(d.vpnConsentPending).toBe(true)
+  })
+
   it('reviews findings and improves security score', () => {
     const store = freshStore()
     const { deviceId } = enrolledDevice(store)

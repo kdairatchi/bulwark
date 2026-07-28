@@ -63,6 +63,9 @@ Play distribution / signing pipeline · packet-level firewall beyond DNS.
 - Posture score / findings (`AppPosture`)
 - Local DNS blocklist + `DnsGuardVpnService` (NXDOMAIN for blocked names)
 - Remote **policy sync** and **emergency isolate** (allowlist DNS mode)
+- **Honest VPN consent**: isolate / `dnsGuardRequired` never reports `applied: true`
+  until `VpnService.prepare()` is approved; TV UI shows a consent banner; parent sees
+  a **VPN PENDING** badge + `dns_guard_pending` events
 - **Event batching** (`POST …/network-events`) for DNS blocks / isolation / findings
 - Commands: `BLOCK_DOMAIN`, `UPDATE_THREAT_FEEDS`, `ISOLATE_DEVICE`,
   `CLEAR_ISOLATION`, `APPLY_POLICY`, real `RUN_HEALTH_ASSESSMENT`

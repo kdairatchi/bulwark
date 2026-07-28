@@ -182,6 +182,7 @@
   "parentEvents": "Network events",
   "parentNoEvents": "No network events yet.",
   "parentIsolatedBadge": "ISOLATED",
+  "parentVpnPendingBadge": "VPN PENDING",
   "parentOnline": "Last seen",
   "parentNever": "never",
   "parentApps": "Apps",

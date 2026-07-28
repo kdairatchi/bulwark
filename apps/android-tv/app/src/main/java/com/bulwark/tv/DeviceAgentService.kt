@@ -9,6 +9,7 @@ import com.bulwark.deviceapi.CommandExecutor
 import com.bulwark.deviceapi.DeviceApiClient
 import com.bulwark.deviceapi.DeviceCrypto
 import com.bulwark.deviceapi.DeviceIdentity
+import com.bulwark.deviceapi.DnsGuardEnforcement
 
 /**
  * Enrollment + one agent tick (heartbeat, poll/verify/execute, inventory sync).
@@ -18,6 +19,7 @@ class DeviceAgentService(
     private val store: IdentityStore = IdentityStore(context),
     private val packageManager: PackageManager = context.packageManager,
     private val blocklistStore: BlocklistStore = BlocklistStore(context),
+    private val vpnConsent: VpnConsentStore = VpnConsentStore(context),
 ) {
     private val seenNonces = linkedSetOf<String>()
 
@@ -64,11 +66,8 @@ class DeviceAgentService(
             runCatching {
                 val policy = client.getPolicy(identity)
                 blocklistStore.applyPolicy(policy)
-                if (policy.dnsGuardRequired || policy.isolated) {
-                    // Best-effort: UI/user may still need to approve VPN permission.
-                    if (!DnsGuardVpnService.isRunning) {
-                        DnsGuardVpnService.start(context)
-                    }
+                if (DnsGuardEnforcement.needsDnsGuard(policy.isolated, policy.dnsGuardRequired)) {
+                    ensureDnsGuard()
                 }
             }
             val commands = client.pollCommands(identity)
@@ -146,13 +145,21 @@ class DeviceAgentService(
                     ?: parameters["host"] as? String
                     ?: return mapOf("ok" to false, "error" to "domain required", "type" to type)
                 val added = blocklistStore.add(domain)
+                val guard = ensureDnsGuard()
                 mapOf(
                     "ok" to true,
+                    "stub" to false,
                     "type" to type,
-                    "applied" to added,
+                    "applied" to (added && guard.running),
                     "domain" to domain,
                     "blocklistSize" to blocklistStore.size(),
-                    "dnsGuardRunning" to DnsGuardVpnService.isRunning,
+                    "dnsGuardRunning" to guard.running,
+                    "vpnConsentPending" to guard.needsConsent,
+                    "reason" to when {
+                        guard.running -> null
+                        guard.needsConsent -> DnsGuardEnforcement.REASON_VPN_PERMISSION
+                        else -> DnsGuardEnforcement.REASON_VPN_ESTABLISH
+                    },
                 )
             }
             "UPDATE_THREAT_FEEDS" -> {
@@ -180,16 +187,18 @@ class DeviceAgentService(
                     version = (blocklistStore.loadPolicy()?.version ?: 0) + 1,
                 )
                 blocklistStore.applyPolicy(policy)
-                if (!DnsGuardVpnService.isRunning) DnsGuardVpnService.start(context)
+                val guard = ensureDnsGuard()
                 AgentEvents.isolationChanged(true)
-                mapOf(
-                    "ok" to true,
-                    "type" to type,
-                    "applied" to true,
-                    "isolated" to true,
-                    "mode" to blocklistStore.mode().name,
-                    "allowlistSize" to blocklistStore.size(),
-                    "reason" to (parameters["reason"] ?: "command"),
+                DnsGuardEnforcement.enforcementResult(
+                    type = type,
+                    vpnRunning = guard.running,
+                    needsConsent = guard.needsConsent,
+                    extras = mapOf(
+                        "isolated" to true,
+                        "mode" to blocklistStore.mode().name,
+                        "allowlistSize" to blocklistStore.size(),
+                        "isolateReason" to (parameters["reason"] ?: "command"),
+                    ),
                 )
             }
             "CLEAR_ISOLATION" -> {
@@ -203,12 +212,17 @@ class DeviceAgentService(
                     blocklistStore.replaceAll(BlocklistStore.STARTER)
                 }
                 AgentEvents.isolationChanged(false)
+                // Clearing isolation does not require the TUN to be up.
+                vpnConsent.clearPending()
                 mapOf(
                     "ok" to true,
+                    "stub" to false,
                     "type" to type,
                     "applied" to true,
                     "isolated" to false,
                     "mode" to blocklistStore.mode().name,
+                    "dnsGuardRunning" to DnsGuardVpnService.isRunning,
+                    "vpnConsentPending" to false,
                 )
             }
             "APPLY_POLICY" -> {
@@ -218,17 +232,35 @@ class DeviceAgentService(
                 } else {
                     val policy = DeviceApiClient(identity.baseUrl).getPolicy(identity)
                     blocklistStore.applyPolicy(policy)
-                    if (policy.dnsGuardRequired || policy.isolated) {
-                        if (!DnsGuardVpnService.isRunning) DnsGuardVpnService.start(context)
+                    val needs = DnsGuardEnforcement.needsDnsGuard(policy.isolated, policy.dnsGuardRequired)
+                    if (!needs) {
+                        vpnConsent.clearPending()
+                        mapOf(
+                            "ok" to true,
+                            "stub" to false,
+                            "type" to type,
+                            "applied" to true,
+                            "version" to policy.version,
+                            "isolated" to policy.isolated,
+                            "mode" to blocklistStore.mode().name,
+                            "dnsGuardRequired" to policy.dnsGuardRequired,
+                            "dnsGuardRunning" to DnsGuardVpnService.isRunning,
+                            "vpnConsentPending" to false,
+                        )
+                    } else {
+                        val guard = ensureDnsGuard()
+                        DnsGuardEnforcement.enforcementResult(
+                            type = type,
+                            vpnRunning = guard.running,
+                            needsConsent = guard.needsConsent,
+                            extras = mapOf(
+                                "version" to policy.version,
+                                "isolated" to policy.isolated,
+                                "mode" to blocklistStore.mode().name,
+                                "dnsGuardRequired" to policy.dnsGuardRequired,
+                            ),
+                        )
                     }
-                    mapOf(
-                        "ok" to true,
-                        "type" to type,
-                        "applied" to true,
-                        "version" to policy.version,
-                        "isolated" to policy.isolated,
-                        "mode" to blocklistStore.mode().name,
-                    )
                 }
             }
             "RUN_MALWARE_SCAN", "RUN_VULNERABILITY_SCAN" -> {
@@ -271,9 +303,31 @@ class DeviceAgentService(
                 "mode" to blocklistStore.mode().name,
                 "isolated" to blocklistStore.isIsolated(),
                 "policyVersion" to blocklistStore.loadPolicy()?.version,
+                "vpnConsentPending" to vpnConsent.isPending(),
+                "vpnConsentGranted" to vpnConsent.isConsentGranted(),
             ),
             "_findings" to findings,
         )
+    }
+
+    /**
+     * Start DNS Guard when possible. If VpnService.prepare() is required,
+     * mark consent pending and emit a parent-visible event — never claim success.
+     */
+    private fun ensureDnsGuard(): DnsGuardVpnService.TryStartResult {
+        val result = DnsGuardVpnService.tryStart(context)
+        if (result.running) {
+            vpnConsent.setConsentGranted(true)
+            vpnConsent.clearPending()
+        } else if (result.needsConsent) {
+            vpnConsent.markNeedsConsent()
+            AgentEvents.dnsGuardPending()
+        } else {
+            // Permission already granted but establish failed / still starting.
+            vpnConsent.markNeedsConsent()
+            AgentEvents.dnsGuardPending("DNS Guard failed to establish TUN")
+        }
+        return result
     }
 
     companion object {

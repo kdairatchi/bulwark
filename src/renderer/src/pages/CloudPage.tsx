@@ -466,6 +466,8 @@ type ParentDevice = {
   policyVersion: number
   dnsGuardRequired: boolean
   blockedDomains: string[]
+  dnsGuardRunning?: boolean
+  vpnConsentPending?: boolean
 }
 
 type ParentEvent = {
@@ -811,11 +813,18 @@ function ParentControlPanel({
               >
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-[13px] font-medium text-zinc-200">{d.name}</span>
-                  {d.isolated && (
-                    <span className="text-[9px] font-bold tracking-wider px-1.5 py-0.5 rounded" style={{ background: 'rgba(239,68,68,0.15)', color: '#f87171' }}>
-                      {t('parentIsolatedBadge')}
-                    </span>
-                  )}
+                  <span className="flex flex-wrap gap-1 justify-end">
+                    {d.isolated && (
+                      <span className="text-[9px] font-bold tracking-wider px-1.5 py-0.5 rounded" style={{ background: 'rgba(239,68,68,0.15)', color: '#f87171' }}>
+                        {t('parentIsolatedBadge')}
+                      </span>
+                    )}
+                    {d.vpnConsentPending && (
+                      <span className="text-[9px] font-bold tracking-wider px-1.5 py-0.5 rounded" style={{ background: 'rgba(245,158,11,0.15)', color: '#fbbf24' }}>
+                        {t('parentVpnPendingBadge')}
+                      </span>
+                    )}
+                  </span>
                 </div>
                 <div className="text-[11px] mt-1" style={{ color: 'var(--text-muted)' }}>
                   {d.os || 'unknown'} · {t('parentOnline')}: {d.lastHeartbeat ? new Date(d.lastHeartbeat).toLocaleString() : t('parentNever')}

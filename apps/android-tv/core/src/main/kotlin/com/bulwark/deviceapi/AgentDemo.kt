@@ -14,6 +14,9 @@ fun main(args: Array<String>) {
         ?: "http://127.0.0.1:8787"
     val client = DeviceApiClient(base)
 
+    val token = client.ensureDashboardToken()
+    println("0. dashboard token ready (len=${token.length})")
+
     val (code, _) = client.createPairingCode()
     println("1. pairing code: $code")
 
@@ -39,16 +42,8 @@ fun main(args: Array<String>) {
         enrolledAt = enrolled.enrolledAt,
     )
 
-    // Dashboard-side enqueue via unsigned POST (same as command-demo.mjs)
-    val issueConn = (java.net.URL("$base/v1/devices/${identity.deviceId}/commands").openConnection() as java.net.HttpURLConnection).apply {
-        requestMethod = "POST"
-        doOutput = true
-        setRequestProperty("Content-Type", "application/json")
-        outputStream.write("""{"type":"RUN_MALWARE_SCAN","parameters":{"scope":"quick"}}""".toByteArray())
-    }
-    val issueStatus = issueConn.responseCode
-    issueConn.disconnect()
-    println("4. dashboard issued status=$issueStatus")
+    client.issueCommand(identity.deviceId, "RUN_MALWARE_SCAN", mapOf("scope" to "quick"))
+    println("4. dashboard issued RUN_MALWARE_SCAN")
 
     client.heartbeat(identity)
     println("5. heartbeat ok")
@@ -71,6 +66,26 @@ fun main(args: Array<String>) {
     client.postCommandResult(identity, cmd.commandId, result)
     println("8. result posted: $result")
 
+    // Honest isolate result when VPN consent is missing (mirrors TV app DeviceAgentService).
+    client.isolateDevice(identity.deviceId, "agent-demo isolate")
+    val isolateCmds = client.pollCommands(identity)
+    require(isolateCmds.isNotEmpty()) { "expected ISOLATE_DEVICE" }
+    val isolateCmd = isolateCmds.first()
+    val honest = DnsGuardEnforcement.enforcementResult(
+        type = isolateCmd.type,
+        vpnRunning = false,
+        needsConsent = true,
+        extras = mapOf("isolated" to true, "mode" to "ALLOWLIST"),
+    )
+    require(honest["applied"] == false) { "expected applied=false without VPN" }
+    require(honest["reason"] == DnsGuardEnforcement.REASON_VPN_PERMISSION)
+    client.postCommandResult(identity, isolateCmd.commandId, honest)
+    client.submitNetworkEvents(
+        identity,
+        listOf(DeviceEvent.dnsGuardPending().toMap()),
+    )
+    println("9. isolate honesty: applied=${honest["applied"]} reason=${honest["reason"]} event=dns_guard_pending")
+
     // Inventory sample (sideload-shaped) — same shape as device-client-demo.
     client.submitInventory(
         identity,
@@ -90,6 +105,12 @@ fun main(args: Array<String>) {
                 ),
             ),
             "count" to 2,
+            "dnsGuard" to mapOf(
+                "running" to false,
+                "vpnConsentPending" to true,
+                "isolated" to true,
+                "mode" to "ALLOWLIST",
+            ),
         ),
     )
     client.submitFindings(
@@ -102,7 +123,7 @@ fun main(args: Array<String>) {
             ),
         ),
     )
-    println("9. inventory + findings submitted")
+    println("10. inventory + findings submitted (dnsGuard.vpnConsentPending=true)")
 
     // Posture + DNS blocklist (core library — same logic the TV app uses)
     val apps = listOf(
@@ -115,8 +136,8 @@ fun main(args: Array<String>) {
         ),
     )
     val health = AppPosture.healthAssessment(apps)
-    println("10. posture score=${health["score"]} findings=${health["findingCount"]}")
+    println("11. posture score=${health["score"]} findings=${health["findingCount"]}")
     val bl = DnsBlocklist(listOf("tracker.malware.test"))
-    println("11. dns blocklist blocks tracker.malware.test=${bl.isBlocked("sub.tracker.malware.test")}")
+    println("12. dns blocklist blocks tracker.malware.test=${bl.isBlocked("sub.tracker.malware.test")}")
     println("DONE")
 }

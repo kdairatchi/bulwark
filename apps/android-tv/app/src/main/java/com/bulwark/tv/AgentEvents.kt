@@ -13,4 +13,7 @@ object AgentEvents {
 
     fun finding(subject: String, reason: String, level: String) =
         batcher.add(DeviceEvent.findingRaised(subject, reason, level))
+
+    fun dnsGuardPending(detail: String = "VPN permission required for DNS Guard") =
+        batcher.add(DeviceEvent.dnsGuardPending(detail))
 }

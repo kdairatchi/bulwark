@@ -41,6 +41,13 @@ data class DeviceEvent(
             detail = reason,
             metadata = mapOf("level" to level),
         )
+
+        fun dnsGuardPending(detail: String = "VPN permission required for DNS Guard") = DeviceEvent(
+            type = DnsGuardEnforcement.EVENT_DNS_GUARD_PENDING,
+            at = java.time.Instant.now().toString(),
+            subject = "device",
+            detail = detail,
+        )
     }
 }
 

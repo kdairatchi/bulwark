@@ -28,14 +28,49 @@ data class DeviceIdentity(
  */
 class DeviceApiClient(
     baseUrl: String,
+    private var dashboardToken: String? = System.getenv("DASHBOARD_TOKEN"),
 ) {
     private val base = baseUrl.trimEnd('/')
 
+    fun setDashboardToken(token: String) {
+        dashboardToken = token.trim()
+    }
+
+    /** Local/dev only — GET /v1/dashboard-bootstrap when the server auto-generated a token. */
+    fun bootstrapDashboardToken(): String {
+        val (status, body) = request("GET", "/v1/dashboard-bootstrap")
+        if (status !in 200..299) throw DeviceApiException(status, body)
+        val token = JsonLite.parseObject(body)["token"] as? String
+            ?: throw DeviceApiException(status, "missing token")
+        dashboardToken = token
+        return token
+    }
+
+    fun ensureDashboardToken(): String {
+        val existing = dashboardToken?.trim().orEmpty()
+        if (existing.isNotEmpty()) return existing
+        return bootstrapDashboardToken()
+    }
+
     fun createPairingCode(): Pair<String, String> {
-        val (status, body) = request("POST", "/v1/pairing-codes")
+        val (status, body) = dashboardRequest("POST", "/v1/pairing-codes", "{}")
         if (status !in 200..299) throw DeviceApiException(status, body)
         val obj = JsonLite.parseObject(body)
         return (obj["code"] as String) to (obj["expiresAt"] as String)
+    }
+
+    fun issueCommand(deviceId: String, type: String, parameters: Map<String, Any?> = emptyMap()): Map<String, Any?> {
+        val payload = JsonLite.stringifyObject(mapOf("type" to type, "parameters" to parameters))
+        val (status, body) = dashboardRequest("POST", "/v1/devices/$deviceId/commands", payload)
+        if (status !in 200..299) throw DeviceApiException(status, body)
+        return JsonLite.parseObject(body)
+    }
+
+    fun isolateDevice(deviceId: String, reason: String = "agent-demo"): Map<String, Any?> {
+        val payload = JsonLite.stringifyObject(mapOf("reason" to reason))
+        val (status, body) = dashboardRequest("POST", "/v1/devices/$deviceId/isolate", payload)
+        if (status !in 200..299) throw DeviceApiException(status, body)
+        return JsonLite.parseObject(body)
     }
 
     fun enroll(code: String, name: String, publicKeyPem: String, os: String): EnrollResult {
@@ -139,6 +174,15 @@ class DeviceApiClient(
         val (status, body) = request(method, path, if (method == "GET") null else rawBody, headers)
         if (status !in 200..299) throw DeviceApiException(status, body)
         return body
+    }
+
+    private fun dashboardRequest(method: String, path: String, rawBody: String? = null): Pair<Int, String> {
+        val token = ensureDashboardToken()
+        val headers = mapOf(
+            "Content-Type" to "application/json",
+            "Authorization" to "Bearer $token",
+        )
+        return request(method, path, rawBody, headers)
     }
 
     private fun request(

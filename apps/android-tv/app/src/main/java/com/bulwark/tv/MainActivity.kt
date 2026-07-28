@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -38,6 +39,8 @@ import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -62,6 +65,7 @@ fun BulwarkTvApp() {
     val context = LocalContext.current
     val agent = remember { DeviceAgentService(context) }
     val blocklist = remember { BlocklistStore(context) }
+    val vpnConsent = remember { VpnConsentStore(context) }
     val scope = rememberCoroutineScope()
 
     var identity by remember { mutableStateOf(IdentityStore(context).load()) }
@@ -70,16 +74,50 @@ fun BulwarkTvApp() {
     var statusMessage by remember { mutableStateOf("") }
     var busy by remember { mutableStateOf(false) }
     var dnsRunning by remember { mutableStateOf(DnsGuardVpnService.isRunning) }
+    var consentPending by remember { mutableStateOf(vpnConsent.isPending()) }
+
+    fun refreshGuardState() {
+        dnsRunning = DnsGuardVpnService.isRunning
+        consentPending = vpnConsent.isPending()
+    }
 
     val vpnPermission = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult(),
     ) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
+            vpnConsent.setConsentGranted(true)
             DnsGuardVpnService.start(context)
             dnsRunning = true
+            consentPending = false
             statusMessage = "DNS Guard started (${blocklist.size()} blocked domains)"
         } else {
-            statusMessage = "DNS Guard permission denied"
+            vpnConsent.markNeedsConsent()
+            consentPending = true
+            statusMessage = "DNS Guard permission denied — isolation cannot enforce until approved"
+        }
+    }
+
+    fun requestVpnConsent() {
+        if (blocklist.size() == 0) blocklist.addAll(BlocklistStore.STARTER)
+        val prepare = DnsGuardVpnService.prepareIntent(context)
+        if (prepare != null) {
+            vpnPermission.launch(prepare)
+        } else {
+            vpnConsent.setConsentGranted(true)
+            DnsGuardVpnService.start(context)
+            refreshGuardState()
+            statusMessage = "DNS Guard started (${blocklist.size()} domains)"
+        }
+    }
+
+    LaunchedEffect(identity) {
+        while (isActive) {
+            refreshGuardState()
+            // Auto-prompt when parent isolate/policy needs VPN and we are on the status screen.
+            if (identity != null && consentPending && !dnsRunning && !busy) {
+                // Do not auto-launch every loop — only nudge via banner; user must press Approve.
+            }
+            delay(2000)
         }
     }
 
@@ -139,6 +177,13 @@ fun BulwarkTvApp() {
                 }
             }
         } else {
+            if (consentPending && !dnsRunning) {
+                ConsentBanner(
+                    isolated = blocklist.isIsolated(),
+                    onApprove = { requestVpnConsent() },
+                )
+                Spacer(Modifier.height(16.dp))
+            }
             Text(text = "Device status", color = Text, fontSize = 28.sp, fontWeight = FontWeight.SemiBold)
             Spacer(Modifier.height(12.dp))
             StatusCard(
@@ -147,6 +192,7 @@ fun BulwarkTvApp() {
                 model = "${Build.MANUFACTURER} ${Build.MODEL}",
                 enrolledAt = identity!!.enrolledAt,
                 dnsRunning = dnsRunning,
+                consentPending = consentPending,
                 blocklistSize = blocklist.size(),
                 isolated = blocklist.isIsolated(),
                 filterMode = blocklist.mode().name,
@@ -160,6 +206,7 @@ fun BulwarkTvApp() {
                     scope.launch {
                         val result = withContext(Dispatchers.IO) { agent.tick() }
                         busy = false
+                        refreshGuardState()
                         result.fold(
                             onSuccess = {
                                 statusMessage =
@@ -186,15 +233,7 @@ fun BulwarkTvApp() {
                         dnsRunning = false
                         statusMessage = "DNS Guard stopped"
                     } else {
-                        if (blocklist.size() == 0) blocklist.addAll(BlocklistStore.STARTER)
-                        val prepare = DnsGuardVpnService.prepareIntent(context)
-                        if (prepare != null) {
-                            vpnPermission.launch(prepare)
-                        } else {
-                            DnsGuardVpnService.start(context)
-                            dnsRunning = true
-                            statusMessage = "DNS Guard started (${blocklist.size()} domains)"
-                        }
+                        requestVpnConsent()
                     }
                 }
                 Spacer(Modifier.width(16.dp))
@@ -233,12 +272,39 @@ private fun LabeledField(label: String, value: String, onChange: (String) -> Uni
 }
 
 @Composable
+private fun ConsentBanner(isolated: Boolean, onApprove: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Color(0xFF7F1D1D))
+            .padding(20.dp),
+    ) {
+        Text(
+            text = if (isolated) "Isolation pending — VPN permission required"
+            else "DNS Guard required — VPN permission needed",
+            color = Color(0xFFFEE2E2),
+            fontSize = 22.sp,
+            fontWeight = FontWeight.Bold,
+        )
+        Spacer(Modifier.height(8.dp))
+        Text(
+            text = "Parent policy asked this TV to filter DNS, but Android must approve the VPN once. Press Approve to enforce.",
+            color = Color(0xFFFECACA),
+            fontSize = 16.sp,
+        )
+        Spacer(Modifier.height(14.dp))
+        FocusButton("Approve DNS Guard", enabled = true, onClick = onApprove)
+    }
+}
+
+@Composable
 private fun StatusCard(
     deviceId: String,
     baseUrl: String,
     model: String,
     enrolledAt: String,
     dnsRunning: Boolean,
+    consentPending: Boolean,
     blocklistSize: Int,
     isolated: Boolean,
     filterMode: String,
@@ -256,9 +322,17 @@ private fun StatusCard(
         Text(text = "Enrolled: $enrolledAt", color = Muted, fontSize = 16.sp)
         Text(
             text = "DNS Guard: ${if (dnsRunning) "ON" else "OFF"} · ${if (isolated) "ISOLATED" else filterMode} · list $blocklistSize · queries ${dnsStats["queries"]} · blocks ${dnsStats["blocks"]}",
-            color = if (isolated) Color(0xFFEF4444) else if (dnsRunning) Accent else Muted,
+            color = if (isolated && !dnsRunning) Color(0xFFEF4444) else if (dnsRunning) Accent else Muted,
             fontSize = 16.sp,
         )
+        if (consentPending && !dnsRunning) {
+            Text(
+                text = "VPN consent pending — filtering not active yet",
+                color = Color(0xFFF87171),
+                fontSize = 15.sp,
+                fontWeight = FontWeight.SemiBold,
+            )
+        }
         val last = dnsStats["lastBlockedHost"] as? String
         if (!last.isNullOrBlank()) {
             Text(text = "Last blocked: $last", color = Accent, fontSize = 14.sp)
