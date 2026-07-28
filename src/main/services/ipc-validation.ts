@@ -5,7 +5,7 @@
 
 import { app } from 'electron'
 import { isAbsolute } from 'path'
-import type { ScanHistoryEntry } from '../../shared/types'
+import type { ScanHistoryEntry, CleanOptions } from '../../shared/types'
 import type { DeletionQuery } from './deletion-log-store'
 
 /** Validate that a partial settings object only contains expected keys and safe values */
@@ -240,6 +240,17 @@ export function validateStringArray(
   if (input.length > maxItems) return null
   if (!input.every((v: unknown) => typeof v === 'string' && v.length <= maxItemLength)) return null
   return input as string[]
+}
+
+/** Optional second IPC arg for clean handlers: `{ dryRun?: boolean }`. */
+export function parseCleanOptions(input: unknown): CleanOptions {
+  if (input === undefined || input === null) return {}
+  if (typeof input !== 'object' || Array.isArray(input)) return {}
+  const obj = input as Record<string, unknown>
+  const opts: CleanOptions = {}
+  if (obj.dryRun === true) opts.dryRun = true
+  if (obj.force === true) opts.force = true
+  return opts
 }
 
 /** Validate a scan history entry has the expected shape and reasonable size */

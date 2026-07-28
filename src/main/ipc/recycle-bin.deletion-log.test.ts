@@ -44,6 +44,32 @@ vi.mock('../services/file-utils', () => ({
   cleanItems: vi.fn(),
 }))
 
+vi.mock('../services/gated-clean', () => ({
+  gatedCleanItems: vi.fn(),
+  assertCleanAllowed: vi.fn(async () => ({
+    allowed: true,
+    restoreAttempted: false,
+    restoreSucceeded: false,
+    skipReason: 'disabled',
+  })),
+  blockedCleanResult: vi.fn((gate: { error?: string }) => ({
+    totalCleaned: 0,
+    filesDeleted: 0,
+    filesSkipped: 0,
+    errors: [{ path: '', reason: gate.error || 'restore_point_required' }],
+    needsElevation: false,
+    blockedByRestoreGate: true,
+  })),
+}))
+
+vi.mock('../services/ipc-validation', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../services/ipc-validation')>()
+  return {
+    ...actual,
+    parseCleanOptions: (input: unknown) => actual.parseCleanOptions(input),
+  }
+})
+
 vi.mock('../services/scan-cache', () => ({ cacheItems: vi.fn() }))
 
 vi.mock('../services/exec-utf8', () => ({ psUtf8: (s: string) => s }))

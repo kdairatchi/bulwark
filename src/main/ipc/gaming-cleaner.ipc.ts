@@ -5,12 +5,13 @@ import { join } from 'path'
 import { randomUUID } from 'crypto'
 import { IPC } from '../../shared/channels'
 import { getPlatform } from '../platform'
-import { scanDirectoriesAsItems, cleanItems, getDirectorySize } from '../services/file-utils'
+import { scanDirectoriesAsItems, getDirectorySize } from '../services/file-utils'
+import { gatedCleanItems } from '../services/gated-clean'
 import { cacheItems } from '../services/scan-cache'
 import { CleanerType } from '../../shared/enums'
 import type { ScanItem, ScanResult, CleanResult } from '../../shared/types'
 import type { WindowGetter } from './index'
-import { validateStringArray } from '../services/ipc-validation'
+import { validateStringArray, parseCleanOptions } from '../services/ipc-validation'
 
 export function registerGamingCleanerIpc(getWindow: WindowGetter): void {
   ipcMain.handle(IPC.GAMING_SCAN, async (): Promise<ScanResult[]> => {
@@ -78,10 +79,11 @@ export function registerGamingCleanerIpc(getWindow: WindowGetter): void {
     return results
   })
 
-  ipcMain.handle(IPC.GAMING_CLEAN, async (_event, itemIds: string[]): Promise<CleanResult> => {
+  ipcMain.handle(IPC.GAMING_CLEAN, async (_event, itemIds: string[], options?: unknown): Promise<CleanResult> => {
     const valid = validateStringArray(itemIds)
     if (!valid) return { totalCleaned: 0, filesDeleted: 0, filesSkipped: 0, errors: [], needsElevation: false }
-    return cleanItems(valid, (processed, total, currentPath, cleanedSize) => {
+    const opts = parseCleanOptions(options)
+    return gatedCleanItems(valid, (processed, total, currentPath, cleanedSize) => {
       const win = getWindow()
       if (win && !win.isDestroyed()) win.webContents.send(IPC.SCAN_PROGRESS, {
         phase: 'cleaning',
@@ -91,7 +93,7 @@ export function registerGamingCleanerIpc(getWindow: WindowGetter): void {
         itemsFound: total,
         sizeFound: cleanedSize,
       })
-    })
+    }, 'local', opts)
   })
 }
 

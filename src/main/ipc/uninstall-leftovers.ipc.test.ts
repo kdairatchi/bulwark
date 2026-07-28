@@ -31,6 +31,10 @@ vi.mock('../services/file-utils', () => ({
   cleanItems: (...args: unknown[]) => mockCleanItems(...args),
 }))
 
+vi.mock('../services/gated-clean', () => ({
+  gatedCleanItems: (...args: unknown[]) => mockCleanItems(...args),
+}))
+
 const mockCacheItems = vi.fn()
 
 vi.mock('../services/scan-cache', () => ({
@@ -41,6 +45,11 @@ const mockValidateStringArray = vi.fn()
 
 vi.mock('../services/ipc-validation', () => ({
   validateStringArray: (...args: unknown[]) => mockValidateStringArray(...args),
+  parseCleanOptions: (input: unknown) => {
+    if (!input || typeof input !== 'object' || Array.isArray(input)) return {}
+    const obj = input as Record<string, unknown>
+    return obj.dryRun === true ? { dryRun: true } : {}
+  },
 }))
 
 import { registerUninstallLeftoversIpc } from './uninstall-leftovers.ipc'
@@ -165,7 +174,7 @@ describe('uninstall-leftovers IPC', () => {
 
       expect(result).toEqual(expected)
       expect(mockValidateStringArray).toHaveBeenCalledWith(ids)
-      expect(mockCleanItems).toHaveBeenCalledWith(ids)
+      expect(mockCleanItems).toHaveBeenCalledWith(ids, undefined, 'local', {})
     })
 
     it('returns empty result when validation fails (returns null)', async () => {

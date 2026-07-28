@@ -21,6 +21,10 @@ vi.mock('../services/file-utils', () => ({
   cleanItems: (...args: unknown[]) => mockCleanItems(...args),
 }))
 
+vi.mock('../services/gated-clean', () => ({
+  gatedCleanItems: (...args: unknown[]) => mockCleanItems(...args),
+}))
+
 const mockCacheItems = vi.fn()
 vi.mock('../services/scan-cache', () => ({
   cacheItems: (...args: unknown[]) => mockCacheItems(...args),
@@ -45,6 +49,11 @@ vi.mock('../services/ipc-validation', () => ({
     if (!Array.isArray(input)) return null
     if (!input.every((v: unknown) => typeof v === 'string')) return null
     return input as string[]
+  },
+  parseCleanOptions: (input: unknown) => {
+    if (!input || typeof input !== 'object' || Array.isArray(input)) return {}
+    const obj = input as Record<string, unknown>
+    return obj.dryRun === true ? { dryRun: true } : {}
   },
 }))
 
@@ -356,7 +365,7 @@ describe('BROWSER_CLEAN handler', () => {
     const handler = getHandler('cleaner:browser:clean')
     const result = await handler({}, ['id-1', 'id-2'])
 
-    expect(mockCleanItems).toHaveBeenCalledWith(['id-1', 'id-2'], expect.any(Function))
+    expect(mockCleanItems).toHaveBeenCalledWith(['id-1', 'id-2'], expect.any(Function), 'local', {})
     expect(result).toEqual(expect.objectContaining({ totalCleaned: 500 }))
   })
 

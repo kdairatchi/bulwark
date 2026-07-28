@@ -1,11 +1,11 @@
 import { ipcMain } from 'electron'
 import { IPC } from '../../shared/channels'
 import { scanForLeftovers } from '../services/uninstall-leftovers'
-import { cleanItems } from '../services/file-utils'
+import { gatedCleanItems } from '../services/gated-clean'
 import { cacheItems } from '../services/scan-cache'
 import type { ScanResult, CleanResult } from '../../shared/types'
 import type { WindowGetter } from './index'
-import { validateStringArray } from '../services/ipc-validation'
+import { validateStringArray, parseCleanOptions } from '../services/ipc-validation'
 
 export function registerUninstallLeftoversIpc(getWindow: WindowGetter): void {
   ipcMain.handle(IPC.UNINSTALL_LEFTOVERS_SCAN, async (): Promise<ScanResult[]> => {
@@ -19,9 +19,9 @@ export function registerUninstallLeftoversIpc(getWindow: WindowGetter): void {
     return results
   })
 
-  ipcMain.handle(IPC.UNINSTALL_LEFTOVERS_CLEAN, async (_event, itemIds: string[]): Promise<CleanResult> => {
+  ipcMain.handle(IPC.UNINSTALL_LEFTOVERS_CLEAN, async (_event, itemIds: string[], options?: unknown): Promise<CleanResult> => {
     const valid = validateStringArray(itemIds)
     if (!valid) return { totalCleaned: 0, filesDeleted: 0, filesSkipped: 0, errors: [], needsElevation: false }
-    return cleanItems(valid)
+    return gatedCleanItems(valid, undefined, 'local', parseCleanOptions(options))
   })
 }
