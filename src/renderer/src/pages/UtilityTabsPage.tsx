@@ -17,6 +17,11 @@ import {
   ShieldCheck,
   Zap,
   ExternalLink,
+  CheckCircle2,
+  CircleDashed,
+  Server,
+  Wrench,
+  XCircle,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { PageHeader } from '@/components/layout/PageHeader'
@@ -29,6 +34,13 @@ import type {
   UtilityInstallActionResult,
   UtilityInstalledMap,
   UtilityPowerPlanTarget,
+  UtilityConfigActionResult,
+  UtilityConfigCatalogResult,
+  UtilityConfigFeatureMetadata,
+  UtilityConfigFeatureStatus,
+  UtilityConfigFeatureStatusResult,
+  UtilityConfigFixMetadata,
+  UtilityConfigOpenSshStatusResult,
   UtilityTweakActionResult,
   UtilityTweakMetadata,
 } from '@shared/types'
@@ -47,6 +59,8 @@ const TABS: TabDef[] = [
 ]
 
 const CATEGORY_ORDER = ['browsers', 'utilities', 'media', 'communication', 'development', 'security']
+const REVERSIBLE_CONFIG_FEATURE_IDS = new Set(['f8-boot-recovery', 'daily-registry-backup'])
+const DESTRUCTIVE_CONFIG_FIX_IDS = new Set(['reset-network', 'reset-windows-update'])
 
 function reportActionResult(t: (k: string, o?: Record<string, unknown>) => string, result: UtilityInstallActionResult) {
   if (result.succeeded > 0) toast.success(t('install.toastSuccess', { count: result.succeeded }))
@@ -67,6 +81,39 @@ function reportTweakActionResult(t: (k: string, o?: Record<string, unknown>) => 
     const detail = result.errors.slice(0, 3).map((e) => `${e.id}: ${e.reason}`).join('\n')
     toast.error(t('tweaks.toastFailed', { count: result.failed }), { description: detail || undefined })
   }
+}
+
+function reportConfigActionResult(t: (k: string, o?: Record<string, unknown>) => string, result: UtilityConfigActionResult) {
+  if (result.success) {
+    toast.success(result.summary, {
+      description: result.requiresReboot ? t('config.rebootRequired') : undefined,
+    })
+    return
+  }
+
+  if (result.needsAdmin) {
+    toast.error(t('config.adminRequired'), { description: result.error || result.summary })
+    return
+  }
+
+  toast.error(result.summary || t('config.toastActionFailed'), {
+    description: result.error,
+  })
+}
+
+function configStatusClass(status: UtilityConfigFeatureStatus | 'loading') {
+  if (status === 'enabled') return 'text-green-400'
+  if (status === 'partial') return 'text-amber-300'
+  if (status === 'disabled') return 'text-zinc-400'
+  if (status === 'unavailable') return 'text-red-300'
+  return 'text-zinc-500'
+}
+
+function configStatusIcon(status: UtilityConfigFeatureStatus | 'loading') {
+  if (status === 'enabled') return CheckCircle2
+  if (status === 'disabled') return XCircle
+  if (status === 'loading') return Loader2
+  return CircleDashed
 }
 
 function InstallTab() {
@@ -740,14 +787,477 @@ function TweaksTab() {
   )
 }
 
-function ComingSoon({ titleKey, descriptionKey }: { titleKey: string; descriptionKey: string }) {
+function ConfigTab() {
   const { t } = useTranslation('utilities')
+  const [loading, setLoading] = useState(true)
+  const [statusLoading, setStatusLoading] = useState(false)
+  const [runningId, setRunningId] = useState<string | null>(null)
+  const [catalog, setCatalog] = useState<UtilityConfigCatalogResult | null>(null)
+  const [featureStatus, setFeatureStatus] = useState<Record<string, UtilityConfigFeatureStatusResult>>({})
+  const [openSshStatus, setOpenSshStatus] = useState<UtilityConfigOpenSshStatusResult | null>(null)
+  const [selected, setSelected] = useState<Set<string>>(new Set())
+
+  const busy = runningId !== null
+
+  const loadFeatureStatuses = useCallback(async (features: UtilityConfigFeatureMetadata[]) => {
+    setStatusLoading(true)
+    try {
+      const statuses = await Promise.all(features.map(async (feature) => {
+        try {
+          return await window.kudu.utilityConfigFeatureStatus(feature.id)
+        } catch {
+          return {
+            id: feature.id,
+            available: false,
+            enabled: null,
+            status: 'unknown' as const,
+            details: t('config.statusLoadFailed'),
+          }
+        }
+      }))
+      setFeatureStatus(Object.fromEntries(statuses.map((status) => [status.id, status])))
+    } finally {
+      setStatusLoading(false)
+    }
+  }, [t])
+
+  const loadOpenSshStatus = useCallback(async (enabled: boolean) => {
+    if (!enabled) {
+      setOpenSshStatus(null)
+      return
+    }
+    try {
+      setOpenSshStatus(await window.kudu.utilityConfigOpenSshStatus())
+    } catch {
+      setOpenSshStatus({
+        available: false,
+        installed: false,
+        serviceRunning: false,
+        startupType: null,
+        details: t('config.statusLoadFailed'),
+      })
+    }
+  }, [t])
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    try {
+      const nextCatalog = await window.kudu.utilityConfigCatalog()
+      setCatalog(nextCatalog)
+      setSelected(new Set())
+      if (!nextCatalog.available) {
+        setFeatureStatus({})
+        setOpenSshStatus(null)
+        return
+      }
+      await Promise.all([
+        loadFeatureStatuses(nextCatalog.features),
+        loadOpenSshStatus(!!nextCatalog.openSsh),
+      ])
+    } catch {
+      toast.error(t('config.toastLoadFailed'))
+    } finally {
+      setLoading(false)
+    }
+  }, [loadFeatureStatuses, loadOpenSshStatus, t])
+
+  useEffect(() => {
+    void load()
+  }, [load])
+
+  const toggleFeature = (id: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  const refreshStatuses = async () => {
+    if (!catalog?.available) return
+    await Promise.all([
+      loadFeatureStatuses(catalog.features),
+      loadOpenSshStatus(!!catalog.openSsh),
+    ])
+  }
+
+  const runSelectedFeatures = async () => {
+    if (!catalog || selected.size === 0) {
+      toast.error(t('config.toastNothingSelected'))
+      return
+    }
+    setRunningId('features-enable')
+    try {
+      for (const id of selected) {
+        const result = await window.kudu.utilityConfigFeatureEnable(id)
+        reportConfigActionResult(t, result)
+      }
+      await loadFeatureStatuses(catalog.features)
+    } catch {
+      toast.error(t('config.toastActionFailed'))
+    } finally {
+      setRunningId(null)
+    }
+  }
+
+  const revertFeature = async (id: string) => {
+    if (!catalog) return
+    setRunningId(`feature-revert:${id}`)
+    try {
+      const result = await window.kudu.utilityConfigFeatureRevert(id)
+      reportConfigActionResult(t, result)
+      await loadFeatureStatuses(catalog.features)
+    } catch {
+      toast.error(t('config.toastActionFailed'))
+    } finally {
+      setRunningId(null)
+    }
+  }
+
+  const launchPanel = async (id: string) => {
+    setRunningId(`panel:${id}`)
+    try {
+      const result = await window.kudu.utilityConfigPanelLaunch(id)
+      if (result.launched) {
+        toast.success(t('config.panelLaunched'))
+      } else {
+        toast.error(t('config.panelLaunchFailed'), { description: result.error })
+      }
+    } catch {
+      toast.error(t('config.panelLaunchFailed'))
+    } finally {
+      setRunningId(null)
+    }
+  }
+
+  const enableOpenSsh = async () => {
+    if (!catalog?.openSsh) return
+    setRunningId('openssh')
+    try {
+      const result = await window.kudu.utilityConfigOpenSshEnable()
+      reportConfigActionResult(t, result)
+      await loadOpenSshStatus(true)
+    } catch {
+      toast.error(t('config.toastActionFailed'))
+    } finally {
+      setRunningId(null)
+    }
+  }
+
+  const runFix = async (fix: UtilityConfigFixMetadata) => {
+    if (DESTRUCTIVE_CONFIG_FIX_IDS.has(fix.id) && !window.confirm(t('config.fixConfirm', { name: fix.name }))) {
+      return
+    }
+    setRunningId(`fix:${fix.id}`)
+    try {
+      const result = await window.kudu.utilityConfigFixRun(fix.id)
+      reportConfigActionResult(t, result)
+    } catch {
+      toast.error(t('config.toastActionFailed'))
+    } finally {
+      setRunningId(null)
+    }
+  }
+
+  const renderAdminBadge = (show: boolean) => show ? (
+    <span className="rounded-md px-2 py-0.5 text-[10px] font-medium text-amber-300" style={{ background: 'rgba(245,158,11,0.08)' }}>
+      {t('config.adminBadge')}
+    </span>
+  ) : null
+
+  const renderRebootBadge = (show: boolean) => show ? (
+    <span className="rounded-md px-2 py-0.5 text-[10px] font-medium text-sky-300" style={{ background: 'rgba(14,165,233,0.08)' }}>
+      {t('config.rebootBadge')}
+    </span>
+  ) : null
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center gap-2 py-16 text-[13px]" style={{ color: 'var(--text-muted)' }}>
+        <Loader2 className="h-4 w-4 animate-spin" />
+        {t('config.loading')}
+      </div>
+    )
+  }
+
+  if (!catalog?.available) {
+    return (
+      <EmptyState
+        icon={AlertTriangle}
+        title={t('config.windowsOnlyTitle')}
+        description={t('config.windowsOnlyDescription')}
+      />
+    )
+  }
+
   return (
-    <EmptyState
-      icon={SlidersHorizontal}
-      title={t(titleKey)}
-      description={t(descriptionKey)}
-    />
+    <div className="space-y-4">
+      <div>
+        <h2 className="text-[15px] font-semibold text-zinc-100">{t('config.heading')}</h2>
+        <p className="text-[12px] mt-1" style={{ color: 'var(--text-muted)' }}>{t('config.description')}</p>
+      </div>
+
+      <section
+        className="rounded-2xl overflow-hidden"
+        style={{ background: 'var(--card-bg)', border: '1px solid var(--border-default)' }}
+      >
+        <div className="px-4 py-3" style={{ borderBottom: '1px solid var(--border-default)' }}>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <div className="flex items-center gap-2">
+                <ShieldCheck className="h-4 w-4 text-amber-400" />
+                <h3 className="text-[13px] font-semibold text-zinc-100">{t('config.featuresTitle')}</h3>
+              </div>
+              <p className="mt-1 text-[11px]" style={{ color: 'var(--text-muted)' }}>{t('config.featuresDescription')}</p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                disabled={busy || selected.size === 0}
+                onClick={() => void runSelectedFeatures()}
+                className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-[12px] font-medium disabled:opacity-40"
+                style={{ background: 'var(--accent)', color: 'white' }}
+              >
+                {runningId === 'features-enable' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ShieldCheck className="h-3.5 w-3.5" />}
+                {t('config.enableSelected')}
+              </button>
+              <button
+                type="button"
+                disabled={busy || statusLoading}
+                onClick={() => void refreshStatuses()}
+                className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-[12px] font-medium disabled:opacity-40"
+                style={{ background: 'var(--bg-subtle)', color: 'var(--text-secondary)', border: '1px solid var(--border-default)' }}
+              >
+                {statusLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+                {t('config.refreshStatus')}
+              </button>
+              <button
+                type="button"
+                disabled={busy || selected.size === 0}
+                onClick={() => setSelected(new Set())}
+                className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-[12px] font-medium disabled:opacity-40"
+                style={{ background: 'var(--bg-subtle)', color: 'var(--text-secondary)', border: '1px solid var(--border-default)' }}
+              >
+                <Eraser className="h-3.5 w-3.5" />
+                {t('config.clearSelection')}
+              </button>
+            </div>
+          </div>
+          <div className="mt-3 flex items-center justify-between text-[11px]" style={{ color: 'var(--text-muted)' }}>
+            <span>{t('config.selectedCount', { count: selected.size })}</span>
+            {(busy || statusLoading) && (
+              <span className="flex items-center gap-1.5 text-amber-400">
+                <Loader2 className="h-3 w-3 animate-spin" />
+                {statusLoading ? t('config.scanning') : t('config.running')}
+              </span>
+            )}
+          </div>
+        </div>
+        <ul>
+          {catalog.features.map((feature) => {
+            const status = featureStatus[feature.id]
+            const badgeStatus = statusLoading && !status ? 'loading' : status?.status ?? 'unknown'
+            const StatusIcon = configStatusIcon(badgeStatus)
+            const unavailable = status?.status === 'unavailable'
+            const isSelected = selected.has(feature.id)
+            const canRevert = REVERSIBLE_CONFIG_FEATURE_IDS.has(feature.id)
+            return (
+              <li key={feature.id} className="flex items-stretch gap-2 px-4 py-3 hover:bg-white/[0.02]">
+                <button
+                  type="button"
+                  disabled={busy || unavailable}
+                  onClick={() => toggleFeature(feature.id)}
+                  className="min-w-0 flex flex-1 items-start gap-3 text-left disabled:opacity-50"
+                >
+                  {isSelected ? (
+                    <CheckSquare className="h-4 w-4 text-amber-400 shrink-0 mt-0.5" />
+                  ) : (
+                    <Square className="h-4 w-4 shrink-0 mt-0.5" style={{ color: 'var(--text-muted)' }} />
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="text-[13px] font-medium text-zinc-200">{feature.name}</p>
+                      <span
+                        className={cn('inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-medium', configStatusClass(badgeStatus))}
+                        style={{ background: 'rgba(113,113,122,0.1)' }}
+                      >
+                        <StatusIcon className={cn('h-3 w-3', badgeStatus === 'loading' && 'animate-spin')} />
+                        {t(`config.status.${badgeStatus}`)}
+                      </span>
+                      {renderAdminBadge(feature.requiresAdmin)}
+                    </div>
+                    <p className="text-[11px] mt-1" style={{ color: 'var(--text-muted)' }}>{feature.description}</p>
+                    {status?.details && (
+                      <p className="text-[10px] mt-1" style={{ color: 'var(--text-faint)' }}>{status.details}</p>
+                    )}
+                    {feature.notes && (
+                      <p className="text-[10px] mt-1 text-amber-200">{feature.notes}</p>
+                    )}
+                    <p className="text-[10px] font-mono mt-1" style={{ color: 'var(--text-faint)' }}>{feature.id}</p>
+                  </div>
+                </button>
+                {canRevert && (
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => void revertFeature(feature.id)}
+                    className="self-center rounded-lg px-3 py-2 text-[12px] font-medium text-red-300 disabled:opacity-40"
+                    style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)' }}
+                  >
+                    {runningId === `feature-revert:${feature.id}` ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      t('config.revert')
+                    )}
+                  </button>
+                )}
+              </li>
+            )
+          })}
+        </ul>
+      </section>
+
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
+        <div className="space-y-4">
+          <section
+            className="rounded-2xl p-4"
+            style={{ background: 'var(--card-bg)', border: '1px solid var(--border-default)' }}
+          >
+            <div className="flex items-center gap-2">
+              <ExternalLink className="h-4 w-4 text-amber-400" />
+              <h3 className="text-[13px] font-semibold text-zinc-100">{t('config.panelsTitle')}</h3>
+            </div>
+            <p className="mt-1 text-[11px]" style={{ color: 'var(--text-muted)' }}>{t('config.panelsDescription')}</p>
+            <div className="mt-3 grid gap-2 sm:grid-cols-2">
+              {catalog.legacyPanels.map((panel) => (
+                <button
+                  key={panel.id}
+                  type="button"
+                  disabled={busy}
+                  onClick={() => void launchPanel(panel.id)}
+                  className="rounded-xl px-3 py-3 text-left transition-colors hover:bg-white/[0.02] disabled:opacity-40"
+                  style={{ background: 'var(--bg-subtle)', border: '1px solid var(--border-default)' }}
+                >
+                  <span className="flex items-center justify-between gap-2">
+                    <span className="text-[12px] font-medium text-zinc-200">{panel.name}</span>
+                    {runningId === `panel:${panel.id}` ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin text-amber-400" />
+                    ) : (
+                      <ExternalLink className="h-3.5 w-3.5" style={{ color: 'var(--text-muted)' }} />
+                    )}
+                  </span>
+                  <span className="mt-1 block text-[11px]" style={{ color: 'var(--text-muted)' }}>{panel.description}</span>
+                </button>
+              ))}
+            </div>
+          </section>
+
+          <section
+            className="rounded-2xl p-4"
+            style={{ background: 'var(--card-bg)', border: '1px solid var(--border-default)' }}
+          >
+            <div className="flex items-center gap-2">
+              <Wrench className="h-4 w-4 text-amber-400" />
+              <h3 className="text-[13px] font-semibold text-zinc-100">{t('config.fixesTitle')}</h3>
+            </div>
+            <p className="mt-1 text-[11px]" style={{ color: 'var(--text-muted)' }}>{t('config.fixesDescription')}</p>
+            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+              {catalog.fixes.map((fix) => (
+                <div
+                  key={fix.id}
+                  className="rounded-xl p-3"
+                  style={{ background: 'var(--bg-subtle)', border: '1px solid var(--border-default)' }}
+                >
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h4 className="text-[12px] font-semibold text-zinc-200">{fix.name}</h4>
+                    {renderAdminBadge(fix.requiresAdmin)}
+                    {renderRebootBadge(fix.requiresReboot)}
+                  </div>
+                  <p className="mt-1 text-[11px]" style={{ color: 'var(--text-muted)' }}>{fix.description}</p>
+                  {fix.notes && <p className="mt-2 text-[10px] text-amber-200">{fix.notes}</p>}
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => void runFix(fix)}
+                    className="mt-3 flex items-center gap-1.5 rounded-lg px-3 py-2 text-[12px] font-medium disabled:opacity-40"
+                    style={{ background: 'var(--accent)', color: 'white' }}
+                  >
+                    {runningId === `fix:${fix.id}` ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Wrench className="h-3.5 w-3.5" />}
+                    {t('config.runFix')}
+                  </button>
+                </div>
+              ))}
+            </div>
+          </section>
+        </div>
+
+        <aside>
+          <section
+            className="rounded-2xl p-4"
+            style={{ background: 'var(--card-bg)', border: '1px solid var(--border-default)' }}
+          >
+            <div className="flex items-center gap-2">
+              <Server className="h-4 w-4 text-amber-400" />
+              <h3 className="text-[13px] font-semibold text-zinc-100">{t('config.openSshTitle')}</h3>
+            </div>
+            <p className="mt-1 text-[11px]" style={{ color: 'var(--text-muted)' }}>
+              {catalog.openSsh?.description ?? t('config.openSshUnavailable')}
+            </p>
+            {catalog.openSsh && (
+              <>
+                <div className="mt-3 space-y-2 text-[11px]">
+                  <div className="flex items-center justify-between gap-3">
+                    <span style={{ color: 'var(--text-muted)' }}>{t('config.openSshInstalled')}</span>
+                    <span className={openSshStatus?.installed ? 'text-green-400' : 'text-zinc-500'}>
+                      {openSshStatus?.installed ? t('config.yes') : t('config.no')}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <span style={{ color: 'var(--text-muted)' }}>{t('config.openSshRunning')}</span>
+                    <span className={openSshStatus?.serviceRunning ? 'text-green-400' : 'text-zinc-500'}>
+                      {openSshStatus?.serviceRunning ? t('config.yes') : t('config.no')}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <span style={{ color: 'var(--text-muted)' }}>{t('config.openSshStartup')}</span>
+                    <span className="text-zinc-300">{openSshStatus?.startupType ?? t('config.unknown')}</span>
+                  </div>
+                </div>
+                {openSshStatus?.details && (
+                  <p className="mt-3 text-[10px]" style={{ color: 'var(--text-faint)' }}>{openSshStatus.details}</p>
+                )}
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => void enableOpenSsh()}
+                    className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-[12px] font-medium disabled:opacity-40"
+                    style={{ background: 'var(--accent)', color: 'white' }}
+                  >
+                    {runningId === 'openssh' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Server className="h-3.5 w-3.5" />}
+                    {t('config.enableOpenSsh')}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => void loadOpenSshStatus(true)}
+                    className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-[12px] font-medium disabled:opacity-40"
+                    style={{ background: 'var(--bg-subtle)', color: 'var(--text-secondary)', border: '1px solid var(--border-default)' }}
+                  >
+                    <RefreshCw className="h-3.5 w-3.5" />
+                    {t('config.refreshStatus')}
+                  </button>
+                </div>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {renderAdminBadge(catalog.openSsh.requiresAdmin)}
+                </div>
+              </>
+            )}
+          </section>
+        </aside>
+      </div>
+    </div>
   )
 }
 
@@ -803,9 +1313,7 @@ export function UtilityTabsPage() {
 
       {activeTab === 'install' && <InstallTab />}
       {activeTab === 'tweaks' && <TweaksTab />}
-      {activeTab === 'config' && (
-        <ComingSoon titleKey="config.comingSoonTitle" descriptionKey="config.comingSoonDescription" />
-      )}
+      {activeTab === 'config' && <ConfigTab />}
     </div>
   )
 }
