@@ -33,6 +33,9 @@ jobs:
       - name: Validate cleaner rules
         run: npm run validate:rules
 
+      - name: Validate beta report template
+        run: npm run validate:beta-report -- docs/release/beta-report.template.json
+
       - name: Test
         run: npm test
 
