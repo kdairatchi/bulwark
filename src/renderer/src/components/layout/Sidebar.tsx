@@ -211,8 +211,6 @@ export function Sidebar() {
   const filteredNavGroups = navGroups.map((group) => ({
     ...group,
     items: group.items.filter((item) => {
-      if (item.path === '/registry' && !features.registry) return false
-      if (item.path === '/game-mode' && !features.gameMode) return false
       return true
     }).map((item) => {
       if (!item.children) return item
