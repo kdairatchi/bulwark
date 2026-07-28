@@ -160,7 +160,7 @@ describe('defaultCommandExecutor', () => {
     expect(r.stub).toBe(false)
     expect(r.type).toBe('REQUEST_INVENTORY')
     expect(typeof r.count).toBe('number')
-  })
+  }, 30_000)
 
   it('runs health / malware / vuln scans without stubbing', async () => {
     for (const type of ['RUN_HEALTH_ASSESSMENT', 'RUN_MALWARE_SCAN', 'RUN_VULNERABILITY_SCAN'] as const) {

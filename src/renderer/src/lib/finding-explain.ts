@@ -98,13 +98,29 @@ export function explainMalwareThreat(input: {
   source?: string
   details?: string
   detectionName?: string
+  /** Threat path — used to avoid pushing quarantine for system-policy findings. */
+  path?: string
+  /** When false, quarantine is not the primary action. */
+  selected?: boolean
 }): { why: string[]; recommended: string } {
   const why: string[] = []
   const sev = (input.severity || '').toLowerCase()
   const source = (input.source || '').toLowerCase()
+  const path = (input.path || '').replace(/\\/g, '/')
+  const detection = (input.detectionName || '').toLowerCase()
+  const isSystemPolicy =
+    path === '/etc/hosts'
+    || path === 'crontab'
+    || path.startsWith('/etc/cron.d/')
+    || path === '/etc/ld.so.preload'
+    || (detection.includes('linuxpersistence') && input.selected === false)
+    || detection.includes('hoststamper')
+    || detection.includes('hostsredirect')
 
   if (sev === 'critical' || sev === 'high') {
-    why.push('This was rated high severity — treat it as unsafe until you review the file.')
+    why.push(isSystemPolicy
+      ? 'This was rated high severity — review the persistence or system-policy entry carefully.'
+      : 'This was rated high severity — treat it as unsafe until you review the file.')
   } else if (sev === 'medium') {
     why.push('This may be unwanted or risky software. Confirm whether you installed it on purpose.')
   } else {
@@ -121,9 +137,14 @@ export function explainMalwareThreat(input: {
 
   if (input.details?.trim()) why.push(input.details.trim().slice(0, 220))
 
-  const recommended = sev === 'critical' || sev === 'high'
-    ? 'Quarantine the selected threats, then run another scan. Do not open the file.'
-    : 'If you do not recognize this file, quarantine it. You can allowlist false positives later.'
+  let recommended: string
+  if (isSystemPolicy || input.selected === false) {
+    recommended = 'Review this finding manually — quarantine cannot safely change system policy files. Remove or disable the entry yourself if it is malicious.'
+  } else if (sev === 'critical' || sev === 'high') {
+    recommended = 'Quarantine the selected threats, then run another scan. Do not open the file.'
+  } else {
+    recommended = 'If you do not recognize this file, quarantine it. You can allowlist false positives later.'
+  }
 
   return { why: why.slice(0, 6), recommended }
 }
