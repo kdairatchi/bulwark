@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import {
   Download,
@@ -24,17 +25,26 @@ import {
   XCircle,
   FileDown,
   FileUp,
+  Pause,
+  Play,
+  Cpu,
+  Package,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { EmptyState } from '@/components/shared/EmptyState'
-import { cn } from '@/lib/utils'
+import { cn, formatBytes } from '@/lib/utils'
 import { usePlatform } from '@/hooks/usePlatform'
 import type { LucideIcon } from 'lucide-react'
 import type {
+  DriverUpdate,
+  DriverUpdateProgress,
+  UpdatableApp,
+  UpdateProgress,
   UtilityCatalogApp,
   UtilityInstallActionResult,
   UtilityInstalledMap,
+  UtilityOsUpdateInfo,
   UtilityPowerPlanTarget,
   UtilityConfigActionResult,
   UtilityConfigCatalogResult,
@@ -45,10 +55,12 @@ import type {
   UtilityConfigOpenSshStatusResult,
   UtilityTweakActionResult,
   UtilityTweakMetadata,
+  UtilityUpdatesPauseDays,
+  UtilityUpdatesStatus,
 } from '@shared/types'
 
 interface TabDef {
-  id: 'install' | 'tweaks' | 'config'
+  id: 'install' | 'updates' | 'tweaks' | 'config'
   labelKey: string
   descriptionKey: string
   icon: LucideIcon
@@ -56,9 +68,16 @@ interface TabDef {
 
 const TABS: TabDef[] = [
   { id: 'install', labelKey: 'tabs.install', descriptionKey: 'tabs.installDescription', icon: Download },
+  { id: 'updates', labelKey: 'tabs.updates', descriptionKey: 'tabs.updatesDescription', icon: ArrowUpCircle },
   { id: 'tweaks', labelKey: 'tabs.tweaks', descriptionKey: 'tabs.tweaksDescription', icon: SlidersHorizontal },
   { id: 'config', labelKey: 'tabs.config', descriptionKey: 'tabs.configDescription', icon: Settings2 },
 ]
+
+const UPDATE_PAUSE_DAYS: UtilityUpdatesPauseDays[] = [1, 7, 14, 35]
+
+function softwareAppKey(app: { id: string; source: string }): string {
+  return `${app.source}::${app.id}`
+}
 
 const CATEGORY_ORDER = ['browsers', 'utilities', 'media', 'communication', 'development', 'security']
 const DESTRUCTIVE_CONFIG_FIX_IDS = new Set(['reset-network', 'reset-windows-update'])
@@ -1423,10 +1442,839 @@ function ConfigTab() {
   )
 }
 
+function UpdatesTab() {
+  const { t } = useTranslation('utilities')
+  const navigate = useNavigate()
+
+  const [statusLoading, setStatusLoading] = useState(true)
+  const [status, setStatus] = useState<UtilityUpdatesStatus | null>(null)
+  const [busyId, setBusyId] = useState<string | null>(null)
+
+  const [osUpdates, setOsUpdates] = useState<UtilityOsUpdateInfo[]>([])
+  const [osChecked, setOsChecked] = useState(false)
+
+  const [drivers, setDrivers] = useState<DriverUpdate[]>([])
+  const [driversDisabled, setDriversDisabled] = useState(false)
+  const [driversChecked, setDriversChecked] = useState(false)
+  const [selectedDrivers, setSelectedDrivers] = useState<Set<string>>(new Set())
+  const [driverProgress, setDriverProgress] = useState<DriverUpdateProgress | null>(null)
+
+  const [apps, setApps] = useState<UpdatableApp[]>([])
+  const [appsChecked, setAppsChecked] = useState(false)
+  const [selectedApps, setSelectedApps] = useState<Set<string>>(new Set())
+  const [appProgress, setAppProgress] = useState<UpdateProgress | null>(null)
+
+  const busy = busyId !== null
+
+  const loadStatus = useCallback(async () => {
+    setStatusLoading(true)
+    try {
+      const next = await window.kudu.utilityUpdatesStatus()
+      setStatus(next)
+    } catch {
+      toast.error(t('updates.toastActionFailed'))
+    } finally {
+      setStatusLoading(false)
+    }
+  }, [t])
+
+  useEffect(() => {
+    void loadStatus()
+  }, [loadStatus])
+
+  useEffect(() => {
+    const offDriver = window.kudu.onDriverUpdateProgress?.((p) => setDriverProgress(p))
+    const offApp = window.kudu.onSoftwareUpdateProgress?.((p) => setAppProgress(p))
+    return () => {
+      offDriver?.()
+      offApp?.()
+    }
+  }, [])
+
+  const applyStatus = (next?: UtilityUpdatesStatus) => {
+    if (next) setStatus(next)
+  }
+
+  const checkOsUpdates = async () => {
+    setBusyId('os-check')
+    try {
+      const result = await window.kudu.utilityUpdatesOsCheck()
+      setOsUpdates(result.updates)
+      setOsChecked(true)
+      if (result.error) {
+        toast.error(t('updates.windowsUpdate.toastCheckFailed'), { description: result.error })
+      } else if (result.updates.length === 0) {
+        toast.success(t('updates.windowsUpdate.noUpdates'))
+      } else {
+        toast.info(t('updates.windowsUpdate.foundCount', { count: result.updates.length }))
+      }
+    } catch {
+      toast.error(t('updates.windowsUpdate.toastCheckFailed'))
+    } finally {
+      setBusyId(null)
+    }
+  }
+
+  const installOsUpdates = async () => {
+    if (!window.confirm(t('updates.windowsUpdate.installConfirm'))) return
+    setBusyId('os-install')
+    try {
+      const result = await window.kudu.utilityUpdatesOsInstall()
+      if (result.needsAdmin) {
+        toast.error(t('updates.adminRequired'), { description: result.error })
+        return
+      }
+      if (result.success) {
+        toast.success(t('updates.windowsUpdate.toastInstallSuccess', { count: result.installed }), {
+          description: result.needsReboot ? t('updates.rebootRequired') : undefined,
+        })
+        setOsUpdates([])
+        setOsChecked(true)
+      } else {
+        toast.error(t('updates.windowsUpdate.toastInstallFailed'), { description: result.error })
+      }
+    } catch {
+      toast.error(t('updates.windowsUpdate.toastInstallFailed'))
+    } finally {
+      setBusyId(null)
+    }
+  }
+
+  const pauseUpdates = async (days: UtilityUpdatesPauseDays) => {
+    setBusyId(`pause-${days}`)
+    try {
+      const result = await window.kudu.utilityUpdatesPause(days)
+      if (result.needsAdmin) {
+        toast.error(t('updates.adminRequired'), { description: result.error })
+        return
+      }
+      if (result.success) {
+        applyStatus(result.status)
+        toast.success(t('updates.windowsUpdate.toastPaused', { days }))
+      } else {
+        toast.error(t('updates.windowsUpdate.toastPauseFailed'), { description: result.error })
+      }
+    } catch {
+      toast.error(t('updates.windowsUpdate.toastPauseFailed'))
+    } finally {
+      setBusyId(null)
+    }
+  }
+
+  const resumeUpdates = async () => {
+    setBusyId('resume')
+    try {
+      const result = await window.kudu.utilityUpdatesResume()
+      if (result.needsAdmin) {
+        toast.error(t('updates.adminRequired'), { description: result.error })
+        return
+      }
+      if (result.success) {
+        applyStatus(result.status)
+        toast.success(t('updates.windowsUpdate.toastResumed'))
+      } else {
+        toast.error(t('updates.windowsUpdate.toastResumeFailed'), { description: result.error })
+      }
+    } catch {
+      toast.error(t('updates.windowsUpdate.toastResumeFailed'))
+    } finally {
+      setBusyId(null)
+    }
+  }
+
+  const openWuSettings = async () => {
+    setBusyId('open-wu-settings')
+    try {
+      const result = await window.kudu.utilityUpdatesHelper('open-wu-settings')
+      reportConfigActionResult(t, result)
+    } catch {
+      toast.error(t('updates.toastActionFailed'))
+    } finally {
+      setBusyId(null)
+    }
+  }
+
+  const refreshDrivers = async () => {
+    const result = await window.kudu.driverUpdateScan()
+    setDrivers(result.updates)
+    setDriversDisabled(result.updatesDisabled)
+    setDriversChecked(true)
+    setSelectedDrivers(new Set(result.updates.map((u) => u.id)))
+    return result
+  }
+
+  const scanDrivers = async () => {
+    setBusyId('driver-scan')
+    setDriverProgress(null)
+    try {
+      const result = await refreshDrivers()
+      if (result.updatesDisabled) {
+        toast.info(t('updates.drivers.updatesDisabledTitle'))
+      } else if (result.updates.length === 0) {
+        toast.success(t('updates.drivers.noUpdates'))
+      } else {
+        toast.info(t('updates.drivers.foundCount', { count: result.updates.length }))
+      }
+    } catch {
+      toast.error(t('updates.drivers.toastScanFailed'))
+    } finally {
+      setBusyId(null)
+      setDriverProgress(null)
+    }
+  }
+
+  const installDrivers = async () => {
+    if (selectedDrivers.size === 0) {
+      toast.error(t('updates.toastNothingSelected'))
+      return
+    }
+    const ids = drivers.filter((d) => selectedDrivers.has(d.id)).map((d) => d.updateId)
+    setBusyId('driver-install')
+    setDriverProgress(null)
+    try {
+      const result = await window.kudu.driverUpdateInstall(ids)
+      if (result.installed > 0) {
+        toast.success(t('updates.drivers.toastInstallSuccess', { count: result.installed }), {
+          description: result.rebootRequired ? t('updates.drivers.toastRebootRequired') : undefined,
+        })
+      }
+      if (result.failed > 0) {
+        const detail = result.errors.slice(0, 3).map((e) => `${e.deviceName}: ${e.reason}`).join('\n')
+        toast.error(t('updates.drivers.toastInstallFailed'), { description: detail || undefined })
+      }
+      try {
+        await refreshDrivers()
+      } catch {
+        // Keep prior list if refresh fails after install
+      }
+    } catch {
+      toast.error(t('updates.drivers.toastInstallFailed'))
+    } finally {
+      setBusyId(null)
+      setDriverProgress(null)
+    }
+  }
+
+  const toggleDriver = (id: string) => {
+    setSelectedDrivers((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  const refreshApps = async () => {
+    const result = await window.kudu.softwareUpdateCheck()
+    setApps(result.apps)
+    setAppsChecked(true)
+    setSelectedApps(new Set(result.apps.map(softwareAppKey)))
+    return result
+  }
+
+  const checkApps = async () => {
+    setBusyId('app-check')
+    setAppProgress(null)
+    try {
+      const result = await refreshApps()
+      if (!result.packageManagerAvailable) {
+        toast.error(t('updates.apps.toastPackageManagerMissing'))
+      } else if (result.apps.length === 0) {
+        toast.success(t('updates.apps.noUpdates'))
+      } else {
+        toast.info(t('updates.apps.foundCount', { count: result.apps.length }))
+      }
+    } catch {
+      toast.error(t('updates.apps.toastCheckFailed'))
+    } finally {
+      setBusyId(null)
+      setAppProgress(null)
+    }
+  }
+
+  const updateSelectedApps = async () => {
+    const selected = apps.filter((a) => selectedApps.has(softwareAppKey(a)))
+    if (selected.length === 0) {
+      toast.error(t('updates.toastNothingSelected'))
+      return
+    }
+    setBusyId('app-update')
+    setAppProgress(null)
+    try {
+      const result = await window.kudu.softwareUpdateRun(
+        selected.map((a) => ({ id: a.id, source: a.source })),
+      )
+      if (result.succeeded > 0) {
+        toast.success(t('updates.apps.toastUpdateSuccess', { count: result.succeeded }))
+      }
+      if (result.failed > 0) {
+        const detail = result.errors.slice(0, 3).map((e) => `${e.name}: ${e.reason}`).join('\n')
+        toast.error(t('updates.apps.toastUpdateFailed', { count: result.failed }), {
+          description: detail || undefined,
+        })
+      }
+      try {
+        await refreshApps()
+      } catch {
+        // Keep prior list if refresh fails after update
+      }
+    } catch {
+      toast.error(t('updates.apps.toastUpdateFailed', { count: selected.length }))
+    } finally {
+      setBusyId(null)
+      setAppProgress(null)
+    }
+  }
+
+  const upgradeAllApps = async () => {
+    if (!window.confirm(t('updates.apps.upgradeAllConfirm'))) return
+    setBusyId('app-upgrade-all')
+    try {
+      const result = await window.kudu.utilityInstallUpgradeAll()
+      reportActionResult(t, result)
+      if (appsChecked) {
+        try {
+          await refreshApps()
+        } catch {
+          // ignore refresh failure
+        }
+      }
+    } catch {
+      toast.error(t('updates.toastActionFailed'))
+    } finally {
+      setBusyId(null)
+    }
+  }
+
+  const toggleApp = (key: string) => {
+    setSelectedApps((prev) => {
+      const next = new Set(prev)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
+      return next
+    })
+  }
+
+  const runHelper = async (id: 'reset-wu-services' | 'winget-repair') => {
+    if (id === 'reset-wu-services' && !window.confirm(t('updates.helpers.resetWuServicesConfirm'))) {
+      return
+    }
+    setBusyId(`helper:${id}`)
+    try {
+      const result = await window.kudu.utilityUpdatesHelper(id)
+      reportConfigActionResult(t, result)
+      if (id === 'reset-wu-services') await loadStatus()
+    } catch {
+      toast.error(t('updates.toastActionFailed'))
+    } finally {
+      setBusyId(null)
+    }
+  }
+
+  if (statusLoading && !status) {
+    return (
+      <div className="flex items-center justify-center gap-2 py-16 text-[13px]" style={{ color: 'var(--text-muted)' }}>
+        <Loader2 className="h-4 w-4 animate-spin" />
+        {t('updates.loading')}
+      </div>
+    )
+  }
+
+  if (status && !status.available) {
+    return (
+      <EmptyState
+        icon={AlertTriangle}
+        title={t('updates.windowsOnlyTitle')}
+        description={t('updates.windowsOnlyDescription')}
+      />
+    )
+  }
+
+  const pausedUntil = status?.paused && status.pauseExpiresAt
+    ? new Date(status.pauseExpiresAt).toLocaleString()
+    : null
+
+  const driverProgressFallback = busyId === 'driver-install'
+    ? t('updates.drivers.installing')
+    : t('updates.drivers.checking')
+  const appProgressFallback = busyId === 'app-update'
+    ? t('updates.apps.updating')
+    : t('updates.apps.checking')
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <h2 className="text-[15px] font-semibold text-zinc-100">{t('updates.heading')}</h2>
+        <p className="text-[12px] mt-1" style={{ color: 'var(--text-muted)' }}>{t('updates.description')}</p>
+      </div>
+
+      {/* Windows Update */}
+      <section
+        className="rounded-2xl overflow-hidden"
+        style={{ background: 'var(--card-bg)', border: '1px solid var(--border-default)' }}
+      >
+        <div className="px-4 py-3" style={{ borderBottom: '1px solid var(--border-default)' }}>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <div className="flex flex-wrap items-center gap-2">
+                <RefreshCw className="h-4 w-4 text-amber-400" />
+                <h3 className="text-[13px] font-semibold text-zinc-100">{t('updates.windowsUpdate.title')}</h3>
+                <span
+                  className={cn(
+                    'rounded-md px-2 py-0.5 text-[10px] font-medium',
+                    status?.paused ? 'text-amber-300' : 'text-green-400',
+                  )}
+                  style={{ background: status?.paused ? 'rgba(245,158,11,0.08)' : 'rgba(34,197,94,0.08)' }}
+                >
+                  {status?.paused && pausedUntil
+                    ? t('updates.windowsUpdate.statusPaused', { date: pausedUntil })
+                    : status
+                      ? t('updates.windowsUpdate.statusActive')
+                      : t('updates.windowsUpdate.statusUnknown')}
+                </span>
+              </div>
+              <p className="mt-1 text-[11px]" style={{ color: 'var(--text-muted)' }}>
+                {t('updates.windowsUpdate.description')}
+              </p>
+              {status?.details && (
+                <p className="mt-1 text-[10px]" style={{ color: 'var(--text-faint)' }}>{status.details}</p>
+              )}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => void checkOsUpdates()}
+                className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-[12px] font-medium disabled:opacity-40"
+                style={{ background: 'var(--accent)', color: 'white' }}
+              >
+                {busyId === 'os-check' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Search className="h-3.5 w-3.5" />}
+                {t('updates.windowsUpdate.check')}
+              </button>
+              <button
+                type="button"
+                disabled={busy || (osChecked && osUpdates.length === 0)}
+                onClick={() => void installOsUpdates()}
+                className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-[12px] font-medium disabled:opacity-40"
+                style={{ background: 'var(--bg-subtle)', color: 'var(--text-secondary)', border: '1px solid var(--border-default)' }}
+              >
+                {busyId === 'os-install' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
+                {t('updates.windowsUpdate.installAll')}
+              </button>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => void openWuSettings()}
+                className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-[12px] font-medium disabled:opacity-40"
+                style={{ background: 'var(--bg-subtle)', color: 'var(--text-secondary)', border: '1px solid var(--border-default)' }}
+              >
+                {busyId === 'open-wu-settings' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Settings2 className="h-3.5 w-3.5" />}
+                {t('updates.windowsUpdate.openSettings')}
+              </button>
+            </div>
+          </div>
+
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <span className="flex items-center gap-1.5 text-[11px]" style={{ color: 'var(--text-muted)' }}>
+              <Pause className="h-3.5 w-3.5" />
+              {t('updates.windowsUpdate.pause')}
+            </span>
+            {UPDATE_PAUSE_DAYS.map((days) => (
+              <button
+                key={days}
+                type="button"
+                disabled={busy}
+                onClick={() => void pauseUpdates(days)}
+                className="rounded-lg px-2.5 py-1.5 text-[11px] font-medium disabled:opacity-40"
+                style={{ background: 'var(--bg-subtle)', color: 'var(--text-secondary)', border: '1px solid var(--border-default)' }}
+              >
+                {busyId === `pause-${days}` ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : (
+                  t('updates.windowsUpdate.pauseDays', { count: days, days })
+                )}
+              </button>
+            ))}
+            <button
+              type="button"
+              disabled={busy || !status?.paused}
+              onClick={() => void resumeUpdates()}
+              className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] font-medium disabled:opacity-40"
+              style={{ background: 'var(--bg-subtle)', color: 'var(--text-secondary)', border: '1px solid var(--border-default)' }}
+            >
+              {busyId === 'resume' ? <Loader2 className="h-3 w-3 animate-spin" /> : <Play className="h-3 w-3" />}
+              {t('updates.windowsUpdate.resume')}
+            </button>
+          </div>
+
+          {(busyId === 'os-check' || busyId === 'os-install') && (
+            <div className="mt-3 text-[11px]" style={{ color: 'var(--text-muted)' }}>
+              <span className="flex items-center gap-1.5 text-amber-400">
+                <Loader2 className="h-3 w-3 animate-spin" />
+                {busyId === 'os-install'
+                  ? t('updates.windowsUpdate.installing')
+                  : t('updates.windowsUpdate.checking')}
+              </span>
+            </div>
+          )}
+        </div>
+
+        {osChecked && (
+          osUpdates.length === 0 ? (
+            <div className="px-4 py-6 text-center text-[12px]" style={{ color: 'var(--text-muted)' }}>
+              {t('updates.windowsUpdate.noUpdates')}
+            </div>
+          ) : (
+            <ul>
+              {osUpdates.map((update, index) => (
+                <li
+                  key={`${update.kb || update.title}-${index}`}
+                  className="flex items-start justify-between gap-3 px-4 py-3 hover:bg-white/[0.02]"
+                >
+                  <div className="min-w-0">
+                    <p className="text-[13px] font-medium text-zinc-200">{update.title}</p>
+                    <div className="mt-1 flex flex-wrap gap-2 text-[10px]" style={{ color: 'var(--text-muted)' }}>
+                      {update.kb && (
+                        <span className="rounded-md px-2 py-0.5 font-mono" style={{ background: 'rgba(113,113,122,0.1)' }}>
+                          {t('updates.windowsUpdate.kb', { kb: update.kb.replace(/^KB/i, '') })}
+                        </span>
+                      )}
+                      {update.severity && (
+                        <span className="rounded-md px-2 py-0.5" style={{ background: 'rgba(113,113,122,0.1)' }}>
+                          {update.severity}
+                        </span>
+                      )}
+                      {update.downloaded && (
+                        <span className="rounded-md px-2 py-0.5 text-green-400" style={{ background: 'rgba(34,197,94,0.08)' }}>
+                          {t('updates.windowsUpdate.downloaded')}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <span className="shrink-0 font-mono text-[11px] text-zinc-400">
+                    {formatBytes(update.sizeBytes)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )
+        )}
+      </section>
+
+      {/* Driver updates */}
+      <section
+        className="rounded-2xl overflow-hidden"
+        style={{ background: 'var(--card-bg)', border: '1px solid var(--border-default)' }}
+      >
+        <div className="px-4 py-3" style={{ borderBottom: '1px solid var(--border-default)' }}>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <div className="flex items-center gap-2">
+                <Cpu className="h-4 w-4 text-amber-400" />
+                <h3 className="text-[13px] font-semibold text-zinc-100">{t('updates.drivers.title')}</h3>
+              </div>
+              <p className="mt-1 text-[11px]" style={{ color: 'var(--text-muted)' }}>
+                {t('updates.drivers.description')}
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => void scanDrivers()}
+                className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-[12px] font-medium disabled:opacity-40"
+                style={{ background: 'var(--accent)', color: 'white' }}
+              >
+                {busyId === 'driver-scan' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Search className="h-3.5 w-3.5" />}
+                {t('updates.drivers.check')}
+              </button>
+              <button
+                type="button"
+                disabled={busy || selectedDrivers.size === 0}
+                onClick={() => void installDrivers()}
+                className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-[12px] font-medium disabled:opacity-40"
+                style={{ background: 'var(--bg-subtle)', color: 'var(--text-secondary)', border: '1px solid var(--border-default)' }}
+              >
+                {busyId === 'driver-install' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
+                {t('updates.drivers.installSelected')}
+              </button>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => navigate('/drivers')}
+                className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-[12px] font-medium disabled:opacity-40"
+                style={{ background: 'var(--bg-subtle)', color: 'var(--text-secondary)', border: '1px solid var(--border-default)' }}
+              >
+                <ExternalLink className="h-3.5 w-3.5" />
+                {t('updates.drivers.openDriversPage')}
+              </button>
+            </div>
+          </div>
+          <div className="mt-3 flex items-start justify-between gap-4 text-[11px]" style={{ color: 'var(--text-muted)' }}>
+            <span className="shrink-0 pt-0.5">{t('updates.drivers.selectedCount', { count: selectedDrivers.size })}</span>
+            {(busyId === 'driver-scan' || busyId === 'driver-install') && (
+              <UtilityProgressBar
+                progress={driverProgress ? {
+                  message: driverProgress.currentDevice || driverProgressFallback,
+                  current: driverProgress.current,
+                  total: driverProgress.total,
+                } : null}
+                fallback={driverProgressFallback}
+              />
+            )}
+          </div>
+        </div>
+
+        {driversChecked && driversDisabled && (
+          <div
+            className="mx-4 my-3 flex items-start gap-3 rounded-xl px-4 py-3"
+            style={{ background: 'rgba(59,130,246,0.04)', border: '1px solid rgba(59,130,246,0.1)' }}
+          >
+            <AlertTriangle className="h-4 w-4 shrink-0 text-blue-400 mt-0.5" />
+            <div>
+              <p className="text-[12px] font-medium text-zinc-200">{t('updates.drivers.updatesDisabledTitle')}</p>
+              <p className="mt-1 text-[11px]" style={{ color: 'var(--text-secondary)' }}>
+                {t('updates.drivers.updatesDisabledText')}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {driversChecked && !driversDisabled && (
+          drivers.length === 0 ? (
+            <div className="px-4 py-6 text-center text-[12px]" style={{ color: 'var(--text-muted)' }}>
+              {t('updates.drivers.noUpdates')}
+            </div>
+          ) : (
+            <ul>
+              {drivers.map((driver) => {
+                const isSelected = selectedDrivers.has(driver.id)
+                return (
+                  <li key={driver.id}>
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => toggleDriver(driver.id)}
+                      className="flex w-full items-start gap-3 px-4 py-3 text-left hover:bg-white/[0.02] disabled:opacity-50"
+                    >
+                      {isSelected ? (
+                        <CheckSquare className="h-4 w-4 text-amber-400 shrink-0 mt-0.5" />
+                      ) : (
+                        <Square className="h-4 w-4 shrink-0 mt-0.5" style={{ color: 'var(--text-muted)' }} />
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[13px] font-medium text-zinc-200">{driver.deviceName}</p>
+                        <p className="mt-1 text-[11px]" style={{ color: 'var(--text-muted)' }}>
+                          {driver.updateTitle || driver.provider}
+                        </p>
+                        <p className="mt-1 text-[10px] font-mono" style={{ color: 'var(--text-faint)' }}>
+                          {t('updates.drivers.currentVersion')}: {driver.currentVersion || '—'}
+                          {' → '}
+                          {t('updates.drivers.availableVersion')}: {driver.availableVersion || '—'}
+                          {driver.downloadSize ? ` · ${driver.downloadSize}` : ''}
+                        </p>
+                      </div>
+                    </button>
+                  </li>
+                )
+              })}
+            </ul>
+          )
+        )}
+      </section>
+
+      {/* App updates */}
+      <section
+        className="rounded-2xl overflow-hidden"
+        style={{ background: 'var(--card-bg)', border: '1px solid var(--border-default)' }}
+      >
+        <div className="px-4 py-3" style={{ borderBottom: '1px solid var(--border-default)' }}>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <div className="flex items-center gap-2">
+                <Package className="h-4 w-4 text-amber-400" />
+                <h3 className="text-[13px] font-semibold text-zinc-100">{t('updates.apps.title')}</h3>
+              </div>
+              <p className="mt-1 text-[11px]" style={{ color: 'var(--text-muted)' }}>
+                {t('updates.apps.description')}
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => void checkApps()}
+                className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-[12px] font-medium disabled:opacity-40"
+                style={{ background: 'var(--accent)', color: 'white' }}
+              >
+                {busyId === 'app-check' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Search className="h-3.5 w-3.5" />}
+                {t('updates.apps.check')}
+              </button>
+              <button
+                type="button"
+                disabled={busy || selectedApps.size === 0}
+                onClick={() => void updateSelectedApps()}
+                className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-[12px] font-medium disabled:opacity-40"
+                style={{ background: 'var(--bg-subtle)', color: 'var(--text-secondary)', border: '1px solid var(--border-default)' }}
+              >
+                {busyId === 'app-update' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ArrowUpCircle className="h-3.5 w-3.5" />}
+                {t('updates.apps.updateSelected')}
+              </button>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => void upgradeAllApps()}
+                className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-[12px] font-medium disabled:opacity-40"
+                style={{ background: 'var(--bg-subtle)', color: 'var(--text-secondary)', border: '1px solid var(--border-default)' }}
+              >
+                {busyId === 'app-upgrade-all' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <PackagePlus className="h-3.5 w-3.5" />}
+                {t('updates.apps.upgradeAll')}
+              </button>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => navigate('/updates')}
+                className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-[12px] font-medium disabled:opacity-40"
+                style={{ background: 'var(--bg-subtle)', color: 'var(--text-secondary)', border: '1px solid var(--border-default)' }}
+              >
+                <ExternalLink className="h-3.5 w-3.5" />
+                {t('updates.apps.openUpdatesPage')}
+              </button>
+            </div>
+          </div>
+          <div className="mt-3 flex items-start justify-between gap-4 text-[11px]" style={{ color: 'var(--text-muted)' }}>
+            <span className="shrink-0 pt-0.5">{t('updates.apps.selectedCount', { count: selectedApps.size })}</span>
+            {(busyId === 'app-check' || busyId === 'app-update') && (
+              <UtilityProgressBar
+                progress={appProgress ? {
+                  message: appProgressFallback,
+                  current: appProgress.current,
+                  total: appProgress.total,
+                } : null}
+                fallback={appProgressFallback}
+              />
+            )}
+          </div>
+        </div>
+
+        {appsChecked && (
+          apps.length === 0 ? (
+            <div className="px-4 py-6 text-center text-[12px]" style={{ color: 'var(--text-muted)' }}>
+              {t('updates.apps.noUpdates')}
+            </div>
+          ) : (
+            <ul>
+              {apps.map((app) => {
+                const key = softwareAppKey(app)
+                const isSelected = selectedApps.has(key)
+                return (
+                  <li key={key}>
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => toggleApp(key)}
+                      className="flex w-full items-start gap-3 px-4 py-3 text-left hover:bg-white/[0.02] disabled:opacity-50"
+                    >
+                      {isSelected ? (
+                        <CheckSquare className="h-4 w-4 text-amber-400 shrink-0 mt-0.5" />
+                      ) : (
+                        <Square className="h-4 w-4 shrink-0 mt-0.5" style={{ color: 'var(--text-muted)' }} />
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="text-[13px] font-medium text-zinc-200">{app.name}</p>
+                          <span
+                            className="rounded-md px-2 py-0.5 text-[10px] font-medium text-zinc-400"
+                            style={{ background: 'rgba(113,113,122,0.1)' }}
+                          >
+                            {app.source}
+                          </span>
+                        </div>
+                        <p className="mt-1 text-[11px] font-mono" style={{ color: 'var(--text-muted)' }}>
+                          {t('updates.apps.versionArrow', {
+                            current: app.currentVersion,
+                            available: app.availableVersion,
+                          })}
+                        </p>
+                      </div>
+                    </button>
+                  </li>
+                )
+              })}
+            </ul>
+          )
+        )}
+      </section>
+
+      {/* Helpers */}
+      <section
+        className="rounded-2xl p-4"
+        style={{ background: 'var(--card-bg)', border: '1px solid var(--border-default)' }}
+      >
+        <div className="flex items-center gap-2">
+          <Wrench className="h-4 w-4 text-amber-400" />
+          <h3 className="text-[13px] font-semibold text-zinc-100">{t('updates.helpers.title')}</h3>
+        </div>
+        <p className="mt-1 text-[11px]" style={{ color: 'var(--text-muted)' }}>
+          {t('updates.helpers.description')}
+        </p>
+        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          <div
+            className="rounded-xl p-3"
+            style={{ background: 'var(--bg-subtle)', border: '1px solid var(--border-default)' }}
+          >
+            <h4 className="text-[12px] font-semibold text-zinc-200">{t('updates.helpers.resetWuServices')}</h4>
+            <p className="mt-1 text-[11px]" style={{ color: 'var(--text-muted)' }}>
+              {t('updates.helpers.resetWuServicesDescription')}
+            </p>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => void runHelper('reset-wu-services')}
+              className="mt-3 flex items-center gap-1.5 rounded-lg px-3 py-2 text-[12px] font-medium disabled:opacity-40"
+              style={{ background: 'var(--accent)', color: 'white' }}
+            >
+              {busyId === 'helper:reset-wu-services' ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Wrench className="h-3.5 w-3.5" />
+              )}
+              {t('updates.helpers.runHelper')}
+            </button>
+          </div>
+          <div
+            className="rounded-xl p-3"
+            style={{ background: 'var(--bg-subtle)', border: '1px solid var(--border-default)' }}
+          >
+            <h4 className="text-[12px] font-semibold text-zinc-200">{t('updates.helpers.wingetRepair')}</h4>
+            <p className="mt-1 text-[11px]" style={{ color: 'var(--text-muted)' }}>
+              {t('updates.helpers.wingetRepairDescription')}
+            </p>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => void runHelper('winget-repair')}
+              className="mt-3 flex items-center gap-1.5 rounded-lg px-3 py-2 text-[12px] font-medium disabled:opacity-40"
+              style={{ background: 'var(--accent)', color: 'white' }}
+            >
+              {busyId === 'helper:winget-repair' ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Wrench className="h-3.5 w-3.5" />
+              )}
+              {t('updates.helpers.runHelper')}
+            </button>
+          </div>
+        </div>
+      </section>
+    </div>
+  )
+}
+
 export function UtilityTabsPage() {
   const { t } = useTranslation('utilities')
   const { features } = usePlatform()
-  const [activeTab, setActiveTab] = useState<'install' | 'tweaks' | 'config'>('install')
+  const [activeTab, setActiveTab] = useState<'install' | 'updates' | 'tweaks' | 'config'>('install')
 
   if (!features.utilityTabs) {
     return (
@@ -1474,6 +2322,7 @@ export function UtilityTabsPage() {
       </div>
 
       {activeTab === 'install' && <InstallTab />}
+      {activeTab === 'updates' && <UpdatesTab />}
       {activeTab === 'tweaks' && <TweaksTab />}
       {activeTab === 'config' && <ConfigTab />}
     </div>
