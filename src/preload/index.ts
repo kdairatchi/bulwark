@@ -66,6 +66,11 @@ import type {
   UtilityTweakActionResult,
   UtilityTweakMetadata,
   UtilityTweaksScanResult,
+  UtilityConfigActionResult,
+  UtilityConfigCatalogResult,
+  UtilityConfigFeatureStatusResult,
+  UtilityConfigOpenSshStatusResult,
+  UtilityLegacyPanelLaunchResult,
   FileTypeInfo,
   CloudActionEntry,
   ThreatSnapshot,
@@ -515,6 +520,24 @@ const api = {
     ipcRenderer.invoke(IPC.UTILITY_TWEAKS_POWER_PLAN_SET, target),
   utilityTweaksLaunchShutUp10: (): Promise<UtilityShutUpLaunchResult> =>
     ipcRenderer.invoke(IPC.UTILITY_TWEAKS_SHUTUP10_LAUNCH),
+
+  // Utility Tabs - Config
+  utilityConfigCatalog: (): Promise<UtilityConfigCatalogResult> =>
+    ipcRenderer.invoke(IPC.UTILITY_CONFIG_CATALOG),
+  utilityConfigFeatureStatus: (id: string): Promise<UtilityConfigFeatureStatusResult> =>
+    ipcRenderer.invoke(IPC.UTILITY_CONFIG_FEATURE_STATUS, id),
+  utilityConfigFeatureEnable: (id: string): Promise<UtilityConfigActionResult> =>
+    ipcRenderer.invoke(IPC.UTILITY_CONFIG_FEATURE_ENABLE, id),
+  utilityConfigFeatureRevert: (id: string): Promise<UtilityConfigActionResult> =>
+    ipcRenderer.invoke(IPC.UTILITY_CONFIG_FEATURE_REVERT, id),
+  utilityConfigPanelLaunch: (id: string): Promise<UtilityLegacyPanelLaunchResult> =>
+    ipcRenderer.invoke(IPC.UTILITY_CONFIG_PANEL_LAUNCH, id),
+  utilityConfigOpenSshStatus: (): Promise<UtilityConfigOpenSshStatusResult> =>
+    ipcRenderer.invoke(IPC.UTILITY_CONFIG_OPENSSH_STATUS),
+  utilityConfigOpenSshEnable: (): Promise<UtilityConfigActionResult> =>
+    ipcRenderer.invoke(IPC.UTILITY_CONFIG_OPENSSH_ENABLE),
+  utilityConfigFixRun: (id: string): Promise<UtilityConfigActionResult> =>
+    ipcRenderer.invoke(IPC.UTILITY_CONFIG_FIX_RUN, id),
 
   // Cloud Agent
   cloudLink: (apiKey: string): Promise<{ success: boolean; error?: string }> =>

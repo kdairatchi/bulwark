@@ -1095,6 +1095,82 @@ export interface UtilityTweakActionResult {
   restorePoint?: RestorePointResult
 }
 
+export type UtilityConfigFeatureKind = 'optional-feature' | 'boot' | 'scheduled-task'
+export type UtilityConfigFeatureStatus = 'enabled' | 'disabled' | 'partial' | 'unavailable' | 'unknown'
+
+export interface UtilityConfigFeatureMetadata {
+  id: string
+  name: string
+  description: string
+  kind: UtilityConfigFeatureKind
+  requiresAdmin: boolean
+  notes?: string
+}
+
+export interface UtilityLegacyPanelMetadata {
+  id: string
+  name: string
+  description: string
+}
+
+export interface UtilityConfigFixMetadata {
+  id: string
+  name: string
+  description: string
+  requiresAdmin: boolean
+  requiresReboot: boolean
+  notes?: string
+}
+
+export interface UtilityConfigOpenSshMetadata {
+  id: 'openssh-server'
+  name: string
+  description: string
+  requiresAdmin: boolean
+  capabilityName: string
+}
+
+export interface UtilityConfigCatalogResult {
+  available: boolean
+  features: UtilityConfigFeatureMetadata[]
+  legacyPanels: UtilityLegacyPanelMetadata[]
+  fixes: UtilityConfigFixMetadata[]
+  openSsh: UtilityConfigOpenSshMetadata | null
+}
+
+export interface UtilityConfigFeatureStatusResult {
+  id: string
+  available: boolean
+  enabled: boolean | null
+  status: UtilityConfigFeatureStatus
+  details: string
+  log?: string
+}
+
+export interface UtilityConfigActionResult {
+  id: string
+  success: boolean
+  summary: string
+  needsAdmin: boolean
+  requiresReboot: boolean
+  log?: string
+  error?: string
+}
+
+export interface UtilityLegacyPanelLaunchResult {
+  id: string
+  launched: boolean
+  error?: string
+}
+
+export interface UtilityConfigOpenSshStatusResult {
+  available: boolean
+  installed: boolean
+  serviceRunning: boolean
+  startupType: string | null
+  details: string
+}
+
 export interface UpdateCheckResult {
   apps: UpdatableApp[]
   upToDate: UpToDateApp[]
