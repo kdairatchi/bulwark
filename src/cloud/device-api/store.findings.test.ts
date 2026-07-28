@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest'
-import { findingPenalty, normalizeFindingCategory, normalizeFixRecommendation } from './store'
+import {
+  findingPenalty,
+  normalizeFindingCategory,
+  normalizeFixRecommendation,
+  normalizeFindingConfidence,
+  normalizeFindingEvidence,
+} from './store'
 
 describe('finding taxonomy helpers', () => {
   it('normalizes categories', () => {
@@ -14,6 +20,13 @@ describe('finding taxonomy helpers', () => {
     expect(normalizeFixRecommendation('')).toBeNull()
     expect(normalizeFixRecommendation(1)).toBeNull()
     expect(normalizeFixRecommendation('x'.repeat(300))?.length).toBe(240)
+  })
+
+  it('bounds confidence and deduplicates evidence tokens', () => {
+    expect(normalizeFindingConfidence(1.4)).toBe(1)
+    expect(normalizeFindingConfidence(-0.2)).toBe(0)
+    expect(normalizeFindingConfidence('0.8')).toBeNull()
+    expect(normalizeFindingEvidence([' KEV match ', 'KEV match', '', 1])).toEqual(['KEV match'])
   })
 
   it('weights KEV/ransomware higher than publisher noise', () => {
