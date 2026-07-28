@@ -277,8 +277,14 @@ function SecureDnsTab() {
   const status = useNetworkGuardStore((s) => s.dnsStatus)
   const toggle = useNetworkGuardStore((s) => s.dnsToggle)
 
-  useEffect(() => { status() }, [status])
+  const enforcement = useNetworkGuardStore((s) => s.enforcement)
+  const enforceBusy = useNetworkGuardStore((s) => s.enforceBusy)
+  const loadEnforcement = useNetworkGuardStore((s) => s.loadEnforcement)
+  const toggleEnforcement = useNetworkGuardStore((s) => s.toggleEnforcement)
+
+  useEffect(() => { status(); loadEnforcement() }, [status, loadEnforcement])
   const running = dns?.running
+  const enforcing = enforcement?.enforcing
 
   return (
     <div>
@@ -313,7 +319,25 @@ function SecureDnsTab() {
               <RefreshCw className="h-3.5 w-3.5" strokeWidth={1.8} /> {t('refresh')}
             </button>
           </div>
-          <p className="mt-4 rounded-xl px-4 py-3 text-[12px]" style={{ background: 'var(--bg-hover-2)', color: 'var(--text-muted)' }}>{t('dnsPointHint', { address: dns?.address })}</p>
+          <div className="mt-4 rounded-xl p-4" style={{ background: enforcing ? 'rgba(34,197,94,0.08)' : 'var(--bg-hover-2)', border: `1px solid ${enforcing ? 'rgba(34,197,94,0.3)' : 'var(--border-default)'}` }}>
+            <div className="flex items-center gap-3">
+              <div className="min-w-0 flex-1">
+                <p className="text-[13px] font-semibold text-zinc-100">{t('enforceTitle')}</p>
+                <p className="mt-0.5 text-[12px]" style={{ color: 'var(--text-muted)' }}>
+                  {enforcing ? t('enforceOn') : t('enforceOff', { address: dns?.address })}
+                </p>
+                {enforcement?.message && <p className="mt-1 text-[12px]" style={{ color: '#fbbf24' }}>{enforcement.message}</p>}
+              </div>
+              <button
+                onClick={() => toggleEnforcement()}
+                disabled={enforceBusy}
+                className="flex shrink-0 items-center gap-2 rounded-xl px-4 py-2 text-[12px] font-medium transition-colors disabled:opacity-60"
+                style={{ background: enforcing ? 'rgba(239,68,68,0.15)' : 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)', color: enforcing ? '#f87171' : '#fafafa', border: enforcing ? '1px solid rgba(239,68,68,0.3)' : 'none' }}>
+                <ShieldCheck className="h-3.5 w-3.5" strokeWidth={1.8} /> {enforcing ? t('enforceDisable') : t('enforceEnable')}
+              </button>
+            </div>
+            {!enforcing && <p className="mt-2 text-[11px]" style={{ color: 'var(--text-muted)' }}>{t('enforceWarn')}</p>}
+          </div>
 
           {dns && dns.recent.length > 0 && (
             <div className="mt-4">

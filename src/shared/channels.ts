@@ -182,6 +182,10 @@ export const IPC = {
   FILTER_LISTS_GET: 'network-guard:filter-lists-get',
   FILTER_LISTS_SET_ENABLED: 'network-guard:filter-lists-set',
   FILTER_LISTS_SYNC: 'network-guard:filter-lists-sync',
+  DNS_ENFORCE_STATUS: 'network-guard:enforce-status',
+  DNS_ENFORCE_APPLY: 'network-guard:enforce-apply',
+  DNS_ENFORCE_REVERT: 'network-guard:enforce-revert',
+  DNS_ENFORCE_PLAN: 'network-guard:enforce-plan',
 
   // Onboarding
   ONBOARDING_GET: 'onboarding:get',

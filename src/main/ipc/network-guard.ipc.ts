@@ -13,7 +13,23 @@ import { loadRules, saveRules } from '../services/network-rules-store'
 import { getFilterListsState, syncFilterLists, mergedBlocklistDomains } from '../services/filter-lists'
 import { getEnabledListIds, setEnabledListIds } from '../services/filter-lists-store'
 import type { FilterListsState } from '../../shared/filter-lists'
+import { DnsEnforcement, buildEnforcementPlan } from '../services/dns-enforcement'
+import type { EnforcementPlan, EnforcementStatus } from '../../shared/enforcement'
+import { cloudLog } from '../services/logger'
 import { getPlatform } from '../platform'
+
+/** Parse the resolver's bound port from its stats address (default 5353). */
+function currentResolverPort(): number {
+  const addr = dnsResolver.getStats().address
+  const p = addr ? Number(addr.split(':')[1]) : NaN
+  return Number.isFinite(p) ? p : 5353
+}
+
+const dnsEnforcement = new DnsEnforcement({
+  isResolverRunning: () => dnsResolver.getStats().running,
+  resolverPort: currentResolverPort,
+  audit: (event, detail) => cloudLog('INFO', `[enforcement] ${event}${detail ? ': ' + detail : ''}`),
+})
 
 /**
  * Build the resolver's block set from: the built-in starter list, all enabled
@@ -109,6 +125,12 @@ export function registerNetworkGuardIpc(): void {
     refreshResolverBlocklist()
     return state
   })
+
+  // ─── System-wide DNS enforcement (privileged, reversible) ─
+  ipcMain.handle(IPC.DNS_ENFORCE_STATUS, async (): Promise<EnforcementStatus> => dnsEnforcement.getStatus())
+  ipcMain.handle(IPC.DNS_ENFORCE_PLAN, async (): Promise<EnforcementPlan> => buildEnforcementPlan(process.platform, currentResolverPort()))
+  ipcMain.handle(IPC.DNS_ENFORCE_APPLY, async (): Promise<EnforcementStatus> => dnsEnforcement.apply())
+  ipcMain.handle(IPC.DNS_ENFORCE_REVERT, async (): Promise<EnforcementStatus> => dnsEnforcement.revert('user'))
 
   // On-device TCP connect scanner. Defaults to localhost.
   ipcMain.handle(IPC.NETWORK_PORT_SCAN, async (_e, req: PortScanRequest): Promise<PortScanResult> => {

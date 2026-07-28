@@ -20,7 +20,14 @@
   "dnsFilterSize": "Filter list",
   "dnsRecent": "Recent queries",
   "dnsBlockedTag": "blocked",
-  "dnsPointHint": "Point your OS or browser DNS to {{address}} to filter and encrypt all lookups. System-wide redirection is a privileged step (roadmap).",
+  "dnsPointHint": "Point your OS or browser DNS to {{address}} to filter and encrypt all lookups.",
+
+  "enforceTitle": "Protect this device system-wide",
+  "enforceOn": "Active — every app on this device now resolves through Bulwark (filtered + encrypted). Auto-reverts as a safety backstop.",
+  "enforceOff": "Route ALL system DNS through the resolver at {{address}} (not just apps you configure).",
+  "enforceEnable": "Enable",
+  "enforceDisable": "Disable",
+  "enforceWarn": "Requires elevation. Backs up your DNS settings and restores them when disabled or on auto-revert.",
 
   "rulesHint": "Create allow/block rules. Block rules also feed the Secure DNS resolver's filter list. Rules override the automatic verdict on the Connections tab.",
   "rulesPlaceholder": "domain to block or allow, e.g. ads.example.com",

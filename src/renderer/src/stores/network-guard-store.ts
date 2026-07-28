@@ -4,6 +4,7 @@ import type { ConnectionOverview, PortScanResult } from '@shared/network-monitor
 import type { DnsResolverStats } from '@shared/dns'
 import type { NetworkRule } from '@shared/policy'
 import type { FilterListsState } from '@shared/filter-lists'
+import type { EnforcementStatus } from '@shared/enforcement'
 
 // A small, clearly-labeled EXAMPLE feed so the checker is usable out of the box.
 // These use RFC 2606 reserved names — they are placeholders that demonstrate the
@@ -52,6 +53,11 @@ interface NetworkGuardState {
   loadFilterLists: () => Promise<void>
   toggleFilterList: (id: string, enabled: boolean) => Promise<void>
   syncFilterLists: () => Promise<void>
+  // System-wide enforcement
+  enforcement: EnforcementStatus | null
+  enforceBusy: boolean
+  loadEnforcement: () => Promise<void>
+  toggleEnforcement: () => Promise<void>
 }
 
 function parseFeed(text: string): ThreatIndicator[] {
@@ -158,5 +164,21 @@ export const useNetworkGuardStore = create<NetworkGuardState>((set, get) => ({
     set({ filterSyncing: true })
     try { set({ filterLists: await window.kudu.filterListsSync(), filterSyncing: false }) }
     catch (err) { set({ error: err instanceof Error ? err.message : 'Sync failed', filterSyncing: false }) }
+  },
+
+  enforcement: null,
+  enforceBusy: false,
+  loadEnforcement: async () => {
+    try { set({ enforcement: await window.kudu.dnsEnforceStatus() }) } catch { /* ignore */ }
+  },
+  toggleEnforcement: async () => {
+    set({ enforceBusy: true })
+    try {
+      const enforcing = get().enforcement?.enforcing
+      const status = enforcing ? await window.kudu.dnsEnforceRevert() : await window.kudu.dnsEnforceApply()
+      set({ enforcement: status, enforceBusy: false })
+    } catch (err) {
+      set({ error: err instanceof Error ? err.message : 'Enforcement error', enforceBusy: false })
+    }
   },
 }))

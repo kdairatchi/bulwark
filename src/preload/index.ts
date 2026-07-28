@@ -95,6 +95,7 @@ import type { ConnectionOverview, PortScanResult } from '../shared/network-monit
 import type { DnsResolverConfig, DnsResolverStats } from '../shared/dns'
 import type { NetworkRule } from '../shared/policy'
 import type { FilterListsState } from '../shared/filter-lists'
+import type { EnforcementStatus, EnforcementPlan } from '../shared/enforcement'
 
 const api = {
   // Platform
@@ -447,6 +448,10 @@ const api = {
   filterListsGet: (): Promise<FilterListsState> => ipcRenderer.invoke(IPC.FILTER_LISTS_GET),
   filterListsSetEnabled: (ids: string[]): Promise<FilterListsState> => ipcRenderer.invoke(IPC.FILTER_LISTS_SET_ENABLED, ids),
   filterListsSync: (): Promise<FilterListsState> => ipcRenderer.invoke(IPC.FILTER_LISTS_SYNC),
+  dnsEnforceStatus: (): Promise<EnforcementStatus> => ipcRenderer.invoke(IPC.DNS_ENFORCE_STATUS),
+  dnsEnforcePlan: (): Promise<EnforcementPlan> => ipcRenderer.invoke(IPC.DNS_ENFORCE_PLAN),
+  dnsEnforceApply: (): Promise<EnforcementStatus> => ipcRenderer.invoke(IPC.DNS_ENFORCE_APPLY),
+  dnsEnforceRevert: (): Promise<EnforcementStatus> => ipcRenderer.invoke(IPC.DNS_ENFORCE_REVERT),
   onProgramSafetyUpdated: (callback: (data: StartupSafetyResult) => void) => {
     const handler = (_event: Electron.IpcRendererEvent, data: StartupSafetyResult) => callback(data)
     ipcRenderer.on(IPC.PROGRAM_SAFETY_UPDATED, handler)
