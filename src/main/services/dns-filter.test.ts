@@ -8,6 +8,7 @@ import {
   isBlocked,
   domainAndParents,
   typeName,
+  parseAnswerIps,
 } from './dns-filter'
 
 /** Build a minimal DNS query for name/qtype. */
@@ -115,6 +116,41 @@ describe('dns-filter · filter lists', () => {
 
   it('empty block set blocks nothing', () => {
     expect(isBlocked('anything.example', new Set())).toBe(false)
+  })
+})
+
+describe('dns-filter · parseAnswerIps', () => {
+  // Build a response for example.com with two A answers using name compression.
+  function responseWithAs(ips: string[]): Buffer {
+    const q = query('example.com', 1, 0x1234)
+    const parsed = parseQuestion(q)!
+    const header = Buffer.alloc(12)
+    q.copy(header, 0, 0, 2)
+    header.writeUInt16BE(0x8180, 2)
+    header.writeUInt16BE(1, 4)
+    header.writeUInt16BE(ips.length, 6)
+    const question = q.subarray(12, parsed.questionEnd)
+    const answers = ips.map((ip) => {
+      const a = Buffer.alloc(16)
+      a.writeUInt16BE(0xc00c, 0) // compressed name → question
+      a.writeUInt16BE(1, 2) // A
+      a.writeUInt16BE(1, 4) // IN
+      a.writeUInt32BE(60, 6)
+      a.writeUInt16BE(4, 10)
+      const parts = ip.split('.').map((n) => parseInt(n, 10))
+      a.writeUInt8(parts[0], 12); a.writeUInt8(parts[1], 13); a.writeUInt8(parts[2], 14); a.writeUInt8(parts[3], 15)
+      return a
+    })
+    return Buffer.concat([header, question, ...answers])
+  }
+
+  it('extracts A record IPs from a response (with name compression)', () => {
+    const msg = responseWithAs(['93.184.216.34', '1.2.3.4'])
+    expect(parseAnswerIps(msg).map((a) => a.ip)).toEqual(['93.184.216.34', '1.2.3.4'])
+  })
+
+  it('returns empty for a query with no answers', () => {
+    expect(parseAnswerIps(query('example.com'))).toEqual([])
   })
 })
 

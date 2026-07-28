@@ -90,6 +90,59 @@ export function buildBlockedResponse(query: Buffer, q: ParsedQuestion): Buffer {
   return Buffer.concat([header, question, answer])
 }
 
+/** Skip a DNS name at `offset`, returning the offset just after it. Handles
+ * label sequences and compression pointers (a pointer ends the name). */
+function skipName(msg: Buffer, offset: number): number {
+  while (offset < msg.length) {
+    const len = msg[offset]
+    if (len === 0) return offset + 1
+    if ((len & 0xc0) === 0xc0) return offset + 2 // compression pointer (2 bytes)
+    offset += 1 + len
+  }
+  return offset
+}
+
+function ipv4FromBytes(b: Buffer): string {
+  return `${b[0]}.${b[1]}.${b[2]}.${b[3]}`
+}
+
+function ipv6FromBytes(b: Buffer): string {
+  const parts: string[] = []
+  for (let i = 0; i < 16; i += 2) parts.push(((b[i] << 8) | b[i + 1]).toString(16))
+  return parts.join(':')
+}
+
+/**
+ * Extract the resolved A / AAAA addresses from a DNS response message.
+ * Used for response-policy enforcement (block by resolved IP / country).
+ */
+export function parseAnswerIps(msg: Buffer): { type: number; ip: string }[] {
+  if (msg.length < 12) return []
+  const qd = msg.readUInt16BE(4)
+  const an = msg.readUInt16BE(6)
+  let offset = 12
+  for (let i = 0; i < qd; i++) {
+    offset = skipName(msg, offset)
+    offset += 4 // qtype + qclass
+  }
+  const out: { type: number; ip: string }[] = []
+  for (let i = 0; i < an && offset + 10 <= msg.length; i++) {
+    offset = skipName(msg, offset)
+    if (offset + 10 > msg.length) break
+    const type = msg.readUInt16BE(offset)
+    const rdlength = msg.readUInt16BE(offset + 8)
+    const rdStart = offset + 10
+    if (rdStart + rdlength > msg.length) break
+    if (type === DNS_TYPE.A && rdlength === 4) {
+      out.push({ type, ip: ipv4FromBytes(msg.subarray(rdStart, rdStart + 4)) })
+    } else if (type === DNS_TYPE.AAAA && rdlength === 16) {
+      out.push({ type, ip: ipv6FromBytes(msg.subarray(rdStart, rdStart + 16)) })
+    }
+    offset = rdStart + rdlength
+  }
+  return out
+}
+
 /** Frame a DNS message for TCP/DoT transport (2-byte big-endian length prefix). */
 export function frameTcp(msg: Buffer): Buffer {
   const len = Buffer.alloc(2)

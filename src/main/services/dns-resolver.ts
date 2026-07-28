@@ -19,6 +19,7 @@ import {
   deframeTcp,
   isBlocked,
   typeName,
+  parseAnswerIps,
 } from './dns-filter'
 import type { DnsResolverConfig, DnsResolverStats, DnsQueryLogEntry } from '../../shared/dns'
 import { DEFAULT_DNS_CONFIG } from '../../shared/dns'
@@ -33,6 +34,8 @@ export class DnsResolver {
   private blockSet: Set<string> = new Set()
   private running = false
   private startedAt: string | null = null
+  /** Response-policy hook: given resolved IPs, return a block reason or null. */
+  private answerPolicy: ((ips: string[]) => string | null) | null = null
 
   private totalQueries = 0
   private blockedQueries = 0
@@ -43,6 +46,15 @@ export class DnsResolver {
   /** Replace the filter-list block set. */
   setBlocklist(domains: Iterable<string>): void {
     this.blockSet = new Set([...domains].map((d) => d.toLowerCase().replace(/\.$/, '')))
+  }
+
+  /**
+   * Set a response-policy hook. When forwarding, the resolved A/AAAA answers are
+   * passed to it; a non-null return (reason) sinkholes the response — enforcing
+   * IP- and country-block rules at the DNS layer without a kernel firewall.
+   */
+  setAnswerPolicy(fn: ((ips: string[]) => string | null) | null): void {
+    this.answerPolicy = fn
   }
 
   getStats(): DnsResolverStats {
@@ -142,6 +154,18 @@ export class DnsResolver {
 
     try {
       const response = await this.forwardDot(query)
+      // Response policy: sinkhole if a resolved IP matches an IP/country block rule.
+      if (this.answerPolicy) {
+        const ips = parseAnswerIps(response).map((a) => a.ip)
+        if (ips.length > 0) {
+          const reason = this.answerPolicy(ips)
+          if (reason) {
+            this.blockedQueries++
+            this.log({ name: q.name, type: typeName(q.qtype), blocked: true, via: reason, timestamp: ts })
+            return buildBlockedResponse(query, q)
+          }
+        }
+      }
       this.forwardedQueries++
       this.log({ name: q.name, type: typeName(q.qtype), blocked: false, via: this.config.upstreamHost, timestamp: ts })
       return response

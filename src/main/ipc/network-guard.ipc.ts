@@ -16,6 +16,7 @@ import type { FilterListsState } from '../../shared/filter-lists'
 import { DnsEnforcement, buildEnforcementPlan } from '../services/dns-enforcement'
 import type { EnforcementPlan, EnforcementStatus } from '../../shared/enforcement'
 import { getGeoipStatus, syncGeoip, lookupCountry } from '../services/geoip'
+import { evaluateRules } from '../services/policy-engine'
 import type { GeoipStatus } from '../../shared/geoip'
 import { cloudLog } from '../services/logger'
 import { getPlatform } from '../platform'
@@ -47,6 +48,27 @@ function resolverBlocklist(rules: NetworkRule[]): string[] {
 
 function refreshResolverBlocklist(): void {
   dnsResolver.setBlocklist(resolverBlocklist(loadRules()))
+  refreshResolverAnswerPolicy()
+}
+
+/**
+ * Build the resolver's response-policy from IP/country block rules. Any resolved
+ * A/AAAA answer whose IP (or its GeoIP country) matches a block rule is sinkholed
+ * — enforcing IP/country rules at the DNS layer, no kernel firewall needed.
+ */
+function refreshResolverAnswerPolicy(): void {
+  const rules = loadRules().filter((r) => r.enabled && r.action === 'block' && (r.match.ip || r.match.country))
+  if (rules.length === 0) { dnsResolver.setAnswerPolicy(null); return }
+  dnsResolver.setAnswerPolicy((ips: string[]) => {
+    for (const ip of ips) {
+      const country = lookupCountry(ip) ?? undefined
+      const result = evaluateRules({ ip, country }, rules)
+      if (result?.action === 'block') {
+        return result.rule.match.country ? `country:${result.rule.match.country}` : 'ip-rule'
+      }
+    }
+    return null
+  })
 }
 
 export interface NetworkGuardCheckRequest {
@@ -111,8 +133,8 @@ export function registerNetworkGuardIpc(): void {
   ipcMain.handle(IPC.NETWORK_RULES_GET, async (): Promise<NetworkRule[]> => loadRules())
   ipcMain.handle(IPC.NETWORK_RULES_SET, async (_e, rules: NetworkRule[]): Promise<NetworkRule[]> => {
     const saved = saveRules(rules)
-    // Keep the running resolver's blocklist in sync with domain block rules.
-    dnsResolver.setBlocklist(resolverBlocklist(saved))
+    // Keep the running resolver's blocklist + response policy in sync with rules.
+    refreshResolverBlocklist()
     return saved
   })
 
