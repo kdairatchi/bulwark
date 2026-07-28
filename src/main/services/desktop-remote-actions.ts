@@ -1,8 +1,9 @@
 /**
- * Non-stub handlers for UPDATE_THREAT_FEEDS and QUARANTINE_FILE.
+ * Non-stub handlers for UPDATE_THREAT_FEEDS, QUARANTINE_FILE, and RESTART_AGENT.
  * Used by the device-command agent (desktop). Android TV has its own path.
  */
 
+import { app } from 'electron'
 import { getPlatform } from '../platform'
 import { quarantineMalware } from '../ipc/malware-scanner.ipc'
 import { syncFilterLists, getFilterListsState, FILTER_LIST_CATALOG } from './filter-lists'
@@ -208,5 +209,73 @@ export async function executeQuarantineFile(
       reason: err instanceof Error ? err.message : String(err),
       parameters,
     }
+  }
+}
+
+export interface RestartAgentDeps {
+  alreadyScheduled: () => boolean
+  markScheduled: () => void
+  schedule: (fn: () => void, delayMs: number) => void
+  releaseLock: () => void
+  relaunch: (opts: { args: string[] }) => void
+  exit: (code: number) => void
+  delayMs: number
+  argv: string[]
+}
+
+let restartScheduled = false
+
+/** Test-only: clear the one-shot restart guard. */
+export function resetRestartAgentSchedule(): void {
+  restartScheduled = false
+}
+
+const defaultRestartDeps = (): RestartAgentDeps => ({
+  alreadyScheduled: () => restartScheduled,
+  markScheduled: () => { restartScheduled = true },
+  schedule: (fn, delayMs) => { setTimeout(fn, delayMs) },
+  releaseLock: () => {
+    try { app.releaseSingleInstanceLock() } catch { /* not held / tests */ }
+  },
+  relaunch: (opts) => { app.relaunch(opts) },
+  exit: (code) => { app.exit(code) },
+  delayMs: 1000,
+  argv: process.argv.slice(1),
+})
+
+/**
+ * RESTART_AGENT — schedule a process relaunch after the command result is posted.
+ * Returns immediately with `scheduled: true`; never exits synchronously.
+ */
+export function executeRestartAgent(
+  parameters: Record<string, unknown> = {},
+  deps: RestartAgentDeps = defaultRestartDeps(),
+): Record<string, unknown> {
+  if (deps.alreadyScheduled()) {
+    return {
+      ok: true,
+      stub: false,
+      type: 'RESTART_AGENT',
+      scheduled: true,
+      reason: 'already_scheduled',
+      parameters,
+    }
+  }
+  deps.markScheduled()
+  deps.schedule(() => {
+    try {
+      deps.releaseLock()
+      deps.relaunch({ args: deps.argv })
+      deps.exit(0)
+    } catch {
+      /* best-effort — agent may already be exiting */
+    }
+  }, deps.delayMs)
+  return {
+    ok: true,
+    stub: false,
+    type: 'RESTART_AGENT',
+    scheduled: true,
+    parameters,
   }
 }

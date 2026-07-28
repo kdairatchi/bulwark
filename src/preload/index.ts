@@ -644,6 +644,113 @@ const api = {
     | { success: false; error: string }
   > => ipcRenderer.invoke(IPC.DASHBOARD_REVIEW_FINDING, payload),
 
+  dashboardListBreachMonitors: (payload?: { baseUrl?: string; token?: string }): Promise<
+    | {
+      success: true
+      emails: Array<{
+        email: string
+        lastCheckedAt: string | null
+        fresh: boolean
+        monitoringPaused: boolean
+        breaches: Array<{
+          id: string
+          name: string
+          title: string
+          domain: string
+          breachDate: string
+          dataClasses: string[]
+          pwnCount: number
+          isVerified: boolean
+          isSensitive: boolean
+          acknowledgedAt: string | null
+        }>
+      }>
+      limit: number
+      usage: number
+    }
+    | { success: false; error: string }
+  > => ipcRenderer.invoke(IPC.DASHBOARD_LIST_BREACH_MONITORS, payload ?? {}),
+
+  dashboardCreateBreachMonitor: (payload: {
+    baseUrl?: string
+    token?: string
+    email: string
+  }): Promise<
+    | {
+      success: true
+      emails: Array<{
+        email: string
+        lastCheckedAt: string | null
+        fresh: boolean
+        monitoringPaused: boolean
+        breaches: Array<{
+          id: string
+          name: string
+          title: string
+          domain: string
+          breachDate: string
+          dataClasses: string[]
+          pwnCount: number
+          isVerified: boolean
+          isSensitive: boolean
+          acknowledgedAt: string | null
+        }>
+      }>
+      limit: number
+      usage: number
+      source?: string
+      created?: boolean
+    }
+    | { success: false; error: string }
+  > => ipcRenderer.invoke(IPC.DASHBOARD_CREATE_BREACH_MONITOR, payload),
+
+  dashboardDeleteBreachMonitor: (payload: {
+    baseUrl?: string
+    token?: string
+    email: string
+  }): Promise<{ success: true } | { success: false; error: string }> =>
+    ipcRenderer.invoke(IPC.DASHBOARD_DELETE_BREACH_MONITOR, payload),
+
+  dashboardAckBreaches: (payload: {
+    baseUrl?: string
+    token?: string
+    breachIds: string[]
+  }): Promise<
+    { success: true; acknowledged: number } | { success: false; error: string }
+  > => ipcRenderer.invoke(IPC.DASHBOARD_ACK_BREACHES, payload),
+
+  dashboardRefreshBreachMonitors: (payload?: {
+    baseUrl?: string
+    token?: string
+    email?: string
+  }): Promise<
+    | {
+      success: true
+      emails: Array<{
+        email: string
+        lastCheckedAt: string | null
+        fresh: boolean
+        monitoringPaused: boolean
+        breaches: Array<{
+          id: string
+          name: string
+          title: string
+          domain: string
+          breachDate: string
+          dataClasses: string[]
+          pwnCount: number
+          isVerified: boolean
+          isSensitive: boolean
+          acknowledgedAt: string | null
+        }>
+      }>
+      limit: number
+      usage: number
+      source?: string
+    }
+    | { success: false; error: string }
+  > => ipcRenderer.invoke(IPC.DASHBOARD_REFRESH_BREACH_MONITORS, payload ?? {}),
+
   // Duplicate Finder
   duplicatesSelectDir: (): Promise<string | null> =>
     ipcRenderer.invoke(IPC.DUPLICATES_SELECT_DIR),

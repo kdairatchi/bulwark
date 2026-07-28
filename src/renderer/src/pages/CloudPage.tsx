@@ -22,6 +22,7 @@ import {
   Radio,
   Download,
   FolderLock,
+  Mail,
   type LucideIcon,
 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -488,11 +489,33 @@ type ParentFinding = {
   subjectName: string
   reason: string
   category?: string | null
+  fixRecommendation?: string | null
   createdAt: string
   updatedAt?: string | null
   status?: string
   reviewedAt?: string | null
   reviewNote?: string | null
+}
+
+type ParentBreachEntry = {
+  id: string
+  name: string
+  title: string
+  domain: string
+  breachDate: string
+  dataClasses: string[]
+  pwnCount: number
+  isVerified: boolean
+  isSensitive: boolean
+  acknowledgedAt: string | null
+}
+
+type ParentMonitoredEmail = {
+  email: string
+  lastCheckedAt: string | null
+  fresh: boolean
+  monitoringPaused: boolean
+  breaches: ParentBreachEntry[]
 }
 
 function ParentControlPanel({
@@ -505,6 +528,10 @@ function ParentControlPanel({
   const [devices, setDevices] = useState<ParentDevice[]>([])
   const [events, setEvents] = useState<ParentEvent[]>([])
   const [findings, setFindings] = useState<ParentFinding[]>([])
+  const [breachEmails, setBreachEmails] = useState<ParentMonitoredEmail[]>([])
+  const [breachUsage, setBreachUsage] = useState(0)
+  const [breachLimit, setBreachLimit] = useState(10)
+  const [breachEmailInput, setBreachEmailInput] = useState('')
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [minting, setMinting] = useState(false)
@@ -541,7 +568,7 @@ function ParentControlPanel({
     try {
       const token = await ensureToken()
       const base = { baseUrl: baseUrl.trim() || undefined, token: token || undefined }
-      const [devRes, evtRes, findRes] = await Promise.all([
+      const [devRes, evtRes, findRes, breachRes] = await Promise.all([
         window.kudu?.dashboardListDevices?.(base),
         window.kudu?.dashboardListEvents?.({
           ...base,
@@ -551,6 +578,7 @@ function ParentControlPanel({
           ...base,
           deviceId: selectedId || undefined,
         }),
+        window.kudu?.dashboardListBreachMonitors?.(base),
       ])
       if (devRes?.success) {
         setDevices(devRes.devices)
@@ -564,6 +592,11 @@ function ParentControlPanel({
       }
       if (evtRes?.success) setEvents(evtRes.events)
       if (findRes?.success) setFindings(findRes.findings)
+      if (breachRes?.success) {
+        setBreachEmails(breachRes.emails)
+        setBreachUsage(breachRes.usage)
+        setBreachLimit(breachRes.limit)
+      }
     } catch {
       toast.error(t('parentLoadFailedToast'))
     }
@@ -812,6 +845,103 @@ function ParentControlPanel({
       }
     } catch {
       toast.error(t('parentReviewFailedToast'))
+    }
+    setBusy(false)
+  }
+
+  const handleAddBreachMonitor = async () => {
+    const email = breachEmailInput.trim()
+    if (!email) {
+      toast.error(t('parentBreachEmailRequired'))
+      return
+    }
+    setBusy(true)
+    try {
+      const token = await ensureToken()
+      const res = await window.kudu?.dashboardCreateBreachMonitor?.({
+        ...authPayload(),
+        token: token || undefined,
+        email,
+      })
+      if (res?.success) {
+        setBreachEmails(res.emails)
+        setBreachUsage(res.usage)
+        setBreachLimit(res.limit)
+        setBreachEmailInput('')
+        toast.success(t('parentBreachAddedToast'), {
+          description: res.source ? `source=${res.source}` : undefined,
+        })
+      } else {
+        toast.error(t('parentBreachAddFailedToast'), { description: res && 'error' in res ? res.error : undefined })
+      }
+    } catch {
+      toast.error(t('parentBreachAddFailedToast'))
+    }
+    setBusy(false)
+  }
+
+  const handleRemoveBreachMonitor = async (email: string) => {
+    setBusy(true)
+    try {
+      const token = await ensureToken()
+      const res = await window.kudu?.dashboardDeleteBreachMonitor?.({
+        ...authPayload(),
+        token: token || undefined,
+        email,
+      })
+      if (res?.success) {
+        toast.success(t('parentBreachRemovedToast'))
+        await refresh()
+      } else {
+        toast.error(t('parentBreachAddFailedToast'), { description: res && 'error' in res ? res.error : undefined })
+      }
+    } catch {
+      toast.error(t('parentBreachAddFailedToast'))
+    }
+    setBusy(false)
+  }
+
+  const handleAckBreach = async (breachId: string) => {
+    setBusy(true)
+    try {
+      const token = await ensureToken()
+      const res = await window.kudu?.dashboardAckBreaches?.({
+        ...authPayload(),
+        token: token || undefined,
+        breachIds: [breachId],
+      })
+      if (res?.success) {
+        toast.success(t('parentBreachAckToast'))
+        await refresh()
+      } else {
+        toast.error(t('parentBreachAddFailedToast'), { description: res && 'error' in res ? res.error : undefined })
+      }
+    } catch {
+      toast.error(t('parentBreachAddFailedToast'))
+    }
+    setBusy(false)
+  }
+
+  const handleRefreshBreaches = async () => {
+    setBusy(true)
+    try {
+      const token = await ensureToken()
+      const res = await window.kudu?.dashboardRefreshBreachMonitors?.({
+        ...authPayload(),
+        token: token || undefined,
+      })
+      if (res?.success) {
+        setBreachEmails(res.emails)
+        setBreachUsage(res.usage)
+        setBreachLimit(res.limit)
+        toast.success(t('parentBreachRefreshedToast'), {
+          description: res.source ? `source=${res.source}` : undefined,
+        })
+      } else {
+        toast.error(t('parentBreachAddFailedToast'), { description: res && 'error' in res ? res.error : undefined })
+      }
+    } catch {
+      toast.error(t('parentBreachAddFailedToast'))
     }
     setBusy(false)
   }
@@ -1131,6 +1261,11 @@ function ParentControlPanel({
                       </>
                     )}
                   </div>
+                  {f.fixRecommendation && (
+                    <div className="mt-1 text-[10px] font-sans" style={{ color: 'var(--text-muted)' }}>
+                      Fix: {f.fixRecommendation}
+                    </div>
+                  )}
                   {!resolved && (
                     <div className="flex flex-wrap gap-1.5 mt-1.5">
                       <button
@@ -1158,6 +1293,115 @@ function ParentControlPanel({
             })}
           </div>
           </>
+        )}
+      </div>
+
+      <div className="mt-4">
+        <div className="flex items-center justify-between gap-2 mb-2">
+          <h4 className="text-[12px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
+            <Mail className="inline h-3.5 w-3.5 mr-1.5 -mt-0.5" strokeWidth={1.8} />
+            {t('parentBreachTitle')}
+          </h4>
+          <span className="text-[10px] font-mono" style={{ color: 'var(--text-dim)' }}>
+            {t('parentBreachUsage', { usage: breachUsage, limit: breachLimit })}
+          </span>
+        </div>
+        <p className="text-[11px] mb-2" style={{ color: 'var(--text-dim)' }}>{t('parentBreachHint')}</p>
+        <div className="flex flex-wrap gap-2 mb-3">
+          <input
+            type="email"
+            value={breachEmailInput}
+            onChange={(e) => setBreachEmailInput(e.target.value)}
+            placeholder={t('parentBreachEmailPlaceholder')}
+            className="flex-1 min-w-[180px] rounded-xl px-3 py-2 text-[12px] outline-none"
+            style={{ background: 'var(--bg-subtle)', border: '1px solid var(--border-medium)', color: 'var(--text-secondary)' }}
+            onKeyDown={(e) => { if (e.key === 'Enter') void handleAddBreachMonitor() }}
+          />
+          <button
+            type="button"
+            disabled={busy}
+            onClick={handleAddBreachMonitor}
+            className="rounded-xl px-3 py-2 text-[12px] font-medium disabled:opacity-40"
+            style={{ background: 'rgba(96,165,250,0.15)', border: '1px solid rgba(96,165,250,0.35)', color: '#93c5fd' }}
+          >
+            {t('parentBreachAdd')}
+          </button>
+          <button
+            type="button"
+            disabled={busy || breachEmails.length === 0}
+            onClick={handleRefreshBreaches}
+            className="rounded-xl px-3 py-2 text-[12px] font-medium disabled:opacity-40"
+            style={{ background: 'var(--bg-subtle)', border: '1px solid var(--border-medium)', color: 'var(--text-secondary)' }}
+          >
+            {t('parentBreachRefresh')}
+          </button>
+        </div>
+        {breachEmails.length === 0 ? (
+          <p className="text-[12px]" style={{ color: 'var(--text-dim)' }}>{t('parentBreachEmpty')}</p>
+        ) : (
+          <div className="space-y-2 max-h-64 overflow-y-auto">
+            {breachEmails.map((m) => (
+              <div
+                key={m.email}
+                className="rounded-lg px-3 py-2"
+                style={{ background: 'var(--bg-subtle)', border: '1px solid var(--border-medium)' }}
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <div className="text-[12px] font-mono" style={{ color: 'var(--text-secondary)' }}>
+                    {m.email}
+                    <span className="ml-2 text-[10px]" style={{ color: m.fresh ? '#4ade80' : 'var(--text-dim)' }}>
+                      {m.fresh ? 'fresh' : 'stale'}
+                    </span>
+                    <span className="ml-2 text-[10px]" style={{ color: 'var(--text-dim)' }}>
+                      {m.breaches.filter((b) => !b.acknowledgedAt).length} open / {m.breaches.length} total
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => handleRemoveBreachMonitor(m.email)}
+                    className="text-[10px] px-2 py-1 rounded disabled:opacity-40"
+                    style={{ border: '1px solid var(--border-medium)', color: 'var(--text-muted)' }}
+                  >
+                    {t('parentBreachRemove')}
+                  </button>
+                </div>
+                {m.breaches.length > 0 && (
+                  <div className="mt-1.5 space-y-1">
+                    {m.breaches.slice(0, 8).map((b) => (
+                      <div
+                        key={b.id}
+                        className="flex items-start justify-between gap-2 text-[11px]"
+                        style={{ color: b.acknowledgedAt ? 'var(--text-dim)' : 'var(--text-secondary)', opacity: b.acknowledgedAt ? 0.55 : 1 }}
+                      >
+                        <div>
+                          <span style={{ color: '#f87171' }}>{b.title || b.name}</span>
+                          {' · '}
+                          {b.domain || '—'}
+                          {' · '}
+                          {b.breachDate}
+                          {b.dataClasses?.length > 0 && (
+                            <span style={{ color: 'var(--text-dim)' }}> · {b.dataClasses.slice(0, 4).join(', ')}</span>
+                          )}
+                        </div>
+                        {!b.acknowledgedAt && (
+                          <button
+                            type="button"
+                            disabled={busy}
+                            onClick={() => handleAckBreach(b.id)}
+                            className="shrink-0 text-[10px] px-2 py-0.5 rounded disabled:opacity-40"
+                            style={{ border: '1px solid var(--border-medium)', color: 'var(--text-muted)' }}
+                          >
+                            {t('parentBreachAck')}
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
         )}
       </div>
 

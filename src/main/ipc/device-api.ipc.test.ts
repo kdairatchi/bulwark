@@ -27,6 +27,11 @@ vi.mock('../../shared/channels', () => ({
     DASHBOARD_ISSUE_COMMAND: 'dashboard:issue-command',
     DASHBOARD_REQUEST_SCAN: 'dashboard:request-scan',
     DASHBOARD_REVIEW_FINDING: 'dashboard:review-finding',
+    DASHBOARD_LIST_BREACH_MONITORS: 'dashboard:list-breach-monitors',
+    DASHBOARD_CREATE_BREACH_MONITOR: 'dashboard:create-breach-monitor',
+    DASHBOARD_DELETE_BREACH_MONITOR: 'dashboard:delete-breach-monitor',
+    DASHBOARD_ACK_BREACHES: 'dashboard:ack-breaches',
+    DASHBOARD_REFRESH_BREACH_MONITORS: 'dashboard:refresh-breach-monitors',
   },
 }))
 
@@ -52,6 +57,11 @@ vi.mock('../services/dashboard-api-client', () => {
     issueCommand: vi.fn(),
     requestScan: vi.fn(),
     reviewFinding: vi.fn(),
+    listBreachMonitors: vi.fn(),
+    createBreachMonitor: vi.fn(),
+    deleteBreachMonitor: vi.fn(),
+    acknowledgeBreaches: vi.fn(),
+    refreshBreachMonitors: vi.fn(),
   }
   class MockDashboardApiClient {
     constructor() {
@@ -98,6 +108,8 @@ describe('device-api IPC', () => {
     expect(handleMap.has('dashboard:bootstrap')).toBe(true)
     expect(handleMap.has('dashboard:isolate')).toBe(true)
     expect(handleMap.has('dashboard:list-events')).toBe(true)
+    expect(handleMap.has('dashboard:list-breach-monitors')).toBe(true)
+    expect(handleMap.has('dashboard:create-breach-monitor')).toBe(true)
   })
 
   it('bootstraps dashboard token via client', async () => {

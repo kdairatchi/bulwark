@@ -248,6 +248,11 @@ export const IPC = {
   DASHBOARD_REQUEST_SCAN: 'dashboard:request-scan',
   DASHBOARD_REVIEW_FINDING: 'dashboard:review-finding',
   DASHBOARD_BOOTSTRAP: 'dashboard:bootstrap',
+  DASHBOARD_LIST_BREACH_MONITORS: 'dashboard:list-breach-monitors',
+  DASHBOARD_CREATE_BREACH_MONITOR: 'dashboard:create-breach-monitor',
+  DASHBOARD_DELETE_BREACH_MONITOR: 'dashboard:delete-breach-monitor',
+  DASHBOARD_ACK_BREACHES: 'dashboard:ack-breaches',
+  DASHBOARD_REFRESH_BREACH_MONITORS: 'dashboard:refresh-breach-monitors',
 
   // Threat Monitor
   THREAT_MONITOR_GET_SNAPSHOT: 'threat-monitor:get-snapshot',

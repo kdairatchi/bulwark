@@ -1,8 +1,10 @@
 // Pure request handlers + device signature auth. No I/O — the http server in
 // server.ts adapts Node requests to these, which keeps them unit-testable.
 
-import { DeviceStore, isFindingStatus, type StoredFindingStatus } from './store'
+import { DeviceStore, isFindingStatus, type StoredFindingStatus, BREACH_MONITOR_LIMIT } from './store'
 import { canonicalRequest, sha256Hex, verifyMessage } from './crypto'
+import type { HibpClient, HibpBreach } from './hibp-client'
+import { normalizeEmail } from './hibp-client'
 
 export interface HandlerResult {
   status: number
@@ -284,6 +286,7 @@ export function submitFindings(store: DeviceStore, deviceId: string, input: unkn
       reason: typeof r.reason === 'string' ? r.reason : '',
       status: typeof r.status === 'string' ? r.status : undefined,
       category: typeof r.category === 'string' ? r.category : null,
+      fixRecommendation: typeof r.fixRecommendation === 'string' ? r.fixRecommendation : null,
     }
   })
   const accepted = store.addFindings(deviceId, findings)
@@ -350,4 +353,170 @@ export function submitNetworkEvents(store: DeviceStore, deviceId: string, input:
 export function listNetworkEvents(store: DeviceStore, deviceId?: string): HandlerResult {
   const events = store.listNetworkEvents(deviceId)
   return { status: 200, body: { events, count: events.length } }
+}
+
+// ─── Breach monitors (dashboard Bearer) ─────────────────────
+
+function hibpToExposureInput(b: HibpBreach) {
+  return {
+    name: b.Name,
+    title: b.Title,
+    domain: b.Domain,
+    breachDate: b.BreachDate,
+    dataClasses: b.DataClasses,
+    pwnCount: b.PwnCount,
+    isVerified: b.IsVerified,
+    isSensitive: b.IsSensitive,
+  }
+}
+
+async function refreshOneMonitor(
+  store: DeviceStore,
+  hibp: HibpClient,
+  email: string,
+): Promise<{ ok: boolean; source: string; error?: string; added: number }> {
+  const monitor = store.getBreachMonitorByEmail(email)
+  if (!monitor) return { ok: false, source: 'error', error: 'monitor not found', added: 0 }
+  const lookup = await hibp.lookupBreaches(monitor.email)
+  store.markBreachMonitorChecked(monitor.id)
+  if (lookup.breaches.length > 0) {
+    const { added } = store.upsertBreachExposures(
+      monitor.id,
+      lookup.breaches.map(hibpToExposureInput),
+    )
+    return { ok: lookup.ok, source: lookup.source, error: lookup.error, added }
+  }
+  return { ok: lookup.ok, source: lookup.source, error: lookup.error, added: 0 }
+}
+
+/** GET /v1/breach-monitors — list monitors + exposures (BreachMonitorResult shape). */
+export function listBreachMonitors(store: DeviceStore): HandlerResult {
+  return { status: 200, body: store.getBreachMonitorResult() }
+}
+
+/**
+ * POST /v1/breach-monitors — add email, run HIBP/stub lookup, upsert exposures.
+ * Body: `{ email: string }`
+ */
+export async function createBreachMonitor(
+  store: DeviceStore,
+  input: unknown,
+  hibp: HibpClient,
+): Promise<HandlerResult> {
+  const o = (input ?? {}) as Record<string, unknown>
+  const emailRaw = typeof o.email === 'string' ? o.email : ''
+  const added = store.addBreachMonitor(emailRaw)
+  if ('error' in added) {
+    if (added.error === 'invalid_email') {
+      return { status: 400, body: { error: 'invalid email' } }
+    }
+    return { status: 409, body: { error: 'breach monitor limit reached', limit: BREACH_MONITOR_LIMIT } }
+  }
+  const lookup = await hibp.lookupBreaches(added.monitor.email)
+  store.markBreachMonitorChecked(added.monitor.id)
+  if (lookup.breaches.length > 0) {
+    store.upsertBreachExposures(added.monitor.id, lookup.breaches.map(hibpToExposureInput))
+  }
+  const result = store.getBreachMonitorResult()
+  return {
+    status: added.created ? 201 : 200,
+    body: {
+      ...result,
+      created: added.created,
+      source: lookup.source,
+      ...(lookup.error ? { lookupError: lookup.error } : {}),
+    },
+  }
+}
+
+/** DELETE /v1/breach-monitors/{email} */
+export function deleteBreachMonitor(store: DeviceStore, email: string): HandlerResult {
+  const normalized = normalizeEmail(email)
+  if (!normalized) return { status: 400, body: { error: 'invalid email' } }
+  if (!store.removeBreachMonitor(normalized)) {
+    return { status: 404, body: { error: 'breach monitor not found' } }
+  }
+  return { status: 200, body: store.getBreachMonitorResult() }
+}
+
+/** POST /v1/breach-monitors/acknowledge — body `{ breachIds: string[] }` */
+export function acknowledgeBreachExposures(store: DeviceStore, input: unknown): HandlerResult {
+  const o = (input ?? {}) as Record<string, unknown>
+  const raw = Array.isArray(o.breachIds)
+    ? o.breachIds
+    : Array.isArray(o.breach_ids)
+      ? o.breach_ids
+      : null
+  if (!raw || raw.length === 0) {
+    return { status: 400, body: { error: 'breachIds must be a non-empty array' } }
+  }
+  if (raw.length > 100) {
+    return { status: 400, body: { error: 'breachIds max 100' } }
+  }
+  const ids = raw.filter((id): id is string => typeof id === 'string' && id.length > 0)
+  if (ids.length === 0) {
+    return { status: 400, body: { error: 'breachIds must be a non-empty array' } }
+  }
+  const acknowledged = store.acknowledgeBreaches(ids)
+  return {
+    status: 200,
+    body: {
+      status: 'ok',
+      acknowledged,
+      ...store.getBreachMonitorResult(),
+    },
+  }
+}
+
+/**
+ * POST /v1/breach-monitors/refresh — re-check one or all monitors.
+ * Body optional: `{ email?: string }`
+ */
+export async function refreshBreachMonitors(
+  store: DeviceStore,
+  input: unknown,
+  hibp: HibpClient,
+): Promise<HandlerResult> {
+  const o = (input ?? {}) as Record<string, unknown>
+  const emailRaw = typeof o.email === 'string' ? o.email.trim() : ''
+  if (emailRaw) {
+    const normalized = normalizeEmail(emailRaw)
+    if (!normalized) return { status: 400, body: { error: 'invalid email' } }
+    if (!store.getBreachMonitorByEmail(normalized)) {
+      return { status: 404, body: { error: 'breach monitor not found' } }
+    }
+    const r = await refreshOneMonitor(store, hibp, normalized)
+    return {
+      status: 200,
+      body: {
+        ...store.getBreachMonitorResult(),
+        source: r.source,
+        refreshed: 1,
+        added: r.added,
+        ...(r.error ? { lookupError: r.error } : {}),
+      },
+    }
+  }
+
+  const monitors = store.listBreachMonitors()
+  let added = 0
+  let source: string = 'stub'
+  let lookupError: string | undefined
+  for (const m of monitors) {
+    if (m.monitoringPaused) continue
+    const r = await refreshOneMonitor(store, hibp, m.email)
+    added += r.added
+    source = r.source
+    if (r.error) lookupError = r.error
+  }
+  return {
+    status: 200,
+    body: {
+      ...store.getBreachMonitorResult(),
+      source,
+      refreshed: monitors.filter((m) => !m.monitoringPaused).length,
+      added,
+      ...(lookupError ? { lookupError } : {}),
+    },
+  }
 }

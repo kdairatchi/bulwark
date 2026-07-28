@@ -10,6 +10,8 @@ export interface InventoryFinding {
   subjectName: string
   reason: string
   category?: string
+  /** Human-readable remediation hint (KEV requiredAction / upgrade floor). */
+  fixRecommendation?: string
 }
 
 export interface DesktopInventoryPayload {

@@ -6,6 +6,7 @@ import {
   matchKevAgainstApps,
   matchesKevAlias,
   kevHitsToCloudFindings,
+  kevFixRecommendation,
   resetKevCatalogCache,
 } from './kev-matcher'
 import type { InstalledApp } from '../platform/types'
@@ -39,7 +40,27 @@ describe('kev-matcher', () => {
     expect(hits.some((h) => h.cveId === 'CVE-2023-38545')).toBe(true)
     const findings = kevHitsToCloudFindings(hits)
     expect(findings.some((f) => f.category === 'kev' && f.subjectName === 'CVE-2023-38545')).toBe(true)
-    expect(findings.find((f) => f.subjectName === 'CVE-2023-38545')?.level).toBe('likely_affected')
+    const f = findings.find((x) => x.subjectName === 'CVE-2023-38545')
+    expect(f?.level).toBe('likely_affected')
+    expect(f?.fixRecommendation).toBeTruthy()
+    expect(f?.fixRecommendation?.toLowerCase()).toMatch(/curl|upgrade|update|8\.4/)
+  })
+
+  it('builds fix hint from vulnerableBelow when requiredAction missing', () => {
+    expect(kevFixRecommendation({
+      appName: 'curl',
+      reason: 'kev_version_match_<8.4.0',
+      vulnerableBelow: '8.4.0',
+    })).toBe('Upgrade curl to 8.4.0 or newer')
+  })
+
+  it('prefers requiredAction over version floor', () => {
+    expect(kevFixRecommendation({
+      appName: 'curl',
+      requiredAction: 'Apply vendor patches for curl/libcurl',
+      vulnerableBelow: '8.4.0',
+      reason: 'kev_version_match_<8.4.0',
+    })).toBe('Apply vendor patches for curl/libcurl')
   })
 
   it('skips curl when version is already fixed', () => {

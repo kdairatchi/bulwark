@@ -52,11 +52,41 @@ export interface DashboardFinding {
   subjectName: string
   reason: string
   category?: string | null
+  fixRecommendation?: string | null
   createdAt: string
   updatedAt?: string | null
   status: string
   reviewedAt: string | null
   reviewNote: string | null
+}
+
+export interface DashboardBreachEntry {
+  id: string
+  name: string
+  title: string
+  domain: string
+  breachDate: string
+  dataClasses: string[]
+  pwnCount: number
+  isVerified: boolean
+  isSensitive: boolean
+  acknowledgedAt: string | null
+}
+
+export interface DashboardMonitoredEmail {
+  email: string
+  lastCheckedAt: string | null
+  fresh: boolean
+  monitoringPaused: boolean
+  breaches: DashboardBreachEntry[]
+}
+
+export interface DashboardBreachMonitorResult {
+  emails: DashboardMonitoredEmail[]
+  limit: number
+  usage: number
+  source?: string
+  created?: boolean
 }
 
 export interface DashboardApiClientOptions {
@@ -252,6 +282,65 @@ export class DashboardApiClient {
       finding: DashboardFinding
       securityScore: number
       openFindingsCount: number
+    }
+  }
+
+  async listBreachMonitors(): Promise<DashboardBreachMonitorResult> {
+    const { status, body } = await this.request('GET', '/v1/breach-monitors')
+    if (status < 200 || status >= 300) throw new DeviceApiHttpError(status, body)
+    const o = body as DashboardBreachMonitorResult
+    return {
+      emails: Array.isArray(o.emails) ? o.emails : [],
+      limit: typeof o.limit === 'number' ? o.limit : 10,
+      usage: typeof o.usage === 'number' ? o.usage : 0,
+    }
+  }
+
+  async createBreachMonitor(email: string): Promise<DashboardBreachMonitorResult> {
+    const { status, body } = await this.request('POST', '/v1/breach-monitors', { email })
+    if (status < 200 || status >= 300) throw new DeviceApiHttpError(status, body)
+    const o = body as DashboardBreachMonitorResult
+    return {
+      emails: Array.isArray(o.emails) ? o.emails : [],
+      limit: typeof o.limit === 'number' ? o.limit : 10,
+      usage: typeof o.usage === 'number' ? o.usage : 0,
+      source: o.source,
+      created: o.created,
+    }
+  }
+
+  async deleteBreachMonitor(email: string): Promise<void> {
+    const { status, body } = await this.request(
+      'DELETE',
+      `/v1/breach-monitors/${encodeURIComponent(email)}`,
+    )
+    if (status < 200 || status >= 300) throw new DeviceApiHttpError(status, body)
+  }
+
+  async acknowledgeBreaches(breachIds: string[]): Promise<{ acknowledged: number }> {
+    const { status, body } = await this.request(
+      'POST',
+      '/v1/breach-monitors/acknowledge',
+      { breachIds },
+    )
+    if (status < 200 || status >= 300) throw new DeviceApiHttpError(status, body)
+    const o = body as { acknowledged?: number }
+    return { acknowledged: typeof o.acknowledged === 'number' ? o.acknowledged : 0 }
+  }
+
+  async refreshBreachMonitors(email?: string): Promise<DashboardBreachMonitorResult> {
+    const { status, body } = await this.request(
+      'POST',
+      '/v1/breach-monitors/refresh',
+      email ? { email } : {},
+    )
+    if (status < 200 || status >= 300) throw new DeviceApiHttpError(status, body)
+    const o = body as DashboardBreachMonitorResult
+    return {
+      emails: Array.isArray(o.emails) ? o.emails : [],
+      limit: typeof o.limit === 'number' ? o.limit : 10,
+      usage: typeof o.usage === 'number' ? o.usage : 0,
+      source: o.source,
     }
   }
 }

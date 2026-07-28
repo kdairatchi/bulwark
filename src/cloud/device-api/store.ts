@@ -5,6 +5,7 @@
 import { randomUUID, randomBytes } from 'crypto'
 import { generateDeviceKeyPair } from './crypto'
 import { signCommand, isAllowedCommand, type CommandEnvelope, type CommandType } from './commands'
+import { normalizeEmail, emailLookupHash } from './hibp-client'
 
 const COMMAND_TTL_MS = 5 * 60 * 1000
 
@@ -70,6 +71,8 @@ export interface StoredFinding {
   reason: string
   /** Optional taxonomy from agents (kev, osv, technique, lolbin, …). */
   category: string | null
+  /** Optional remediation hint from agents (KEV requiredAction / upgrade floor). */
+  fixRecommendation: string | null
   createdAt: string
   updatedAt: string | null
   status: StoredFindingStatus
@@ -82,6 +85,13 @@ export function normalizeFindingCategory(raw: unknown): string | null {
   if (typeof raw !== 'string') return null
   const c = raw.trim().toLowerCase().replace(/[^a-z0-9._-]+/g, '').slice(0, 40)
   return c || null
+}
+
+/** Sanitize optional remediation text (max 240 chars). */
+export function normalizeFixRecommendation(raw: unknown): string | null {
+  if (typeof raw !== 'string') return null
+  const t = raw.trim().replace(/\s+/g, ' ').slice(0, 240)
+  return t || null
 }
 
 /**
@@ -115,6 +125,69 @@ export interface AuditEvent {
   at: string
   event: string
   detail?: string
+}
+
+/** Account-scoped email breach monitor (reference store keeps plaintext; prod encrypts). */
+export interface StoredBreachMonitor {
+  id: string
+  email: string // normalized — reference service only; prod would encrypt
+  emailHash: string
+  createdAt: string
+  lastCheckedAt: string | null
+  monitoringPaused: boolean
+}
+
+export interface StoredBreachExposure {
+  id: string
+  monitorId: string
+  name: string
+  title: string
+  domain: string
+  breachDate: string
+  dataClasses: string[]
+  pwnCount: number
+  isVerified: boolean
+  isSensitive: boolean
+  acknowledgedAt: string | null
+  firstSeenAt: string
+}
+
+export const BREACH_MONITOR_LIMIT = 10
+
+const BREACH_FRESH_MS = 24 * 60 * 60 * 1000
+
+export interface BreachExposureInput {
+  name: string
+  title: string
+  domain: string
+  breachDate: string
+  dataClasses: string[]
+  pwnCount: number
+  isVerified: boolean
+  isSensitive: boolean
+}
+
+export interface BreachMonitorResultView {
+  emails: Array<{
+    email: string
+    lastCheckedAt: string | null
+    fresh: boolean
+    monitoringPaused: boolean
+    breaches: Array<{
+      id: string
+      name: string
+      title: string
+      domain: string
+      breachDate: string
+      dataClasses: string[]
+      pwnCount: number
+      isVerified: boolean
+      isSensitive: boolean
+      acknowledgedAt: string | null
+    }>
+  }>
+  limit: number
+  usage: number
 }
 
 export interface StoreDeps {
@@ -209,6 +282,8 @@ export class DeviceStore {
   private audit: AuditEvent[] = []
   private commands = new Map<string, CommandRecord>()
   private policies = new Map<string, DevicePolicy>()
+  private breachMonitors = new Map<string, StoredBreachMonitor>() // key: emailHash
+  private breachExposures: StoredBreachExposure[] = []
   private deps: StoreDeps
   private serverKeys = generateDeviceKeyPair()
   private readonly dashboardTokenValue: string
@@ -365,6 +440,7 @@ export class DeviceStore {
   addFindings(deviceId: string, findings: Array<Omit<StoredFinding, 'id' | 'deviceId' | 'createdAt' | 'updatedAt' | 'status' | 'reviewedAt' | 'reviewNote'> & {
     status?: string
     category?: string | null
+    fixRecommendation?: string | null
   }>): number {
     const d = this.devices.get(deviceId)
     if (!d) return 0
@@ -375,6 +451,7 @@ export class DeviceStore {
         ? f.status
         : (isFindingStatus(f.level) ? f.level : 'potential_match')
       const category = normalizeFindingCategory(f.category)
+      const fixRecommendation = normalizeFixRecommendation(f.fixRecommendation)
       const subjectName = f.subjectName
       const reason = f.reason
       const level = f.level
@@ -390,6 +467,7 @@ export class DeviceStore {
       if (openMatch) {
         openMatch.level = level
         openMatch.reason = reason
+        openMatch.fixRecommendation = fixRecommendation
         openMatch.updatedAt = nowIso
         // Keep existing status if it's a review-style open status; otherwise align with level.
         if (!isFindingStatus(openMatch.status) || openMatch.status === 'unknown') {
@@ -406,6 +484,7 @@ export class DeviceStore {
         subjectName,
         reason,
         category,
+        fixRecommendation,
         createdAt: nowIso,
         updatedAt: null,
         status,
@@ -545,5 +624,158 @@ export class DeviceStore {
     if (!command) return null
     this.log('device_isolation_cleared', deviceId)
     return { policy, command }
+  }
+
+  // ─── Breach monitors (account-scoped, in-memory reference) ───
+
+  listBreachMonitors(): StoredBreachMonitor[] {
+    return [...this.breachMonitors.values()]
+  }
+
+  getBreachMonitorByEmail(email: string): StoredBreachMonitor | undefined {
+    const normalized = normalizeEmail(email)
+    if (!normalized) return undefined
+    return this.breachMonitors.get(emailLookupHash(normalized))
+  }
+
+  addBreachMonitor(
+    email: string,
+  ): { monitor: StoredBreachMonitor; created: boolean } | { error: 'invalid_email' | 'limit_reached' } {
+    const normalized = normalizeEmail(email)
+    if (!normalized) return { error: 'invalid_email' }
+    const hash = emailLookupHash(normalized)
+    const existing = this.breachMonitors.get(hash)
+    if (existing) return { monitor: existing, created: false }
+    if (this.breachMonitors.size >= BREACH_MONITOR_LIMIT) {
+      return { error: 'limit_reached' }
+    }
+    const nowIso = new Date(this.deps.now()).toISOString()
+    const monitor: StoredBreachMonitor = {
+      id: `bm_${this.deps.uuid()}`,
+      email: normalized,
+      emailHash: hash,
+      createdAt: nowIso,
+      lastCheckedAt: null,
+      monitoringPaused: false,
+    }
+    this.breachMonitors.set(hash, monitor)
+    this.log('breach_monitor_added', normalized)
+    return { monitor, created: true }
+  }
+
+  removeBreachMonitor(email: string): boolean {
+    const normalized = normalizeEmail(email)
+    if (!normalized) return false
+    const hash = emailLookupHash(normalized)
+    const monitor = this.breachMonitors.get(hash)
+    if (!monitor) return false
+    this.breachMonitors.delete(hash)
+    this.breachExposures = this.breachExposures.filter((e) => e.monitorId !== monitor.id)
+    this.log('breach_monitor_removed', normalized)
+    return true
+  }
+
+  listBreachExposures(monitorId?: string): StoredBreachExposure[] {
+    return monitorId
+      ? this.breachExposures.filter((e) => e.monitorId === monitorId)
+      : [...this.breachExposures]
+  }
+
+  upsertBreachExposures(
+    monitorId: string,
+    breaches: BreachExposureInput[],
+  ): { added: number; total: number } {
+    let added = 0
+    const nowIso = new Date(this.deps.now()).toISOString()
+    for (const b of breaches) {
+      if (!b.name) continue
+      const existing = this.breachExposures.find(
+        (e) => e.monitorId === monitorId && e.name === b.name,
+      )
+      if (existing) {
+        // Refresh metadata but preserve acknowledgedAt / firstSeenAt / id.
+        existing.title = b.title
+        existing.domain = b.domain
+        existing.breachDate = b.breachDate
+        existing.dataClasses = [...b.dataClasses]
+        existing.pwnCount = b.pwnCount
+        existing.isVerified = b.isVerified
+        existing.isSensitive = b.isSensitive
+        continue
+      }
+      this.breachExposures.push({
+        id: `be_${this.deps.uuid()}`,
+        monitorId,
+        name: b.name,
+        title: b.title,
+        domain: b.domain,
+        breachDate: b.breachDate,
+        dataClasses: [...b.dataClasses],
+        pwnCount: b.pwnCount,
+        isVerified: b.isVerified,
+        isSensitive: b.isSensitive,
+        acknowledgedAt: null,
+        firstSeenAt: nowIso,
+      })
+      added++
+    }
+    const total = this.breachExposures.filter((e) => e.monitorId === monitorId).length
+    return { added, total }
+  }
+
+  acknowledgeBreaches(ids: string[]): number {
+    const idSet = new Set(ids.filter((id) => typeof id === 'string' && id))
+    if (idSet.size === 0) return 0
+    const nowIso = new Date(this.deps.now()).toISOString()
+    let n = 0
+    for (const e of this.breachExposures) {
+      if (idSet.has(e.id) && e.acknowledgedAt === null) {
+        e.acknowledgedAt = nowIso
+        n++
+      }
+    }
+    if (n > 0) this.log('breach_exposures_acknowledged', String(n))
+    return n
+  }
+
+  markBreachMonitorChecked(monitorId: string): void {
+    for (const m of this.breachMonitors.values()) {
+      if (m.id === monitorId) {
+        m.lastCheckedAt = new Date(this.deps.now()).toISOString()
+        return
+      }
+    }
+  }
+
+  getBreachMonitorResult(): BreachMonitorResultView {
+    const now = this.deps.now()
+    const emails = this.listBreachMonitors().map((m) => {
+      const lastMs = m.lastCheckedAt ? Date.parse(m.lastCheckedAt) : NaN
+      const fresh = Number.isFinite(lastMs) && now - lastMs <= BREACH_FRESH_MS
+      const breaches = this.listBreachExposures(m.id).map((e) => ({
+        id: e.id,
+        name: e.name,
+        title: e.title,
+        domain: e.domain,
+        breachDate: e.breachDate,
+        dataClasses: e.dataClasses,
+        pwnCount: e.pwnCount,
+        isVerified: e.isVerified,
+        isSensitive: e.isSensitive,
+        acknowledgedAt: e.acknowledgedAt,
+      }))
+      return {
+        email: m.email,
+        lastCheckedAt: m.lastCheckedAt,
+        fresh,
+        monitoringPaused: m.monitoringPaused,
+        breaches,
+      }
+    })
+    return {
+      emails,
+      limit: BREACH_MONITOR_LIMIT,
+      usage: emails.length,
+    }
   }
 }

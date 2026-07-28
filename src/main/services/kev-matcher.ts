@@ -41,6 +41,22 @@ export interface KevHit {
   ransomware: boolean
   reason: string
   requiredAction?: string
+  /** Fix floor from catalog (`vulnerableBelow`) when present. */
+  vulnerableBelow?: string
+}
+
+/** Build a short remediation hint from KEV requiredAction and/or vulnerableBelow. */
+export function kevFixRecommendation(hit: Pick<KevHit, 'appName' | 'requiredAction' | 'vulnerableBelow' | 'reason'>): string | undefined {
+  const action = (hit.requiredAction || '').trim()
+  if (action) return action.slice(0, 240)
+
+  let floor = (hit.vulnerableBelow || '').trim()
+  if (!floor && hit.reason.startsWith('kev_version_match_<')) {
+    floor = hit.reason.slice('kev_version_match_<'.length).trim()
+  }
+  if (!floor) return undefined
+  const app = (hit.appName || 'package').trim() || 'package'
+  return `Upgrade ${app} to ${floor} or newer`.slice(0, 240)
 }
 
 let cached: { catalogPath: string; mtimeMs: number; catalog: KevCatalog } | null = null
@@ -172,6 +188,7 @@ export function matchKevAgainstApps(
           ? `kev_version_match_<${entry.vulnerableBelow}`
           : 'kev_product_match',
         requiredAction: entry.requiredAction,
+        vulnerableBelow: entry.vulnerableBelow,
       })
       if (hits.length >= maxHits) return hits
     }
@@ -180,12 +197,16 @@ export function matchKevAgainstApps(
 }
 
 export function kevHitsToCloudFindings(hits: KevHit[]): InventoryFinding[] {
-  return hits.map((h) => ({
-    level: h.severity === 'critical' || h.severity === 'high'
-      ? (h.reason.startsWith('kev_version_match') ? 'likely_affected' : 'potential_match')
-      : 'potential_match',
-    subjectName: h.cveId,
-    reason: `${h.reason}:${h.appName}@${h.installedVersion}${h.ransomware ? ':ransomware' : ''}`.slice(0, 200),
-    category: 'kev',
-  }))
+  return hits.map((h) => {
+    const fixRecommendation = kevFixRecommendation(h)
+    return {
+      level: h.severity === 'critical' || h.severity === 'high'
+        ? (h.reason.startsWith('kev_version_match') ? 'likely_affected' : 'potential_match')
+        : 'potential_match',
+      subjectName: h.cveId,
+      reason: `${h.reason}:${h.appName}@${h.installedVersion}${h.ransomware ? ':ransomware' : ''}`.slice(0, 200),
+      category: 'kev',
+      ...(fixRecommendation ? { fixRecommendation } : {}),
+    }
+  })
 }

@@ -213,5 +213,20 @@
   "parentScanQueuedToast": "Scan queued — agent will post findings on next poll",
   "parentScanFailedToast": "Could not queue scan",
   "parentTokenPlaceholder": "Dashboard token (Bearer) — auto-filled via local bootstrap",
-  "parentTokenHint": "Dashboard reads and writes require Authorization: Bearer. Local cloud:dev exposes GET /v1/dashboard-bootstrap; production sets DASHBOARD_TOKEN."
+  "parentTokenHint": "Dashboard reads and writes require Authorization: Bearer. Local cloud:dev exposes GET /v1/dashboard-bootstrap; production sets DASHBOARD_TOKEN.",
+  "parentBreachTitle": "Email breach monitors",
+  "parentBreachHint": "Stub mode without HIBP_API_KEY — use pwned@… or *@hibp-test.bulwark.local for fixture hits",
+  "parentBreachEmailPlaceholder": "email@example.com",
+  "parentBreachAdd": "Add & check",
+  "parentBreachRefresh": "Refresh checks",
+  "parentBreachRemove": "Remove",
+  "parentBreachAck": "Mark reviewed",
+  "parentBreachEmpty": "No monitored emails yet",
+  "parentBreachUsage": "{{usage}} / {{limit}} monitors",
+  "parentBreachAddedToast": "Email monitor added",
+  "parentBreachAddFailedToast": "Could not add breach monitor",
+  "parentBreachRemovedToast": "Monitor removed",
+  "parentBreachAckToast": "Breach marked reviewed",
+  "parentBreachRefreshedToast": "Breach checks refreshed",
+  "parentBreachEmailRequired": "Enter an email address"
 }

@@ -40,6 +40,10 @@ Split the reusable security engine (inventory, risk engine, policy engine) into
 Auth, device registration/enrollment (pairing codes + per-device keys), device list,
 security score, findings, alerts, scan requests, email breach checks, basic reports.
 
+**Landed in `src/cloud/device-api/`:** pairing enroll, device telemetry, findings +
+review/score, remote commands, policy/isolate, network events, **email breach
+monitors** (HIBP stub/live — `GET|POST /v1/breach-monitors`, ack, refresh).
+
 ## Phase 4 — Android TV agent (first unique feature)  *(scaffold in progress)*
 
 Compose TV UI (ten-foot design), device enrollment, app inventory, device legitimacy
