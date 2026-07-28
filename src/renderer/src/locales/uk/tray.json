@@ -1,10 +1,10 @@
 {
-  "trayTooltip": "Kudu",
-  "openKudu": "Відкрити Kudu",
+  "trayTooltip": "Bulwrk",
+  "openKudu": "Відкрити Bulwrk",
   "quit": "Вийти",
-  "scheduledTaskNotificationTitle": "Kudu - Заплановане завдання",
+  "scheduledTaskNotificationTitle": "Bulwrk - Заплановане завдання",
   "scheduledTaskNotificationBody": "Виконується \"{{name}}\"...",
-  "scanCompleteNotificationTitle": "Kudu - Сканування завершено",
+  "scanCompleteNotificationTitle": "Bulwrk - Сканування завершено",
   "scanCompleteNotificationBody": "Знайдено {{itemCount}} елементів ({{sizeMB}} МБ), які можна очистити.",
   "scheduledScanName": "Заплановане сканування"
 }

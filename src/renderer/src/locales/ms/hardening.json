@@ -34,7 +34,7 @@
     "unprotectedBadge": "{{count}} tidak dilindungi",
     "protectAllCategoryButton": "Lindungi Semua",
     "adminBadge": "Pentadbir",
-    "adminWarning": "Sesetengah tetapan memerlukan keistimewaan pentadbir untuk diubah suai. Jalankan Kudu sebagai pentadbir untuk perlindungan penuh.",
+    "adminWarning": "Sesetengah tetapan memerlukan keistimewaan pentadbir untuk diubah suai. Jalankan Bulwrk sebagai pentadbir untuk perlindungan penuh.",
     "scanFailed": "Imbasan privasi gagal",
     "applyFailed": "Gagal menggunakan tetapan privasi",
     "applyFailedDescription": "Cuba jalankan sebagai pentadbir",

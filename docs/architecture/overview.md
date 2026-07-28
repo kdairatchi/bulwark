@@ -1,4 +1,4 @@
-# Architecture Overview — Bulwark
+# Architecture Overview — Bulwrk
 
 This document describes the **target** architecture. The repository today contains the
 **desktop endpoint agent** (the forked Kudu Electron app); everything else is planned

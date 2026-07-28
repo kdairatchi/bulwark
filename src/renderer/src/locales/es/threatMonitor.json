@@ -3,7 +3,7 @@
   "pageDescription": "Supervisión en tiempo real de las conexiones de red frente a listas de amenazas conocidas.",
   "cloudNotConfigured": {
     "title": "Cloud no configurado",
-    "description": "Vincule su dispositivo a Kudu Cloud en Configuración para habilitar la supervisión de amenazas. La lista negra de amenazas la proporciona el servicio en la nube."
+    "description": "Vincule su dispositivo a Bulwrk Cloud en Configuración para habilitar la supervisión de amenazas. La lista negra de amenazas la proporciona el servicio en la nube."
   },
   "loading": "Cargando...",
   "inactive": {

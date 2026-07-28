@@ -41,7 +41,7 @@ describe('createHibpClient stub mode', () => {
 
   it('triggers fixtures for hibp-test domain and breach keywords', async () => {
     const client = createHibpClient({ stub: true })
-    const a = await client.lookupBreaches('user@hibp-test.bulwark.local')
+    const a = await client.lookupBreaches('user@hibp-test.bulwrk.local')
     expect(a.breaches.map((b) => b.Name)).toEqual(expect.arrayContaining(['Adobe', 'LinkedIn']))
 
     const linked = await client.lookupBreaches('linkedin-breach@example.com')
@@ -81,7 +81,7 @@ describe('createHibpClient live mode', () => {
     const client = createHibpClient({
       apiKey: 'test-key',
       fetchImpl,
-      userAgent: 'Bulwark-Test',
+      userAgent: 'Bulwrk-Test',
     })
     const r = await client.lookupBreaches('Alice@Example.com')
     expect(r).toEqual({ ok: true, source: 'hibp', breaches: [fixture] })
@@ -91,7 +91,7 @@ describe('createHibpClient live mode', () => {
     expect(url).toContain('truncateResponse=false')
     const headers = init.headers as Record<string, string>
     expect(headers['hibp-api-key']).toBe('test-key')
-    expect(headers['user-agent']).toBe('Bulwark-Test')
+    expect(headers['user-agent']).toBe('Bulwrk-Test')
   })
 
   it('maps 404 to empty breaches', async () => {

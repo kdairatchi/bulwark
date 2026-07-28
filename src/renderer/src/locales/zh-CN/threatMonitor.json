@@ -3,7 +3,7 @@
   "pageDescription": "根据已知威胁列表实时监控网络连接。",
   "cloudNotConfigured": {
     "title": "云服务未配置",
-    "description": "请在“设置”中将您的设备关联到 Kudu Cloud 以启用威胁监控。威胁黑名单由云服务提供。"
+    "description": "请在“设置”中将您的设备关联到 Bulwrk Cloud 以启用威胁监控。威胁黑名单由云服务提供。"
   },
   "loading": "正在加载...",
   "inactive": {

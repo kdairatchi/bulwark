@@ -3,7 +3,7 @@
   "pageDescription": "Monitorování síťových připojení v reálném čase podle známých seznamů hrozeb.",
   "cloudNotConfigured": {
     "title": "Cloud není nakonfigurován",
-    "description": "Propojte své zařízení s Kudu Cloud v Nastavení, aby bylo možné zapnout monitorování hrozeb. Seznam blokovaných hrozeb poskytuje cloudová služba."
+    "description": "Propojte své zařízení s Bulwrk Cloud v Nastavení, aby bylo možné zapnout monitorování hrozeb. Seznam blokovaných hrozeb poskytuje cloudová služba."
   },
   "loading": "Načítání...",
   "inactive": {

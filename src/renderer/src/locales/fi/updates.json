@@ -118,7 +118,7 @@
     "allUpToDateTitle": "Kaikki ohjaimet ovat ajan tasalla",
     "allUpToDateDescription": "Päivityksiä ei ole saatavilla eikä vanhentuneita paketteja löytynyt.",
     "updatesDisabledTitle": "Ohjainpäivitykset on poistettu käytöstä Windowsissa",
-    "updatesDisabledText": "Windows on määritetty jättämään ohjaimet pois Windows Update -palvelusta, joten Kudu ei tarkistanut ohjainpäivityksiä. Vanhentuneiden ohjainpakettien siivous toimii silti. Voit ottaa ohjainpäivitykset uudelleen käyttöön Windowsin laiteasennusasetuksissa tai ryhmäkäytännössä.",
+    "updatesDisabledText": "Windows on määritetty jättämään ohjaimet pois Windows Update -palvelusta, joten Bulwrk ei tarkistanut ohjainpäivityksiä. Vanhentuneiden ohjainpakettien siivous toimii silti. Voit ottaa ohjainpäivitykset uudelleen käyttöön Windowsin laiteasennusasetuksissa tai ryhmäkäytännössä.",
     "updatesAvailable": "Saatavilla olevat päivitykset ({{count}})",
     "stalePackages": "Vanhentuneet paketit ({{count}})",
     "selectAll": "Valitse kaikki",

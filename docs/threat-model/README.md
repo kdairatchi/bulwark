@@ -1,6 +1,6 @@
-# Threat Model — Bulwark
+# Threat Model — Bulwrk
 
-Bulwark runs with **elevated permissions** and (optionally) manages devices
+Bulwrk runs with **elevated permissions** and (optionally) manages devices
 remotely, so it is itself a high-value target. This document captures the trust
 boundaries, the biggest risks, and the required controls.
 

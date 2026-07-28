@@ -34,7 +34,7 @@
     "unprotectedBadge": "{{count}} oskyddade",
     "protectAllCategoryButton": "Skydda alla",
     "adminBadge": "Admin",
-    "adminWarning": "Vissa inställningar kräver administratörsbehörighet för att kunna ändras. Kör Kudu som administratör för fullständigt skydd.",
+    "adminWarning": "Vissa inställningar kräver administratörsbehörighet för att kunna ändras. Kör Bulwrk som administratör för fullständigt skydd.",
     "scanFailed": "Sekretesskanningen misslyckades",
     "applyFailed": "Det gick inte att tillämpa sekretessinställningar",
     "applyFailedDescription": "Försök att köra som administratör",

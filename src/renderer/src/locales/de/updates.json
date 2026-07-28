@@ -118,7 +118,7 @@
     "allUpToDateTitle": "Alle Treiber sind auf dem neuesten Stand",
     "allUpToDateDescription": "Keine Updates verfügbar und keine veralteten Pakete gefunden.",
     "updatesDisabledTitle": "Treiber-Updates sind in Windows deaktiviert",
-    "updatesDisabledText": "Windows ist so eingestellt, dass Treiber von Windows Update ausgeschlossen werden. Daher hat Kudu nicht nach Treiber-Updates gesucht. Die Bereinigung veralteter Treiberpakete funktioniert weiterhin. Sie können Treiber-Updates in den Windows-Einstellungen für die Geräteinstallation oder per Gruppenrichtlinie wieder aktivieren.",
+    "updatesDisabledText": "Windows ist so eingestellt, dass Treiber von Windows Update ausgeschlossen werden. Daher hat Bulwrk nicht nach Treiber-Updates gesucht. Die Bereinigung veralteter Treiberpakete funktioniert weiterhin. Sie können Treiber-Updates in den Windows-Einstellungen für die Geräteinstallation oder per Gruppenrichtlinie wieder aktivieren.",
     "updatesAvailable": "Verfügbare Updates ({{count}})",
     "stalePackages": "Veraltete Pakete ({{count}})",
     "selectAll": "Alle auswählen",

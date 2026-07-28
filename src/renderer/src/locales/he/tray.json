@@ -1,10 +1,10 @@
 {
-  "trayTooltip": "Kudu",
-  "openKudu": "פתח את Kudu",
+  "trayTooltip": "Bulwrk",
+  "openKudu": "פתח את Bulwrk",
   "quit": "יציאה",
-  "scheduledTaskNotificationTitle": "Kudu - משימה מתוזמנת",
+  "scheduledTaskNotificationTitle": "Bulwrk - משימה מתוזמנת",
   "scheduledTaskNotificationBody": "מפעיל את \"{{name}}\"...",
-  "scanCompleteNotificationTitle": "Kudu - הסריקה הושלמה",
+  "scanCompleteNotificationTitle": "Bulwrk - הסריקה הושלמה",
   "scanCompleteNotificationBody": "נמצאו {{itemCount}} פריטים ({{sizeMB}} MB) שניתן לנקות.",
   "scheduledScanName": "סריקה מתוזמנת"
 }

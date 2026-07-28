@@ -272,7 +272,7 @@ export function Sidebar() {
           className="absolute left-5 top-5 h-8 w-8 rounded-xl opacity-25 blur-xl"
           style={{ background: 'var(--accent)' }}
         />
-        <img src={logoSrc} alt="Kudu" className="relative h-8 w-8 shrink-0 rounded-xl" />
+        <img src={logoSrc} alt="Bulwrk" className="relative h-8 w-8 shrink-0 rounded-xl" />
         <div>
           <div className="text-[13px] font-semibold text-white">{t('appName')}</div>
           <div className="text-[9px] font-medium tracking-wide" style={{ color: 'var(--text-dim)' }}>

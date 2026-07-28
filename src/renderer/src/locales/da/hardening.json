@@ -34,7 +34,7 @@
     "unprotectedBadge": "{{count}} ubeskyttet",
     "protectAllCategoryButton": "Beskyt alle",
     "adminBadge": "Admin",
-    "adminWarning": "Nogle indstillinger kræver administratorrettigheder for at kunne ændres. Kør Kudu som administrator for fuld beskyttelse.",
+    "adminWarning": "Nogle indstillinger kræver administratorrettigheder for at kunne ændres. Kør Bulwrk som administrator for fuld beskyttelse.",
     "scanFailed": "Privatlivsscanning mislykkedes",
     "applyFailed": "Kunne ikke anvende privatlivsindstillinger",
     "applyFailedDescription": "Prøv at køre som administrator",

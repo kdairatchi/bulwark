@@ -34,7 +34,7 @@
     "unprotectedBadge": "{{count}} korunmuyor",
     "protectAllCategoryButton": "Tümünü Koru",
     "adminBadge": "Yönetici",
-    "adminWarning": "Bazı ayarların değiştirilmesi için yönetici ayrıcalıkları gerekir. Tam koruma için Kudu'yu yönetici olarak çalıştırın.",
+    "adminWarning": "Bazı ayarların değiştirilmesi için yönetici ayrıcalıkları gerekir. Tam koruma için Bulwrk'yu yönetici olarak çalıştırın.",
     "scanFailed": "Gizlilik taraması başarısız oldu",
     "applyFailed": "Gizlilik ayarları uygulanamadı",
     "applyFailedDescription": "Yönetici olarak çalıştırmayı deneyin",

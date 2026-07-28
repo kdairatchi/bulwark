@@ -34,7 +34,7 @@
     "unprotectedBadge": "{{count}} 件が未保護",
     "protectAllCategoryButton": "すべて保護",
     "adminBadge": "管理者",
-    "adminWarning": "一部の設定を変更するには管理者権限が必要です。完全に保護するには、Kudu を管理者として実行してください。",
+    "adminWarning": "一部の設定を変更するには管理者権限が必要です。完全に保護するには、Bulwrk を管理者として実行してください。",
     "scanFailed": "プライバシー スキャンに失敗しました",
     "applyFailed": "プライバシー設定の適用に失敗しました",
     "applyFailedDescription": "管理者として実行してみてください",

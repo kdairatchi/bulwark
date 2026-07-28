@@ -3,7 +3,7 @@
   "pageDescription": "Pemantauan real-time koneksi jaringan terhadap daftar ancaman yang diketahui.",
   "cloudNotConfigured": {
     "title": "Cloud belum dikonfigurasi",
-    "description": "Tautkan perangkat Anda ke Kudu Cloud di Pengaturan untuk mengaktifkan pemantauan ancaman. Daftar hitam ancaman disediakan oleh layanan cloud."
+    "description": "Tautkan perangkat Anda ke Bulwrk Cloud di Pengaturan untuk mengaktifkan pemantauan ancaman. Daftar hitam ancaman disediakan oleh layanan cloud."
   },
   "loading": "Memuat...",
   "inactive": {

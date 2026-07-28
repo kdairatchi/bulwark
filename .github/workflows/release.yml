@@ -131,9 +131,9 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           $version = "${{ steps.version.outputs.version }}"
-          $url = "https://github.com/kdairatchi/bulwark/releases/download/v$version/Bulwark-Setup-$version.exe"
-          Invoke-WebRequest -Uri $url -OutFile "Bulwark-Setup-$version.exe"
-          $hash = (Get-FileHash "Bulwark-Setup-$version.exe" -Algorithm SHA256).Hash
+          $url = "https://github.com/kdairatchi/bulwark/releases/download/v$version/Bulwrk-Setup-$version.exe"
+          Invoke-WebRequest -Uri $url -OutFile "Bulwrk-Setup-$version.exe"
+          $hash = (Get-FileHash "Bulwrk-Setup-$version.exe" -Algorithm SHA256).Hash
           echo "CHECKSUM=$hash" >> $env:GITHUB_ENV
 
       - name: Update choco package files
@@ -154,7 +154,7 @@ jobs:
         shell: pwsh
         run: |
           choco pack choco/kudu.nuspec --out .
-          choco push bulwark.${{ steps.version.outputs.version }}.nupkg --source "https://push.chocolatey.org/" --api-key "${{ secrets.CHOCOLATEY_API_KEY }}"
+          choco push bulwrk.${{ steps.version.outputs.version }}.nupkg --source "https://push.chocolatey.org/" --api-key "${{ secrets.CHOCOLATEY_API_KEY }}"
 
   virustotal-scan:
     needs: build
@@ -170,7 +170,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           version="${{ steps.version.outputs.version }}"
-          gh release download "v$version" --repo kdairatchi/bulwark --pattern "Bulwark-Setup-*.exe" --pattern "Bulwark-*.dmg" --pattern "Bulwark-*.AppImage" --pattern "Bulwark-*.deb" --dir artifacts/
+          gh release download "v$version" --repo kdairatchi/bulwark --pattern "Bulwrk-Setup-*.exe" --pattern "Bulwrk-*.dmg" --pattern "Bulwrk-*.AppImage" --pattern "Bulwrk-*.deb" --dir artifacts/
 
       - name: Scan with VirusTotal
         env:
@@ -247,8 +247,8 @@ jobs:
         shell: pwsh
         run: |
           $version = "${{ steps.version.outputs.version }}"
-          $url = "https://github.com/kdairatchi/bulwark/releases/download/v$version/Bulwark-Setup-$version.exe"
+          $url = "https://github.com/kdairatchi/bulwark/releases/download/v$version/Bulwrk-Setup-$version.exe"
           $releaseNotesUrl = "https://github.com/kdairatchi/bulwark/releases/tag/v$version"
           Invoke-WebRequest -Uri "https://aka.ms/wingetcreate/latest" -OutFile wingetcreate.exe
           # NOTE: replace with your own registered winget package identifier before publishing.
-          .\wingetcreate.exe update Kdairatchi.Bulwark --submit --token "${{ secrets.WINGET_GH_TOKEN }}" --urls "$url|x64|machine" --version $version --release-notes-url $releaseNotesUrl
+          .\wingetcreate.exe update Kdairatchi.Bulwrk --submit --token "${{ secrets.WINGET_GH_TOKEN }}" --urls "$url|x64|machine" --version $version --release-notes-url $releaseNotesUrl

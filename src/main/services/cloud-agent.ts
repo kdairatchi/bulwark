@@ -56,12 +56,12 @@ import { threatMonitor } from './threat-monitor'
 import { isLikelyFalsePositive, deduplicateCves } from './cve-filter'
 
 const execFileAsync = promisify(execFile)
-// Cloud control plane base URL. The upstream service
-// is intentionally NOT part of this fork — point this at your own control
-// plane. Overridable via env for local/self-hosted development. Cloud features
-// stay dormant until the user opts in with an API key, so the placeholder
-// default never runs unless explicitly configured.
-const DEFAULT_SERVER_URL = process.env.BULWARK_CLOUD_URL || 'https://cloud.invalid'
+// Cloud control plane base URL. Upstream legacy hosts are not part of this
+// product — set BULWRK_CLOUD_URL when you have a real endpoint. Public
+// marketing domain / support email stay open (not locked). Cloud features stay
+// dormant until the user opts in with an API key, so the placeholder default
+// never runs unless explicitly configured.
+const DEFAULT_SERVER_URL = process.env.BULWRK_CLOUD_URL || process.env.BULWARK_CLOUD_URL || 'https://cloud.invalid'
 
 /**
  * HTTP statuses that indicate a permanent failure where retrying is pointless:
@@ -522,7 +522,7 @@ class CloudAgentService {
     // required...", etc.) — prefer it verbatim and fall back per-status.
     if (err.serverMessage) return err.serverMessage
     if (err.status === 402) {
-      return 'Bulwark Cloud subscription required — add an active subscription to connect this device.'
+      return 'Bulwrk Cloud subscription required — add an active subscription to connect this device.'
     }
     // 401 / 403 — invalid or unauthorized API key
     return 'Access denied — your API key is invalid or no longer authorized. Re-link this device.'
@@ -1417,7 +1417,7 @@ class CloudAgentService {
         if (connCount > 0) parts.push(`${connCount} suspicious connection${connCount > 1 ? 's' : ''}`)
         if (dnsCount > 0) parts.push(`${dnsCount} suspicious DNS entr${dnsCount > 1 ? 'ies' : 'y'}`)
         new Notification({
-          title: 'Bulwark - Threat Detected',
+          title: 'Bulwrk - Threat Detected',
           body: `Detected ${parts.join(' and ')}.`,
           silent: false,
         }).show()

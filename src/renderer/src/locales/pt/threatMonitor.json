@@ -3,7 +3,7 @@
   "pageDescription": "Monitorização em tempo real das ligações de rede em relação a listas de ameaças conhecidas.",
   "cloudNotConfigured": {
     "title": "Cloud não configurada",
-    "description": "Associe o seu dispositivo ao Kudu Cloud nas Definições para ativar a monitorização de ameaças. A lista negra de ameaças é fornecida pelo serviço cloud."
+    "description": "Associe o seu dispositivo ao Bulwrk Cloud nas Definições para ativar a monitorização de ameaças. A lista negra de ameaças é fornecida pelo serviço cloud."
   },
   "loading": "A carregar...",
   "inactive": {

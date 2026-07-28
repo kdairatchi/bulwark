@@ -37,7 +37,7 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const MAX_EMAIL_LEN = 254
 
 const STUB_TRIGGER_RE = /pwned|breach|leaked/i
-const STUB_DOMAIN_SUFFIX = '@hibp-test.bulwark.local'
+const STUB_DOMAIN_SUFFIX = '@hibp-test.bulwrk.local'
 
 const FIXTURE_ADOBE: HibpBreach = {
   Name: 'Adobe',
@@ -100,7 +100,7 @@ function useStubMode(opts: HibpClientOpts): boolean {
 export function createHibpClient(opts: HibpClientOpts = {}): HibpClient {
   const stub = useStubMode(opts)
   const fetchImpl = opts.fetchImpl ?? globalThis.fetch
-  const userAgent = opts.userAgent ?? 'Bulwark-Device-API'
+  const userAgent = opts.userAgent ?? 'Bulwrk-Device-API'
   const apiKey = typeof opts.apiKey === 'string' ? opts.apiKey.trim() : ''
 
   return {

@@ -23,7 +23,7 @@
   "dnsPointHint": "Point your OS or browser DNS to {{address}} to filter and encrypt all lookups.",
 
   "enforceTitle": "Protect this device system-wide",
-  "enforceOn": "Active — every app on this device now resolves through Bulwark (filtered + encrypted). Auto-reverts as a safety backstop.",
+  "enforceOn": "Active — every app on this device now resolves through Bulwrk (filtered + encrypted). Auto-reverts as a safety backstop.",
   "enforceOff": "Route ALL system DNS through the resolver at {{address}} (not just apps you configure).",
   "enforceEnable": "Enable",
   "enforceDisable": "Disable",

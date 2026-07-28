@@ -34,7 +34,7 @@
     "unprotectedBadge": "{{count}} sin proteger",
     "protectAllCategoryButton": "Proteger todo",
     "adminBadge": "Admin",
-    "adminWarning": "Algunas configuraciones requieren privilegios de administrador para modificarse. Ejecute Kudu como administrador para obtener protección completa.",
+    "adminWarning": "Algunas configuraciones requieren privilegios de administrador para modificarse. Ejecute Bulwrk como administrador para obtener protección completa.",
     "scanFailed": "Error en el análisis de privacidad",
     "applyFailed": "No se pudo aplicar la configuración de privacidad",
     "applyFailedDescription": "Intente ejecutar como administrador",

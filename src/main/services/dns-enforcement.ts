@@ -26,15 +26,15 @@ const RESOLV_CONF = '/etc/resolv.conf'
 const LOOPBACK = '127.0.0.1'
 const AUTO_REVERT_MS = 10 * 60 * 1000 // 10 minutes safety backstop
 
-const BULWARK_MARKER = 'Written by Bulwark Network Guard'
+const BULWRK_MARKER = 'Written by Bulwrk Network Guard'
 
 export function buildResolvConf(nameserver: string): string {
-  return `# ${BULWARK_MARKER} (system-wide DNS enforcement).\n# Original file backed up; disabling protection restores it.\nnameserver ${nameserver}\n`
+  return `# ${BULWRK_MARKER} (system-wide DNS enforcement).\n# Original file backed up; disabling protection restores it.\nnameserver ${nameserver}\n`
 }
 
 /** True if resolv.conf was written by our enforcement (i.e. potentially stale). */
-export function isBulwarkManagedResolvConf(text: string): boolean {
-  return text.includes(BULWARK_MARKER)
+export function isBulwrkManagedResolvConf(text: string): boolean {
+  return text.includes(BULWRK_MARKER)
 }
 
 /** Pure: what enforcement would do on a given platform. Used by UI + tests. */
@@ -72,7 +72,7 @@ export function buildEnforcementPlan(platform: NodeJS.Platform, resolverPort: nu
 /** The privileged helper: binds :53 (UDP+TCP) and relays to the app resolver. */
 function helperSource(): string {
   return `'use strict'
-// Bulwark privileged DNS helper: binds 127.0.0.1:53 and forwards to the
+// Bulwrk privileged DNS helper: binds 127.0.0.1:53 and forwards to the
 // unprivileged app resolver. Minimal by design — no filtering logic here.
 const dgram = require('dgram'); const net = require('net')
 const PORT = parseInt(process.argv[2], 10) || 5353
@@ -142,7 +142,7 @@ export class DnsEnforcement {
     if (process.platform !== 'linux' || this.enforcing) return
     try {
       const current = readFileSync(RESOLV_CONF, 'utf-8')
-      if (!isBulwarkManagedResolvConf(current)) return
+      if (!isBulwrkManagedResolvConf(current)) return
       const backup = join(this.dataDir(), 'resolv.conf.backup')
       if (existsSync(backup)) {
         await execFileAsync('sudo', ['-n', 'cp', backup, RESOLV_CONF])

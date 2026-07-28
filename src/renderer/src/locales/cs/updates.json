@@ -118,7 +118,7 @@
     "allUpToDateTitle": "Všechny ovladače jsou aktuální",
     "allUpToDateDescription": "Nejsou k dispozici žádné aktualizace ani nebyly nalezeny žádné zastaralé balíčky.",
     "updatesDisabledTitle": "Aktualizace ovladačů jsou ve Windows vypnuté",
-    "updatesDisabledText": "Windows je nastaven tak, aby vylučoval ovladače z Windows Update, takže Kudu nekontroloval aktualizace ovladačů. Vyčištění zastaralých balíčků ovladačů je stále funkční. Aktualizace ovladačů můžete znovu povolit v nastavení instalace zařízení ve Windows nebo v Zásadách skupiny.",
+    "updatesDisabledText": "Windows je nastaven tak, aby vylučoval ovladače z Windows Update, takže Bulwrk nekontroloval aktualizace ovladačů. Vyčištění zastaralých balíčků ovladačů je stále funkční. Aktualizace ovladačů můžete znovu povolit v nastavení instalace zařízení ve Windows nebo v Zásadách skupiny.",
     "updatesAvailable": "Dostupné aktualizace ({{count}})",
     "stalePackages": "Zastaralé balíčky ({{count}})",
     "selectAll": "Vybrat vše",

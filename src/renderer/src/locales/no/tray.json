@@ -1,10 +1,10 @@
 {
-  "trayTooltip": "Kudu",
-  "openKudu": "Åpne Kudu",
+  "trayTooltip": "Bulwrk",
+  "openKudu": "Åpne Bulwrk",
   "quit": "Avslutt",
-  "scheduledTaskNotificationTitle": "Kudu - Planlagt oppgave",
+  "scheduledTaskNotificationTitle": "Bulwrk - Planlagt oppgave",
   "scheduledTaskNotificationBody": "Kjører \"{{name}}\"...",
-  "scanCompleteNotificationTitle": "Kudu - Skanning fullført",
+  "scanCompleteNotificationTitle": "Bulwrk - Skanning fullført",
   "scanCompleteNotificationBody": "Fant {{itemCount}} elementer ({{sizeMB}} MB) som kan ryddes.",
   "scheduledScanName": "Planlagt skanning"
 }

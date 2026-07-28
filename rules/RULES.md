@@ -1,6 +1,6 @@
 # Contributing Cleaner Rules
 
-Bulwark's cleaning targets are defined as JSON files in this directory. Adding support for a new app, game launcher, or cache location is as simple as editing a JSON file — no TypeScript or Electron knowledge required.
+Bulwrk's cleaning targets are defined as JSON files in this directory. Adding support for a new app, game launcher, or cache location is as simple as editing a JSON file — no TypeScript or Electron knowledge required.
 
 Browse the [rules catalog](CATALOG.md) to see what's already covered and what's missing.
 

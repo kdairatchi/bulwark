@@ -3,7 +3,7 @@
   "pageDescription": "Pemantauan masa nyata bagi sambungan rangkaian terhadap senarai ancaman yang diketahui.",
   "cloudNotConfigured": {
     "title": "Cloud belum dikonfigurasikan",
-    "description": "Pautkan peranti anda ke Kudu Cloud dalam Tetapan untuk mendayakan pemantauan ancaman. Senarai hitam ancaman disediakan oleh perkhidmatan cloud."
+    "description": "Pautkan peranti anda ke Bulwrk Cloud dalam Tetapan untuk mendayakan pemantauan ancaman. Senarai hitam ancaman disediakan oleh perkhidmatan cloud."
   },
   "loading": "Memuatkan...",
   "inactive": {

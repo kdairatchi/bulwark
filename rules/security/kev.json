@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
   "updatedAt": "2026-07-28T00:00:00Z",
-  "source": "CISA Known Exploited Vulnerabilities — curated offline subset for Bulwark name/version matching",
+  "source": "CISA Known Exploited Vulnerabilities — curated offline subset for Bulwrk name/version matching",
   "description": "Not the full KEV catalog. Used for basic CVE matching in RUN_VULNERABILITY_SCAN. Full OSV/NVD remains Phase 5.",
   "entries": [
     {

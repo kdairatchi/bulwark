@@ -1,4 +1,4 @@
-// Demo device client for the Bulwark device API.
+// Demo device client for the Bulwrk device API.
 import { fetchDashboardToken, dashboardAuthHeaders } from './dashboard-auth.mjs'
 // Simulates a desktop/TV agent: get a pairing code, generate a per-device
 // Ed25519 key pair, enroll, then send SIGNED heartbeat / inventory / findings.

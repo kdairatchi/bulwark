@@ -34,7 +34,7 @@
     "unprotectedBadge": "{{count}} niechronionych",
     "protectAllCategoryButton": "Chroń wszystko",
     "adminBadge": "Admin",
-    "adminWarning": "Niektóre ustawienia wymagają uprawnień administratora do modyfikacji. Uruchom Kudu jako administrator, aby zapewnić pełną ochronę.",
+    "adminWarning": "Niektóre ustawienia wymagają uprawnień administratora do modyfikacji. Uruchom Bulwrk jako administrator, aby zapewnić pełną ochronę.",
     "scanFailed": "Skanowanie prywatności nie powiodło się",
     "applyFailed": "Nie udało się zastosować ustawień prywatności",
     "applyFailedDescription": "Spróbuj uruchomić jako administrator",

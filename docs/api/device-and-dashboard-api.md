@@ -1,4 +1,4 @@
-# API Design — Bulwark Control Plane
+# API Design — Bulwrk Control Plane
 
 > **Status: device API + secure remote commands implemented (reference service).**
 > A dependency-free Node/TypeScript reference implementation lives in
@@ -84,8 +84,8 @@ Account-scoped monitors (no multi-tenant yet) backed by Have I Been Pwned.
 
 | Mode | When | Behavior |
 |------|------|----------|
-| **Stub** | No `HIBP_API_KEY`, or `HIBP_STUB=1`/`true` | Emails matching `/pwned\|breach\|leaked/i` or ending `@hibp-test.bulwark.local` return Adobe/LinkedIn-style fixtures; others return `[]` |
-| **Live** | `HIBP_API_KEY` set (and stub not forced) | `GET https://haveibeenpwned.com/api/v3/breachedaccount/{email}?truncateResponse=false` with `hibp-api-key` + `user-agent: Bulwark-Device-API`. 404 → no breaches. Network errors soft-fail. |
+| **Stub** | No `HIBP_API_KEY`, or `HIBP_STUB=1`/`true` | Emails matching `/pwned\|breach\|leaked/i` or ending `@hibp-test.bulwrk.local` return Adobe/LinkedIn-style fixtures; others return `[]` |
+| **Live** | `HIBP_API_KEY` set (and stub not forced) | `GET https://haveibeenpwned.com/api/v3/breachedaccount/{email}?truncateResponse=false` with `hibp-api-key` + `user-agent: Bulwrk-Device-API`. 404 → no breaches. Network errors soft-fail. |
 
 Response shape matches desktop `BreachMonitorResult`: `{ emails: [{ email, lastCheckedAt, fresh, monitoringPaused, breaches: [{ id, name, title, domain, breachDate, dataClasses, pwnCount, isVerified, isSensitive, acknowledgedAt }] }], limit, usage }`. Limit is **10** monitors. `fresh` is true when `lastCheckedAt` is within 24h.
 
@@ -148,7 +148,7 @@ APPLY_POLICY
 | Command | Behavior |
 |---------|----------|
 | `QUARANTINE_FILE` | Moves `path` / `paths[]` into `filesDir/quarantine` when under app-scoped roots (`filesDir`, `cacheDir`, `externalFilesDir`) or readable public Downloads. Rejects path escapes; honest failures for missing/permission errors. |
-| `RESTART_AGENT` | Returns `{ ok, scheduled: true }` immediately, then cancels/reschedules the unique periodic `AgentWorker` and enqueues a one-shot tick (`bulwark-device-agent-now`). Does **not** kill DnsGuard VPN or call `System.exit`. |
+| `RESTART_AGENT` | Returns `{ ok, scheduled: true }` immediately, then cancels/reschedules the unique periodic `AgentWorker` and enqueues a one-shot tick (`bulwrk-device-agent-now`). Does **not** kill DnsGuard VPN or call `System.exit`. |
 | `BLOCK_DOMAIN` / `ISOLATE_DEVICE` / `CLEAR_ISOLATION` / `APPLY_POLICY` / `UPDATE_THREAT_FEEDS` / inventory & scans | Enforced in `DeviceAgentService` (DNS Guard VpnService + blocklist / PackageManager posture). JVM demo stubs remain in `CommandExecutor.defaultExecute` when no Android `Context` is available. |
 
 **Not allowed:** arbitrary shell / PowerShell / remote-exec (`RUN_SHELL` is rejected

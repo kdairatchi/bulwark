@@ -14,13 +14,13 @@
         android:required="false" />
 
     <application
-        android:name=".BulwarkApp"
+        android:name=".BulwrkApp"
         android:allowBackup="false"
         android:banner="@drawable/banner"
         android:icon="@drawable/ic_launcher"
         android:label="@string/app_name"
         android:supportsRtl="true"
-        android:theme="@style/Theme.BulwarkTv"
+        android:theme="@style/Theme.BulwrkTv"
         android:usesCleartextTraffic="true">
 
         <activity

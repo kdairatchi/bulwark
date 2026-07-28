@@ -1,5 +1,5 @@
 /**
- * Desktop agent for the Bulwark device API: pairing enrollment, heartbeat,
+ * Desktop agent for the Bulwrk device API: pairing enrollment, heartbeat,
  * and secure remote-command poll → verify → execute → report.
  *
  * Parallel to (not inside) the legacy Pusher/API-key cloud-agent.
@@ -293,7 +293,7 @@ export class DeviceCommandAgent {
       return { success: false, error: 'Invalid pairing code' }
     }
     const baseUrl = (input.baseUrl?.trim() || DEFAULT_BASE_URL).replace(/\/+$/, '')
-    const name = (input.name?.trim() || hostname() || 'Bulwark Device').slice(0, 80)
+    const name = (input.name?.trim() || hostname() || 'Bulwrk Device').slice(0, 80)
     const client = new DeviceApiClient({ baseUrl, fetchImpl: this.fetchImpl })
     try {
       const keys = generateDeviceKeyPair()

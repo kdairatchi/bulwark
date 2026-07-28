@@ -34,7 +34,7 @@
     "unprotectedBadge": "{{count}} belum terlindungi",
     "protectAllCategoryButton": "Lindungi Semua",
     "adminBadge": "Admin",
-    "adminWarning": "Beberapa pengaturan memerlukan hak administrator untuk diubah. Jalankan Kudu sebagai administrator untuk perlindungan penuh.",
+    "adminWarning": "Beberapa pengaturan memerlukan hak administrator untuk diubah. Jalankan Bulwrk sebagai administrator untuk perlindungan penuh.",
     "scanFailed": "Pemindaian privasi gagal",
     "applyFailed": "Gagal menerapkan pengaturan privasi",
     "applyFailedDescription": "Coba jalankan sebagai administrator",

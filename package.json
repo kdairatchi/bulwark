@@ -1,7 +1,7 @@
 {
-  "name": "bulwark",
+  "name": "bulwrk",
   "version": "1.47.0",
-  "description": "Bulwark (temporary internal codename; forked from Kudu) — a family-focused device security platform that protects Windows, macOS, and Linux endpoints from malware, vulnerable software, malicious traffic, and privacy risks.",
+  "description": "Bulwrk — a family-focused device security platform that protects Windows, macOS, and Linux endpoints from malware, vulnerable software, malicious traffic, and privacy risks. (Forked from Kudu; public domain/email still open.)",
   "main": "./out/main/index.js",
   "scripts": {
     "dev": "electron-vite dev",
@@ -39,8 +39,8 @@
     "linux"
   ],
   "author": {
-    "name": "Bulwark Contributors",
-    "email": "bulwark@users.noreply.github.com"
+    "name": "Bulwrk Contributors",
+    "email": "bulwrk@users.noreply.github.com"
   },
   "license": "MIT",
   "repository": {

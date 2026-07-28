@@ -1,15 +1,15 @@
-# Product Vision — Bulwark
+# Product Vision — Bulwrk
 
-> **Codename notice.** `Bulwark` is a **temporary internal codename**, not a final,
-> trademark-cleared brand. Do not lock product IDs, signing identities, or public
-> URLs to a final name until it passes the checks in
-> [Naming & trademark process](#naming--trademark-process).
+> **Brand.** **Bulwrk** is the permanent product name.
+> **Still open:** public marketing domain and support email — do not lock those
+> until chosen. Cloud hosts stay env-configured; defaults are non-resolving
+> placeholders.
 
 ## The pitch
 
 **Protect every device in your home — without needing to be a cybersecurity expert.**
 
-Bulwark is a **family-focused device security platform** that protects Windows,
+Bulwrk is a **family-focused device security platform** that protects Windows,
 macOS, Linux, Android phones/tablets, Android TV boxes, and home networks from
 malware, unsafe apps, vulnerable software, malicious traffic, and privacy risks.
 
@@ -38,6 +38,7 @@ Desktop Agent          Android Agent           Network Sensor          Cloud Con
                                                └── Traffic risk        ├── Reports
                                                    analysis            └── Remote actions
 ```
+
 
 ## Principles (non-negotiable)
 
@@ -71,9 +72,18 @@ threat intelligence are the paid service.
 
 MVP scope and explicit non-goals live in [`ROADMAP.md`](../../ROADMAP.md).
 
-## Naming & trademark process
+## Naming, domain & email
 
-`Bulwark` is a working codename. Before adopting any final brand (or committing it
-to package IDs / signing identities / URLs), run: USPTO search, GitHub search, npm
-search, App Store + Google Play search, domain search, company-registry search, and
-review with trademark counsel.
+**Product name:** Bulwrk (permanent).
+
+**Still open:** public marketing domain and support email. Do not invent or ship a
+locked `bulwrk.com` / `support@…` until those are chosen. Cloud control-plane hosts
+remain env-configured (`BULWRK_CLOUD_URL` / `VITE_BULWRK_CLOUD_URL`) with
+non-resolving placeholders by default.
+
+**Package IDs already in use:** `com.bulwrk.app` (desktop), `com.bulwrk.tv`
+(Android TV). Prefer keeping these stable. Store signing may proceed under those
+IDs; public listing copy should say Bulwrk.
+
+Optional hygiene before a public launch: USPTO / store / domain searches for
+conflicts on the chosen *domain and email*, plus counsel review.

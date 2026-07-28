@@ -118,7 +118,7 @@
     "allUpToDateTitle": "すべてのドライバーは最新の状態です",
     "allUpToDateDescription": "利用可能な更新はなく、古いパッケージも見つかりませんでした。",
     "updatesDisabledTitle": "Windows でドライバー更新がオフになっています",
-    "updatesDisabledText": "Windows が Windows Update からドライバーを除外する設定になっているため、Kudu はドライバー更新を確認しませんでした。古いドライバー パッケージのクリーンアップは引き続き利用できます。Windows のデバイスのインストール設定またはグループ ポリシーでドライバー更新を再度有効にできます。",
+    "updatesDisabledText": "Windows が Windows Update からドライバーを除外する設定になっているため、Bulwrk はドライバー更新を確認しませんでした。古いドライバー パッケージのクリーンアップは引き続き利用できます。Windows のデバイスのインストール設定またはグループ ポリシーでドライバー更新を再度有効にできます。",
     "updatesAvailable": "利用可能な更新（{{count}}）",
     "stalePackages": "古いパッケージ（{{count}}）",
     "selectAll": "すべて選択",

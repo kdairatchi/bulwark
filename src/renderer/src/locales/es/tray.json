@@ -1,10 +1,10 @@
 {
-  "trayTooltip": "Kudu",
-  "openKudu": "Abrir Kudu",
+  "trayTooltip": "Bulwrk",
+  "openKudu": "Abrir Bulwrk",
   "quit": "Salir",
-  "scheduledTaskNotificationTitle": "Kudu - Tarea programada",
+  "scheduledTaskNotificationTitle": "Bulwrk - Tarea programada",
   "scheduledTaskNotificationBody": "Ejecutando \"{{name}}\"...",
-  "scanCompleteNotificationTitle": "Kudu - Análisis completado",
+  "scanCompleteNotificationTitle": "Bulwrk - Análisis completado",
   "scanCompleteNotificationBody": "Se encontraron {{itemCount}} elementos ({{sizeMB}} MB) que se pueden limpiar.",
   "scheduledScanName": "Análisis programado"
 }

@@ -74,7 +74,7 @@ function resolveCacheDir(deps: KevFeedDeps): string {
     const { app } = require('electron') as { app: { getPath: (n: string) => string } }
     return join(app.getPath('userData'), 'kev-feed')
   } catch {
-    return join(tmpdir(), 'bulwark-kev-feed')
+    return join(tmpdir(), 'bulwrk-kev-feed')
   }
 }
 

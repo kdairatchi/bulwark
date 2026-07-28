@@ -18,6 +18,7 @@ import { toast } from 'sonner'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { cn } from '@/lib/utils'
+import { openPublicCloudDashboard } from '@/lib/cloud-dashboard-url'
 import { useBreachStore } from '@/stores/breach-store'
 import { useSettingsStore } from '@/stores/settings-store'
 import type { BreachEntry } from '@shared/types'
@@ -205,7 +206,13 @@ export function BreachMonitorPage() {
           description={t('emptyState.upgradeRequiredDesc')}
           action={
             <button
-              onClick={() => window.open('https://cloud.invalid/organisation/billing', '_blank')}
+onClick={() => {
+                openPublicCloudDashboard('/organisation/billing', () => {
+                  toast.message(t('cloudDashboardNotConfigured', {
+                    defaultValue: 'No public cloud dashboard URL is configured yet. Domain and billing host stay open.',
+                  }))
+                })
+              }}
               className="rounded-lg px-5 py-2.5 text-[13px] font-medium text-black transition-colors"
               style={{ background: 'linear-gradient(135deg, #fbbf24, #f59e0b)' }}
             >

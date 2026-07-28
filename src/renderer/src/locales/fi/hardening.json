@@ -34,7 +34,7 @@
     "unprotectedBadge": "{{count}} suojaamatta",
     "protectAllCategoryButton": "Suojaa kaikki",
     "adminBadge": "Järjestelmänvalvoja",
-    "adminWarning": "Joidenkin asetusten muuttaminen vaatii järjestelmänvalvojan oikeudet. Suorita Kudu järjestelmänvalvojana saadaksesi täyden suojauksen.",
+    "adminWarning": "Joidenkin asetusten muuttaminen vaatii järjestelmänvalvojan oikeudet. Suorita Bulwrk järjestelmänvalvojana saadaksesi täyden suojauksen.",
     "scanFailed": "Tietosuojatarkistus epäonnistui",
     "applyFailed": "Tietosuoja-asetusten käyttöönotto epäonnistui",
     "applyFailedDescription": "Yritä suorittaa järjestelmänvalvojana",

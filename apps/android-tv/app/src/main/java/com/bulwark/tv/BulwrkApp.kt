@@ -6,7 +6,7 @@ import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import java.util.concurrent.TimeUnit
 
-class BulwarkApp : Application() {
+class BulwrkApp : Application() {
     override fun onCreate() {
         super.onCreate()
         scheduleAgentWork()

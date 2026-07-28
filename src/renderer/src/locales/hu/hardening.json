@@ -34,7 +34,7 @@
     "unprotectedBadge": "{{count}} nincs védve",
     "protectAllCategoryButton": "Összes védelme",
     "adminBadge": "Rendszergazda",
-    "adminWarning": "Egyes beállítások módosításához rendszergazdai jogosultság szükséges. A teljes védelemhez futtassa a Kudu alkalmazást rendszergazdaként.",
+    "adminWarning": "Egyes beállítások módosításához rendszergazdai jogosultság szükséges. A teljes védelemhez futtassa a Bulwrk alkalmazást rendszergazdaként.",
     "scanFailed": "Az adatvédelmi vizsgálat sikertelen",
     "applyFailed": "Az adatvédelmi beállítások alkalmazása sikertelen",
     "applyFailedDescription": "Próbálja rendszergazdaként futtatni",

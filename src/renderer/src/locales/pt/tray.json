@@ -1,10 +1,10 @@
 {
-  "trayTooltip": "Kudu",
-  "openKudu": "Abrir Kudu",
+  "trayTooltip": "Bulwrk",
+  "openKudu": "Abrir Bulwrk",
   "quit": "Sair",
-  "scheduledTaskNotificationTitle": "Kudu - Tarefa Agendada",
+  "scheduledTaskNotificationTitle": "Bulwrk - Tarefa Agendada",
   "scheduledTaskNotificationBody": "A executar \"{{name}}\"...",
-  "scanCompleteNotificationTitle": "Kudu - Verificação Concluída",
+  "scanCompleteNotificationTitle": "Bulwrk - Verificação Concluída",
   "scanCompleteNotificationBody": "Foram encontrados {{itemCount}} itens ({{sizeMB}} MB) que podem ser limpos.",
   "scheduledScanName": "Verificação Agendada"
 }

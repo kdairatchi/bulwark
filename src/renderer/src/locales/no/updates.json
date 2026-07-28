@@ -118,7 +118,7 @@
     "allUpToDateTitle": "Alle drivere er oppdatert",
     "allUpToDateDescription": "Ingen oppdateringer er tilgjengelige, og ingen utdaterte pakker ble funnet.",
     "updatesDisabledTitle": "Driveroppdateringer er slått av i Windows",
-    "updatesDisabledText": "Windows er satt til å utelate drivere fra Windows Update, så Kudu kontrollerte ikke driveroppdateringer. Opprydding av utdaterte driverpakker fungerer fortsatt. Du kan aktivere driveroppdateringer på nytt i Windows-innstillingene for enhetsinstallasjon eller i Gruppepolicy.",
+    "updatesDisabledText": "Windows er satt til å utelate drivere fra Windows Update, så Bulwrk kontrollerte ikke driveroppdateringer. Opprydding av utdaterte driverpakker fungerer fortsatt. Du kan aktivere driveroppdateringer på nytt i Windows-innstillingene for enhetsinstallasjon eller i Gruppepolicy.",
     "updatesAvailable": "Tilgjengelige oppdateringer ({{count}})",
     "stalePackages": "Utdaterte pakker ({{count}})",
     "selectAll": "Merk alle",

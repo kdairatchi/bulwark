@@ -1,5 +1,5 @@
 /**
- * Persist the Bulwark device-API identity (Ed25519 key pair + device id).
+ * Persist the Bulwrk device-API identity (Ed25519 key pair + device id).
  * Private key is encrypted at rest with Electron safeStorage when available
  * (same pattern as the legacy cloud API key). Separate from settings.cloud.apiKey.
  */
