@@ -26,15 +26,15 @@ const DEFAULT_BASE_URL = process.env.DEVICE_API_URL || 'http://127.0.0.1:8787'
 const DEFAULT_POLL_MS = 15_000
 const MAX_SEEN_NONCES = 500
 
-/** Pairing codes are human-enterable like `K7Q2-9F3M` (dash optional on input). */
+/** Pairing codes are human-enterable like `K7Q2-9F3M` (hex; dash optional on input). */
 export function normalizePairingCode(raw: string): string {
-  const cleaned = raw.trim().toUpperCase().replace(/[^A-Z0-9]/g, '')
+  const cleaned = raw.trim().toUpperCase().replace(/[^A-F0-9]/g, '')
   if (cleaned.length === 8) return `${cleaned.slice(0, 4)}-${cleaned.slice(4)}`
-  return raw.trim().toUpperCase()
+  return ''
 }
 
 export function isValidPairingCode(code: string): boolean {
-  return /^[A-Z0-9]{4}-[A-Z0-9]{4}$/.test(normalizePairingCode(code))
+  return /^[A-F0-9]{4}-[A-F0-9]{4}$/.test(normalizePairingCode(code))
 }
 
 export interface DeviceAgentStatus {
