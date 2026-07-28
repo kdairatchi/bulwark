@@ -187,6 +187,7 @@
   "parentNever": "never",
   "parentApps": "Apps",
   "parentFindings": "Findings",
+  "parentFindingsFilterAll": "All",
   "parentScore": "Score",
   "parentMarkFalsePositive": "False positive",
   "parentMarkAcceptedRisk": "Accept risk",

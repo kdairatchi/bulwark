@@ -166,6 +166,45 @@ describe('device-api telemetry endpoints', () => {
     expect(reviewFinding(store, 'finding_nope', { status: 'accepted_risk' }).status).toBe(404)
   })
 
+  it('persists category, dedupes open findings, and weights KEV in the score', () => {
+    const store = freshStore()
+    const { deviceId } = enrolledDevice(store)
+    submitFindings(store, deviceId, {
+      findings: [
+        { level: 'likely_affected', subjectName: 'CVE-2023-38545', reason: 'kev_version_match:curl@7.88.1', category: 'kev' },
+        { level: 'potential_match', subjectName: 'Mystery', reason: 'unknown_publisher', category: 'publisher' },
+      ],
+    })
+    const listed1 = listFindings(store, deviceId).body as { findings: Array<{ category: string | null; subjectName: string }>; count: number }
+    expect(listed1.count).toBe(2)
+    expect(listed1.findings.find((f) => f.subjectName === 'CVE-2023-38545')?.category).toBe('kev')
+
+    const scoreWithKev = (getDevice(store, deviceId).body as { securityScore: number }).securityScore
+
+    // Re-submit same KEV finding with refreshed reason — should update, not duplicate.
+    submitFindings(store, deviceId, {
+      findings: [
+        { level: 'likely_affected', subjectName: 'CVE-2023-38545', reason: 'kev_version_match:curl@7.88.1:epss=0.78', category: 'kev' },
+      ],
+    })
+    const listed2 = listFindings(store, deviceId).body as { findings: Array<{ reason: string; category: string | null }>; count: number }
+    expect(listed2.count).toBe(2)
+    expect(listed2.findings.filter((f) => f.category === 'kev')).toHaveLength(1)
+    expect(listed2.findings.find((f) => f.category === 'kev')?.reason).toContain('epss=')
+
+    // Publisher-only device should score higher than one with a KEV hit of same level.
+    const store2 = freshStore()
+    const { deviceId: id2 } = enrolledDevice(store2)
+    submitFindings(store2, id2, {
+      findings: [
+        { level: 'likely_affected', subjectName: 'Odd App', reason: 'suspicious_app_name', category: 'publisher' },
+        { level: 'potential_match', subjectName: 'Mystery', reason: 'unknown_publisher', category: 'publisher' },
+      ],
+    })
+    const scorePublisherOnly = (getDevice(store2, id2).body as { securityScore: number }).securityScore
+    expect(scoreWithKev).toBeLessThan(scorePublisherOnly)
+  })
+
   it('does not leak the device public key in detail responses', () => {
     const store = freshStore()
     const { deviceId } = enrolledDevice(store)

@@ -170,11 +170,16 @@ Shared implementation: `src/cloud/device-api/commands.ts`
 `confirmed_affected · likely_affected · potential_match · not_exploitable ·
 fixed · accepted_risk · false_positive · unknown`.
 
+Findings may include an optional `category` (`kev`, `osv`, `technique`, `lolbin`,
+`publisher`, …). Open findings are **deduped** on `(deviceId, subjectName, category)`
+— re-submits refresh `level`/`reason` instead of creating duplicates.
+
 `POST /v1/findings/{id}/review` (Bearer) body: `{ "status": "false_positive"|"accepted_risk"|"fixed"|"not_exploitable"|…, "note"?: "…" }`.
 
 `GET /v1/devices` includes `securityScore` (0–100) and `openFindingsCount`. Resolved
 statuses (`false_positive`, `accepted_risk`, `fixed`, `not_exploitable`) do not
-penalize the score.
+penalize the score. Open findings are **category-weighted** (KEV/OSV/ransomware
+penalize more than publisher noise).
 
 ## Fleet hierarchy
 

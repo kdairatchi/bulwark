@@ -283,6 +283,7 @@ export function submitFindings(store: DeviceStore, deviceId: string, input: unkn
       subjectName: typeof r.subjectName === 'string' ? r.subjectName : 'unknown',
       reason: typeof r.reason === 'string' ? r.reason : '',
       status: typeof r.status === 'string' ? r.status : undefined,
+      category: typeof r.category === 'string' ? r.category : null,
     }
   })
   const accepted = store.addFindings(deviceId, findings)

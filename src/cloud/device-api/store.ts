@@ -68,10 +68,47 @@ export interface StoredFinding {
   level: string
   subjectName: string
   reason: string
+  /** Optional taxonomy from agents (kev, osv, technique, lolbin, …). */
+  category: string | null
   createdAt: string
+  updatedAt: string | null
   status: StoredFindingStatus
   reviewedAt: string | null
   reviewNote: string | null
+}
+
+/** Sanitize finding category from agent payloads. */
+export function normalizeFindingCategory(raw: unknown): string | null {
+  if (typeof raw !== 'string') return null
+  const c = raw.trim().toLowerCase().replace(/[^a-z0-9._-]+/g, '').slice(0, 40)
+  return c || null
+}
+
+/**
+ * Level penalty (points deducted from 100), then scaled by category weight.
+ * KEV/OSV/ransomware hurt more than unknown-publisher noise.
+ */
+export function findingPenalty(finding: Pick<StoredFinding, 'level' | 'category' | 'reason'>): number {
+  const level = finding.level.toLowerCase()
+  let base = 8
+  if (level.includes('critical') || level.includes('likely') || level === 'dangerous') base = 25
+  else if (level.includes('high') || level.includes('confirmed')) base = 20
+  else if (level.includes('medium') || level.includes('potential')) base = 10
+  else if (level === 'safe' || level === 'low') base = 2
+
+  const cat = (finding.category || '').toLowerCase()
+  const reason = (finding.reason || '').toLowerCase()
+  let weight = 1
+  if (cat === 'kev' || cat === 'osv' || cat === 'cve') {
+    weight = reason.includes('ransomware') ? 1.6 : 1.35
+  } else if (cat === 'technique' || cat === 'vuln_heuristic' || cat === 'lolbin') {
+    weight = 1.15
+  } else if (cat === 'sideload' || cat === 'malware') {
+    weight = 1.2
+  } else if (cat === 'health' || cat === 'risk') {
+    weight = 0.85
+  }
+  return Math.round(base * weight)
 }
 
 export interface AuditEvent {
@@ -325,30 +362,69 @@ export class DeviceStore {
     this.log('inventory_received', `${deviceId} +${count}`)
   }
 
-  addFindings(deviceId: string, findings: Array<Omit<StoredFinding, 'id' | 'deviceId' | 'createdAt' | 'status' | 'reviewedAt' | 'reviewNote'> & {
+  addFindings(deviceId: string, findings: Array<Omit<StoredFinding, 'id' | 'deviceId' | 'createdAt' | 'updatedAt' | 'status' | 'reviewedAt' | 'reviewNote'> & {
     status?: string
+    category?: string | null
   }>): number {
     const d = this.devices.get(deviceId)
     if (!d) return 0
+    let accepted = 0
+    const nowIso = new Date(this.deps.now()).toISOString()
     for (const f of findings) {
       const status = typeof f.status === 'string' && isFindingStatus(f.status)
         ? f.status
         : (isFindingStatus(f.level) ? f.level : 'potential_match')
+      const category = normalizeFindingCategory(f.category)
+      const subjectName = f.subjectName
+      const reason = f.reason
+      const level = f.level
+
+      // Dedupe open findings by (subjectName, category) — refresh in place.
+      const openMatch = this.findings.find(
+        (x) =>
+          x.deviceId === deviceId
+          && !RESOLVED_FINDING_STATUSES.has(x.status)
+          && x.subjectName === subjectName
+          && (x.category || null) === category,
+      )
+      if (openMatch) {
+        openMatch.level = level
+        openMatch.reason = reason
+        openMatch.updatedAt = nowIso
+        // Keep existing status if it's a review-style open status; otherwise align with level.
+        if (!isFindingStatus(openMatch.status) || openMatch.status === 'unknown') {
+          openMatch.status = status
+        }
+        accepted++
+        continue
+      }
+
       this.findings.push({
         id: `finding_${this.deps.uuid()}`,
         deviceId,
-        level: f.level,
-        subjectName: f.subjectName,
-        reason: f.reason,
-        createdAt: new Date(this.deps.now()).toISOString(),
+        level,
+        subjectName,
+        reason,
+        category,
+        createdAt: nowIso,
+        updatedAt: null,
         status,
         reviewedAt: null,
         reviewNote: null,
       })
+      accepted++
     }
-    d.findingsCount += findings.length
-    this.log('findings_received', `${deviceId} +${findings.length}`)
-    return findings.length
+    d.findingsCount = this.findings.filter((f) => f.deviceId === deviceId).length
+    // Soft cap memory for the reference control plane.
+    const deviceFindings = this.findings.filter((f) => f.deviceId === deviceId)
+    if (deviceFindings.length > 500) {
+      const drop = deviceFindings.length - 500
+      const ids = new Set(deviceFindings.slice(0, drop).map((f) => f.id))
+      this.findings = this.findings.filter((f) => !ids.has(f.id))
+      d.findingsCount = this.findings.filter((f) => f.deviceId === deviceId).length
+    }
+    this.log('findings_received', `${deviceId} +${accepted}`)
+    return accepted
   }
 
   listFindings(deviceId?: string): StoredFinding[] {
@@ -382,18 +458,14 @@ export class DeviceStore {
   /**
    * 0–100 security score from open findings (100 = nothing needs attention).
    * Resolved reviews (false_positive / accepted_risk / fixed / not_exploitable) do not penalize.
+   * Category-aware: KEV/OSV/ransomware weigh more than publisher noise.
    */
   securityScore(deviceId: string): number {
     const open = this.openFindings(deviceId)
     if (open.length === 0) return 100
     let penalty = 0
     for (const f of open) {
-      const level = f.level.toLowerCase()
-      if (level.includes('critical') || level.includes('likely') || level === 'dangerous') penalty += 25
-      else if (level.includes('high') || level.includes('confirmed')) penalty += 20
-      else if (level.includes('medium') || level.includes('potential')) penalty += 10
-      else if (level === 'safe' || level === 'low') penalty += 2
-      else penalty += 8
+      penalty += findingPenalty(f)
     }
     return Math.max(0, Math.min(100, 100 - penalty))
   }

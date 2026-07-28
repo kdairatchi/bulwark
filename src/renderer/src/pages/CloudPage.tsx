@@ -487,7 +487,9 @@ type ParentFinding = {
   level: string
   subjectName: string
   reason: string
+  category?: string | null
   createdAt: string
+  updatedAt?: string | null
   status?: string
   reviewedAt?: string | null
   reviewNote?: string | null
@@ -510,6 +512,7 @@ function ParentControlPanel({
   const [blockedText, setBlockedText] = useState('')
   const [quarantinePath, setQuarantinePath] = useState('')
   const [vulnOsv, setVulnOsv] = useState(false)
+  const [findingCategoryFilter, setFindingCategoryFilter] = useState<string>('all')
   const [dnsGuard, setDnsGuard] = useState(false)
   const [busy, setBusy] = useState(false)
   const [dashboardToken, setDashboardToken] = useState('')
@@ -1063,8 +1066,30 @@ function ParentControlPanel({
         {findings.length === 0 ? (
           <p className="text-[12px]" style={{ color: 'var(--text-dim)' }}>{t('parentNoFindings')}</p>
         ) : (
+          <>
+            <div className="flex flex-wrap gap-1.5 mb-2">
+              {(['all', ...Array.from(new Set(findings.map((f) => f.category || 'uncategorized'))).sort()]).map((cat) => (
+                <button
+                  key={cat}
+                  type="button"
+                  onClick={() => setFindingCategoryFilter(cat)}
+                  className="rounded-lg px-2 py-1 text-[10px] font-medium"
+                  style={{
+                    background: findingCategoryFilter === cat ? 'var(--accent)' : 'var(--bg-subtle)',
+                    color: findingCategoryFilter === cat ? 'var(--text-on-accent)' : 'var(--text-secondary)',
+                    border: '1px solid var(--border-medium)',
+                  }}
+                >
+                  {cat === 'all' ? t('parentFindingsFilterAll') : cat}
+                </button>
+              ))}
+            </div>
           <div className="max-h-52 overflow-y-auto space-y-1.5 mb-4">
-            {[...findings].reverse().slice(0, 40).map((f) => {
+            {[...findings]
+              .filter((f) => findingCategoryFilter === 'all' || (f.category || 'uncategorized') === findingCategoryFilter)
+              .reverse()
+              .slice(0, 40)
+              .map((f) => {
               const resolved = ['false_positive', 'accepted_risk', 'fixed', 'not_exploitable'].includes(f.status || '')
               return (
                 <div
@@ -1079,6 +1104,22 @@ function ParentControlPanel({
                 >
                   <div>
                     <span style={{ color: f.level.includes('likely') ? '#f87171' : '#fbbf24' }}>{f.level}</span>
+                    {f.category && (
+                      <>
+                        {' · '}
+                        <span
+                          className="rounded px-1"
+                          style={{
+                            background: f.category === 'kev' || f.category === 'osv'
+                              ? 'rgba(248,113,113,0.15)'
+                              : 'rgba(148,163,184,0.12)',
+                            color: f.category === 'kev' || f.category === 'osv' ? '#f87171' : 'var(--text-muted)',
+                          }}
+                        >
+                          {f.category}
+                        </span>
+                      </>
+                    )}
                     {' · '}
                     {f.subjectName}
                     {' · '}
@@ -1116,6 +1157,7 @@ function ParentControlPanel({
               )
             })}
           </div>
+          </>
         )}
       </div>
 

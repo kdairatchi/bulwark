@@ -51,7 +51,9 @@ export interface DashboardFinding {
   level: string
   subjectName: string
   reason: string
+  category?: string | null
   createdAt: string
+  updatedAt?: string | null
   status: string
   reviewedAt: string | null
   reviewNote: string | null
