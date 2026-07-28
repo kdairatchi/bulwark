@@ -38,6 +38,7 @@ jobs:
         run: npm run validate:beta-report -- docs/release/beta-report.template.json
 
       - name: Package unsigned beta artifact
+        run: npm run package:${{ matrix.target }} -- --publish never
         run: npm run package:${{ matrix.target }}
 
       - name: Upload beta artifacts
