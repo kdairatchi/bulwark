@@ -28,6 +28,9 @@ import {
 import { toast } from 'sonner'
 import { openPublicCloudDashboard } from '@/lib/cloud-dashboard-url'
 import { PageHeader } from '@/components/layout/PageHeader'
+import { FindingExplainPanel, FindingExpand } from '@/components/shared/FindingExplainPanel'
+import { FamilyPairingWizard } from '@/components/cloud/FamilyPairingWizard'
+import { explainFinding, familyStatusLabel } from '@/lib/finding-explain'
 import { cn } from '@/lib/utils'
 import { useSettingsStore } from '@/stores/settings-store'
 import { usePlatform } from '@/hooks/usePlatform'
@@ -503,6 +506,8 @@ type ParentFinding = {
   reason: string
   category?: string | null
   fixRecommendation?: string | null
+  confidence?: number | null
+  evidence?: string[]
   createdAt: string
   updatedAt?: string | null
   status?: string
@@ -534,7 +539,7 @@ type ParentMonitoredEmail = {
 function ParentControlPanel({
   t, baseUrl, onBaseUrlChange,
 }: {
-  t: (key: string) => string
+  t: (key: string, opts?: Record<string, unknown>) => string
   baseUrl: string
   onBaseUrlChange: (v: string) => void
 }) {
@@ -1207,7 +1212,13 @@ function ParentControlPanel({
           {t('parentFindings')}
         </h4>
         {findings.length === 0 ? (
-          <p className="text-[12px]" style={{ color: 'var(--text-dim)' }}>{t('parentNoFindings')}</p>
+          <div
+            className="rounded-xl px-4 py-6 text-center animate-fade-in"
+            style={{ background: 'var(--bg-subtle)', border: '1px solid var(--border-medium)' }}
+          >
+            <p className="text-[13px] font-medium text-zinc-300">{t('parentNoFindingsTitle')}</p>
+            <p className="mt-1 text-[12px]" style={{ color: 'var(--text-muted)' }}>{t('parentNoFindings')}</p>
+          </div>
         ) : (
           <>
             <div className="flex flex-wrap gap-1.5 mb-2">
@@ -1227,83 +1238,20 @@ function ParentControlPanel({
                 </button>
               ))}
             </div>
-          <div className="max-h-52 overflow-y-auto space-y-1.5 mb-4">
+          <div className="max-h-72 overflow-y-auto space-y-2 mb-4">
             {[...findings]
               .filter((f) => findingCategoryFilter === 'all' || (f.category || 'uncategorized') === findingCategoryFilter)
               .reverse()
               .slice(0, 40)
-              .map((f) => {
-              const resolved = ['false_positive', 'accepted_risk', 'fixed', 'not_exploitable'].includes(f.status || '')
-              return (
-                <div
+              .map((f) => (
+                <ParentFindingRow
                   key={f.id}
-                  className="rounded-lg px-3 py-2 text-[11px] font-mono"
-                  style={{
-                    background: 'var(--bg-subtle)',
-                    border: '1px solid var(--border-medium)',
-                    color: 'var(--text-secondary)',
-                    opacity: resolved ? 0.55 : 1,
-                  }}
-                >
-                  <div>
-                    <span style={{ color: f.level.includes('likely') ? '#f87171' : '#fbbf24' }}>{f.level}</span>
-                    {f.category && (
-                      <>
-                        {' · '}
-                        <span
-                          className="rounded px-1"
-                          style={{
-                            background: f.category === 'kev' || f.category === 'osv'
-                              ? 'rgba(248,113,113,0.15)'
-                              : 'rgba(148,163,184,0.12)',
-                            color: f.category === 'kev' || f.category === 'osv' ? '#f87171' : 'var(--text-muted)',
-                          }}
-                        >
-                          {f.category}
-                        </span>
-                      </>
-                    )}
-                    {' · '}
-                    {f.subjectName}
-                    {' · '}
-                    <span style={{ color: 'var(--text-dim)' }}>{f.reason}</span>
-                    {f.status && (
-                      <>
-                        {' · '}
-                        <span style={{ color: resolved ? '#4ade80' : 'var(--text-muted)' }}>{f.status}</span>
-                      </>
-                    )}
-                  </div>
-                  {f.fixRecommendation && (
-                    <div className="mt-1 text-[10px] font-sans" style={{ color: 'var(--text-muted)' }}>
-                      Fix: {f.fixRecommendation}
-                    </div>
-                  )}
-                  {!resolved && (
-                    <div className="flex flex-wrap gap-1.5 mt-1.5">
-                      <button
-                        type="button"
-                        disabled={busy}
-                        onClick={() => handleReviewFinding(f.id, 'false_positive')}
-                        className="rounded-lg px-2 py-1 text-[10px] font-sans font-medium disabled:opacity-40"
-                        style={{ background: 'var(--bg-elevated, var(--bg-subtle))', border: '1px solid var(--border-medium)', color: 'var(--text-secondary)' }}
-                      >
-                        {t('parentMarkFalsePositive')}
-                      </button>
-                      <button
-                        type="button"
-                        disabled={busy}
-                        onClick={() => handleReviewFinding(f.id, 'accepted_risk')}
-                        className="rounded-lg px-2 py-1 text-[10px] font-sans font-medium disabled:opacity-40"
-                        style={{ background: 'var(--bg-elevated, var(--bg-subtle))', border: '1px solid var(--border-medium)', color: 'var(--text-secondary)' }}
-                      >
-                        {t('parentMarkAcceptedRisk')}
-                      </button>
-                    </div>
-                  )}
-                </div>
-              )
-            })}
+                  finding={f}
+                  busy={busy}
+                  t={t}
+                  onReview={handleReviewFinding}
+                />
+              ))}
           </div>
           </>
         )}
@@ -1446,11 +1394,114 @@ function ParentControlPanel({
   )
 }
 
+function ParentFindingRow({
+  finding: f,
+  busy,
+  t,
+  onReview,
+}: {
+  finding: ParentFinding
+  busy: boolean
+  t: (key: string, opts?: Record<string, unknown>) => string
+  onReview: (id: string, status: 'false_positive' | 'accepted_risk') => void
+}) {
+  const [open, setOpen] = useState(false)
+  const resolved = ['false_positive', 'accepted_risk', 'fixed', 'not_exploitable'].includes(f.status || '')
+  const explained = explainFinding(f)
+  const accent = explained.familyLabel === 'dangerous' ? '#f87171'
+    : explained.familyLabel === 'needs_attention' ? '#fbbf24'
+      : '#4ade80'
+
+  return (
+    <div
+      className="rounded-xl overflow-hidden"
+      style={{
+        background: 'var(--bg-subtle)',
+        border: `1px solid ${open ? accent + '55' : 'var(--border-medium)'}`,
+        opacity: resolved ? 0.6 : 1,
+      }}
+    >
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="flex w-full items-start gap-2 px-3 py-2.5 text-left"
+      >
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-1.5 mb-0.5">
+            <span
+              className="rounded-full px-2 py-0.5 text-[10px] font-semibold"
+              style={{ color: accent, background: `${accent}1a`, border: `1px solid ${accent}40` }}
+            >
+              {familyStatusLabel(explained.familyLabel)}
+            </span>
+            {f.category && (
+              <span className="text-[10px] uppercase tracking-wide" style={{ color: 'var(--text-dim)' }}>
+                {f.category}
+              </span>
+            )}
+            {f.status && (
+              <span className="text-[10px]" style={{ color: resolved ? '#4ade80' : 'var(--text-muted)' }}>
+                {f.status}
+              </span>
+            )}
+          </div>
+          <div className="text-[12px] font-medium text-zinc-100 truncate">{f.subjectName}</div>
+          <div className="text-[11px] mt-0.5 line-clamp-1" style={{ color: 'var(--text-muted)' }}>
+            {explained.why[0]}
+          </div>
+        </div>
+        <span className="text-[11px] shrink-0 mt-1" style={{ color: 'var(--text-dim)' }}>
+          {open ? '−' : '+'}
+        </span>
+      </button>
+
+      <FindingExpand open={open}>
+        <div className="px-3 pb-3 border-t" style={{ borderColor: 'var(--border-medium)' }}>
+          <div className="pt-3">
+            <FindingExplainPanel
+              why={explained.why}
+              recommended={explained.recommended}
+              accent={accent}
+              whyTitle={t('parentFindingWhy')}
+              recommendedTitle={t('parentFindingRecommended')}
+              confidencePct={explained.confidencePct}
+              familyLabel={familyStatusLabel(explained.familyLabel)}
+              animate={false}
+            />
+          </div>
+          {!resolved && (
+            <div className="flex flex-wrap gap-1.5 mt-3">
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => onReview(f.id, 'false_positive')}
+                className="rounded-lg px-2.5 py-1.5 text-[11px] font-medium disabled:opacity-40"
+                style={{ background: 'var(--bg-elevated, var(--bg-subtle))', border: '1px solid var(--border-medium)', color: 'var(--text-secondary)' }}
+              >
+                {t('parentMarkFalsePositive')}
+              </button>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => onReview(f.id, 'accepted_risk')}
+                className="rounded-lg px-2.5 py-1.5 text-[11px] font-medium disabled:opacity-40"
+                style={{ background: 'var(--bg-elevated, var(--bg-subtle))', border: '1px solid var(--border-medium)', color: 'var(--text-secondary)' }}
+              >
+                {t('parentMarkAcceptedRisk')}
+              </button>
+            </div>
+          )}
+        </div>
+      </FindingExpand>
+    </div>
+  )
+}
+
 function DeviceApiPairingCard({
   t, status, pairingCode, pairingBaseUrl, pairingEnrolling,
   onCodeChange, onBaseUrlChange, onEnroll, onUnenroll, onPollNow,
 }: {
-  t: (key: string) => string
+  t: (key: string, opts?: Record<string, unknown>) => string
   status: {
     enrolled: boolean
     deviceId: string | null
@@ -1471,82 +1522,21 @@ function DeviceApiPairingCard({
   onPollNow: () => void
 }) {
   return (
-    <div
-      className="rounded-2xl p-6 mb-4 mt-4"
-      style={{ background: 'var(--card-bg)', border: '1px solid var(--border-default)' }}
-    >
-      <h3 className="text-[15px] font-semibold text-white mb-1">{t('pairingTitle')}</h3>
-      <p className="text-[12px] mb-5" style={{ color: 'var(--text-muted)' }}>{t('pairingDescription')}</p>
-
-      {status?.enrolled ? (
-        <div className="space-y-3">
-          <div className="text-[13px]" style={{ color: 'var(--text-secondary)' }}>
-            <div><span style={{ color: 'var(--text-muted)' }}>{t('pairingDeviceId')}: </span>{status.deviceId}</div>
-            <div><span style={{ color: 'var(--text-muted)' }}>{t('pairingBaseUrl')}: </span>{status.baseUrl}</div>
-            <div><span style={{ color: 'var(--text-muted)' }}>{t('pairingHeartbeat')}: </span>{status.lastHeartbeatAt || t('statusLoading')}</div>
-            <div><span style={{ color: 'var(--text-muted)' }}>{t('pairingLastCommand')}: </span>
-              {status.lastCommandType
-                ? `${status.lastCommandType} @ ${status.lastCommandAt}`
-                : '—'}
-            </div>
-            <div><span style={{ color: 'var(--text-muted)' }}>{t('pairingProcessed')}: </span>{status.commandsProcessed}</div>
-            {status.lastError && (
-              <div className="text-red-400 text-[12px] mt-1">{status.lastError}</div>
-            )}
-          </div>
-          <div className="flex gap-2">
-            <button
-              onClick={onPollNow}
-              className="flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-[13px] font-medium"
-              style={{ background: 'var(--bg-subtle)', border: '1px solid var(--border-medium)', color: 'var(--text-secondary)' }}
-            >
-              <RefreshCw className="h-3.5 w-3.5" strokeWidth={1.8} />
-              {t('pairingPollNow')}
-            </button>
-            <button
-              onClick={onUnenroll}
-              className="flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-[13px] font-medium"
-              style={{ background: 'var(--bg-subtle)', border: '1px solid var(--border-medium)', color: 'var(--text-secondary)' }}
-            >
-              <Unlink className="h-3.5 w-3.5" strokeWidth={1.8} />
-              {t('pairingUnenroll')}
-            </button>
-          </div>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          <input
-            type="text"
-            value={pairingBaseUrl}
-            onChange={(e) => onBaseUrlChange(e.target.value)}
-            placeholder={t('pairingBaseUrlPlaceholder')}
-            className="w-full rounded-xl px-4 py-2.5 text-[13px] text-zinc-300 outline-none placeholder:text-zinc-700"
-            style={{ background: 'var(--bg-subtle)', border: '1px solid var(--border-medium)' }}
-          />
-          <div className="flex items-center gap-2.5">
-            <input
-              type="text"
-              value={pairingCode}
-              onChange={(e) => onCodeChange(e.target.value.toUpperCase())}
-              onKeyDown={(e) => e.key === 'Enter' && onEnroll()}
-              placeholder={t('pairingCodePlaceholder')}
-              className="flex-1 rounded-xl px-4 py-2.5 text-[13px] text-zinc-300 outline-none placeholder:text-zinc-700 tracking-widest"
-              style={{ background: 'var(--bg-subtle)', border: '1px solid var(--border-medium)' }}
-            />
-            <button
-              onClick={onEnroll}
-              disabled={pairingEnrolling || pairingCode.trim().length < 4}
-              className="flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-[13px] font-medium transition-colors disabled:opacity-40"
-              style={{ background: 'var(--accent)', color: 'var(--text-on-accent)' }}
-            >
-              <Link className="h-3.5 w-3.5" strokeWidth={1.8} />
-              {pairingEnrolling ? t('pairingEnrolling') : t('pairingEnroll')}
-            </button>
-          </div>
-          <p className="text-[11px]" style={{ color: 'var(--text-dim)' }}>{t('pairingHint')}</p>
-        </div>
-      )}
-    </div>
+    <FamilyPairingWizard
+      t={t}
+      status={status}
+      pairingCode={pairingCode}
+      pairingBaseUrl={pairingBaseUrl}
+      pairingEnrolling={pairingEnrolling}
+      onCodeChange={onCodeChange}
+      onBaseUrlChange={onBaseUrlChange}
+      onEnroll={onEnroll}
+      onUnenroll={onUnenroll}
+      onPollNow={onPollNow}
+      onRequestFirstScan={() => {
+        toast.message(t('pairingWizardFirstScanHint'))
+      }}
+    />
   )
 }
 

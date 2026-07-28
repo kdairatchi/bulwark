@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ShieldCheck, ShieldAlert, ShieldQuestion, RefreshCw, ChevronDown, ChevronRight } from 'lucide-react'
 import { PageHeader } from '@/components/layout/PageHeader'
+import { FindingExplainPanel, FindingExpand } from '@/components/shared/FindingExplainPanel'
 import { useAppRiskStore } from '@/stores/app-risk-store'
 import type { Finding, RiskLevel } from '@shared/risk'
 
@@ -163,33 +164,40 @@ function FindingRow({ finding }: { finding: Finding }) {
   const s = LEVEL_STYLE[finding.level]
   const Caret = open ? ChevronDown : ChevronRight
   const StatusIcon = finding.familyStatus === 'unknown' ? ShieldQuestion : finding.familyStatus === 'safe' ? ShieldCheck : ShieldAlert
+  const familyLabel = finding.familyStatus === 'safe'
+    ? t('familySafe')
+    : finding.familyStatus === 'dangerous'
+      ? t('familyDangerous')
+      : finding.familyStatus === 'needs_attention'
+        ? t('familyNeedsAttention')
+        : t('familyUnknown')
   return (
     <div className="rounded-xl" style={{ background: s.bg, border: `1px solid ${s.border}` }}>
       <button onClick={() => setOpen((o) => !o)} className="flex w-full items-center gap-3 px-4 py-3 text-left">
-        <Caret className="h-4 w-4 shrink-0" style={{ color: 'var(--text-muted)' }} />
+        <Caret className={`h-4 w-4 shrink-0 transition-transform duration-200 ${open ? 'rotate-0' : ''}`} style={{ color: 'var(--text-muted)' }} />
         <StatusIcon className="h-4 w-4 shrink-0" style={{ color: s.color }} strokeWidth={1.8} />
-        <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-zinc-100">{finding.subjectName}</span>
+        <div className="min-w-0 flex-1">
+          <span className="block truncate text-[13px] font-medium text-zinc-100">{finding.subjectName}</span>
+          <span className="block text-[11px] mt-0.5" style={{ color: 'var(--text-muted)' }}>{familyLabel}</span>
+        </div>
         <span className="shrink-0 text-[11px]" style={{ color: 'var(--text-muted)' }}>{t('confidenceLabel', { level: finding.confidence })}</span>
         <span className="shrink-0 rounded-full px-2.5 py-0.5 text-[11px] font-semibold" style={{ color: s.color, background: `${s.color}1a`, border: `1px solid ${s.color}40` }}>
           {s.label}
         </span>
       </button>
-      {open && (
-        <div className="border-t px-4 py-3 text-[12px]" style={{ borderColor: s.border }}>
-          <p className="mb-1.5 font-semibold text-zinc-300">{t('why')}</p>
-          <ul className="space-y-1">
-            {finding.evidence.map((line, i) => (
-              <li key={i} className="flex gap-2" style={{ color: 'var(--text-muted)' }}>
-                <span style={{ color: s.color }}>•</span>
-                <span>{line}</span>
-              </li>
-            ))}
-          </ul>
-          <p className="mt-3 rounded-lg px-3 py-2" style={{ background: 'var(--bg-hover-2)', color: '#e4e4e7' }}>
-            <span className="font-semibold">{t('recommended')}:</span> {finding.recommendedAction}
-          </p>
+      <FindingExpand open={open}>
+        <div className="border-t px-4 py-3" style={{ borderColor: s.border }}>
+          <FindingExplainPanel
+            why={finding.evidence}
+            recommended={finding.recommendedAction}
+            accent={s.color}
+            whyTitle={t('why')}
+            recommendedTitle={t('recommended')}
+            familyLabel={familyLabel}
+            animate={false}
+          />
         </div>
-      )}
+      </FindingExpand>
     </div>
   )
 }

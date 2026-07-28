@@ -4,12 +4,12 @@
   "welcomeTitle": "Welcome to Bulwrk",
   "welcomeDescriptionWindows": "Your family device security agent. Bulwrk scans for malware, audits vulnerable software, checks your security posture, and helps keep every device in your home protected.",
   "welcomeDescriptionOther": "Your family device security agent. Bulwrk scans for malware, audits vulnerable software, and checks your security posture to keep every device in your home protected.",
-  "featureSmartCleaning": "Smart Cleaning",
-  "featureFasterBoot": "Faster Boot",
-  "featureSafeSecure": "Safe & Secure",
+  "featureSmartCleaning": "Malware Scan",
+  "featureFasterBoot": "App Risk Check",
+  "featureSafeSecure": "Family Protect",
   "getStarted": "Get Started",
   "recommendedSetupTitle": "Recommended Setup",
-  "recommendedSetupDescription": "We recommend these settings for the best experience. You can change them later in Settings.",
+  "recommendedSetupDescription": "These keep Bulwrk watching quietly in the background. You can change them later in Settings.",
   "runAtStartupLabel": "Run at startup",
   "runAtStartupDescriptionWindows": "Launch Bulwrk when Windows starts so your device stays protected automatically",
   "runAtStartupDescriptionOther": "Launch Bulwrk at startup so your device stays protected automatically",
@@ -20,7 +20,8 @@
   "back": "Back",
   "continue": "Continue",
   "allSetTitle": "You're All Set!",
-  "allSetDescription": "Bulwrk will keep your devices protected in the background.",
-  "firstScanScheduled": "Your first automatic scan is scheduled for Monday at 9:00 AM.",
-  "startCleaning": "Start Cleaning"
+  "allSetDescription": "Next, run a quick malware scan so Bulwrk can check this device.",
+  "firstScanScheduled": "Your weekly clean is scheduled for Monday at 9:00 AM.",
+  "startCleaning": "Start Protecting",
+  "startProtecting": "Start Protecting"
 }

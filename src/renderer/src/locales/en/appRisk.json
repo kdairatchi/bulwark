@@ -10,6 +10,10 @@
   "why": "Why this rating",
   "recommended": "Recommended",
   "confidenceLabel": "Confidence: {{level}}",
+  "familySafe": "Looks safe",
+  "familyNeedsAttention": "Needs attention",
+  "familyDangerous": "Take action",
+  "familyUnknown": "Review",
   "emptyForFilter": "No applications at this risk level.",
   "andMore": "+ {{count}} more not shown"
 }
