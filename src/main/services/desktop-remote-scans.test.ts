@@ -8,6 +8,17 @@ import {
   executeRemoteScan,
 } from './desktop-remote-scans'
 
+vi.mock('./lolbin-scanner', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('./lolbin-scanner')>()
+  return {
+    ...actual,
+    // Process/persistence inventory is slow on Win/mac CI (ps / PowerShell) and
+    // stacked scans in executeRemoteScan exceed Vitest's 5s default.
+    scanProcessLolbins: vi.fn(async () => []),
+    scanPersistenceLolbins: vi.fn(async () => []),
+  }
+})
+
 function app(overrides: Partial<InstalledApp> = {}): InstalledApp {
   return {
     name: 'Normal App',

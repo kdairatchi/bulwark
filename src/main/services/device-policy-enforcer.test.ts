@@ -46,8 +46,6 @@ describe('parseRemotePolicy', () => {
 
 describe('DevicePolicyEnforcer', () => {
   const resolver = new DnsResolver()
-  // Use a dedicated enforcer that drives the shared dnsResolver singleton carefully —
-  // tests operate on a local DnsResolver instance via reapply mocking pattern instead.
   afterEach(async () => {
     await resolver.stop()
   })
@@ -55,11 +53,8 @@ describe('DevicePolicyEnforcer', () => {
   it('blockDomain records an event and reports applied', async () => {
     const enforcer = new DevicePolicyEnforcer()
     enforcer.setLocalBlocklistProvider(() => [])
-    // Avoid starting the real singleton resolver in unit tests — stub reapply path
-    // by applying policy without dnsGuard so start isn't required when domains empty...
-    // blockDomain always calls reapply which may start dnsResolver singleton.
-    // Use applyRemotePolicy with dnsGuardRequired false and then blockDomain —
-    // reapply will try to start resolver. That's OK for integration; stop singleton after.
+    // Ephemeral port — CI Win/mac cannot bind :5353 (EACCES / EADDRINUSE).
+    enforcer.setResolverStartConfig({ port: 0 })
     const { dnsResolver } = await import('./dns-resolver')
     try {
       const result = await enforcer.blockDomain('evil.example.test')
@@ -73,6 +68,7 @@ describe('DevicePolicyEnforcer', () => {
       await dnsResolver.stop()
       dnsResolver.setOnBlocked(null)
       dnsResolver.setFilterMode('blocklist', [])
+      enforcer.resetForTest()
     }
   })
 

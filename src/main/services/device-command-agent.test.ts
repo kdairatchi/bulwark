@@ -1,9 +1,34 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
 vi.mock('electron', () => ({
   app: { getPath: () => '/tmp' },
   safeStorage: { isEncryptionAvailable: () => false, encryptString: (s: string) => Buffer.from(s), decryptString: (b: Buffer) => b.toString() },
 }))
+
+// Keep unit tests offline and under Vitest's 5s default: real getInstalledApps +
+// LotL `ps`/PowerShell scans are slow (and flaky) on Windows/macOS CI runners.
+vi.mock('../platform', () => ({
+  getPlatform: () => ({
+    commands: {
+      getInstalledApps: async () => ([
+        { name: 'Normal App', version: '1.0', publisher: 'Acme', installDate: '2020-01-01', sizeKb: 10 },
+        { name: 'sketchy keygen', version: '0.1', publisher: '', installDate: '', sizeKb: 1 },
+      ]),
+    },
+    malwarePaths: {
+      isAllowedMalwarePath: (p: string) => p.startsWith('/tmp') || /Download/i.test(p),
+    },
+  }),
+}))
+
+vi.mock('./lolbin-scanner', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('./lolbin-scanner')>()
+  return {
+    ...actual,
+    scanProcessLolbins: vi.fn(async () => []),
+    scanPersistenceLolbins: vi.fn(async () => []),
+  }
+})
 
 import { generateDeviceKeyPair, signMessage } from '../../cloud/device-api/crypto'
 import { signCommand, type CommandEnvelope } from '../../cloud/device-api/commands'
@@ -12,6 +37,8 @@ import {
   defaultCommandExecutor,
 } from './device-command-agent'
 import { buildSignedHeaders } from './device-api-client'
+import { devicePolicyEnforcer } from './device-policy-enforcer'
+import { dnsResolver } from './dns-resolver'
 
 describe('buildSignedHeaders', () => {
   it('produces verifiable device auth headers', () => {
@@ -145,6 +172,19 @@ describe('processVerifiedCommand', () => {
 })
 
 describe('defaultCommandExecutor', () => {
+  beforeEach(() => {
+    devicePolicyEnforcer.resetForTest()
+    // Avoid :5353 bind EACCES/EADDRINUSE on Windows/macOS CI.
+    devicePolicyEnforcer.setResolverStartConfig({ port: 0 })
+  })
+
+  afterEach(async () => {
+    await dnsResolver.stop()
+    dnsResolver.setOnBlocked(null)
+    dnsResolver.setFilterMode('blocklist', [])
+    devicePolicyEnforcer.resetForTest()
+  })
+
   it('collects real inventory for REQUEST_INVENTORY (not a stub)', async () => {
     const r = await defaultCommandExecutor('REQUEST_INVENTORY', {})
     expect(r.ok).toBe(true)

@@ -379,7 +379,8 @@ export async function collectProcessCommandLines(): Promise<ProcessCmdline[]> {
           '-NoProfile', '-NonInteractive', '-Command',
           'Get-CimInstance Win32_Process | Select-Object ProcessId,CommandLine | ConvertTo-Json -Compress',
         ],
-        { timeout: 12_000, maxBuffer: 8 * 1024 * 1024, windowsHide: true },
+        // Keep under Vitest's default 5s testTimeout so unit tests fail soft.
+        { timeout: 4_000, maxBuffer: 8 * 1024 * 1024, windowsHide: true },
       )
       const parsed = JSON.parse(stdout || '[]') as Array<{ ProcessId?: number; CommandLine?: string }>
       const arr = Array.isArray(parsed) ? parsed : [parsed]
@@ -393,7 +394,7 @@ export async function collectProcessCommandLines(): Promise<ProcessCmdline[]> {
       process.platform === 'darwin'
         ? ['-ax', '-o', 'pid=,command=']
         : ['-axw', '-o', 'pid=,args='],
-      { timeout: 8_000, maxBuffer: 8 * 1024 * 1024 },
+      { timeout: 4_000, maxBuffer: 8 * 1024 * 1024 },
     )
     const out: ProcessCmdline[] = []
     for (const line of stdout.split('\n')) {
