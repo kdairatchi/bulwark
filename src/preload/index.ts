@@ -527,10 +527,13 @@ const api = {
   }> => ipcRenderer.invoke(IPC.DEVICE_API_POLL_NOW),
 
   // Parent dashboard (control plane operator actions)
-  dashboardCreatePairingCode: (payload?: { baseUrl?: string }): Promise<
+  dashboardCreatePairingCode: (payload?: { baseUrl?: string; token?: string }): Promise<
     { success: true; code: string; expiresAt: string } | { success: false; error: string }
   > => ipcRenderer.invoke(IPC.DASHBOARD_CREATE_PAIRING_CODE, payload ?? {}),
-  dashboardListDevices: (payload?: { baseUrl?: string }): Promise<
+  dashboardBootstrap: (payload?: { baseUrl?: string }): Promise<
+    { success: true; token: string } | { success: false; error: string }
+  > => ipcRenderer.invoke(IPC.DASHBOARD_BOOTSTRAP, payload ?? {}),
+  dashboardListDevices: (payload?: { baseUrl?: string; token?: string }): Promise<
     | {
         success: true
         devices: Array<{
@@ -549,14 +552,15 @@ const api = {
       }
     | { success: false; error: string }
   > => ipcRenderer.invoke(IPC.DASHBOARD_LIST_DEVICES, payload ?? {}),
-  dashboardIsolate: (payload: { baseUrl?: string; deviceId: string; reason?: string }): Promise<
+  dashboardIsolate: (payload: { baseUrl?: string; token?: string; deviceId: string; reason?: string }): Promise<
     { success: true; policy: { isolated: boolean; version: number }; command: { type: string } } | { success: false; error: string }
   > => ipcRenderer.invoke(IPC.DASHBOARD_ISOLATE, payload),
-  dashboardClearIsolation: (payload: { baseUrl?: string; deviceId: string }): Promise<
+  dashboardClearIsolation: (payload: { baseUrl?: string; token?: string; deviceId: string }): Promise<
     { success: true; policy: { isolated: boolean; version: number }; command: { type: string } } | { success: false; error: string }
   > => ipcRenderer.invoke(IPC.DASHBOARD_CLEAR_ISOLATION, payload),
   dashboardPutPolicy: (payload: {
     baseUrl?: string
+    token?: string
     deviceId: string
     blockedDomains?: string[]
     dnsGuardRequired?: boolean
@@ -565,7 +569,7 @@ const api = {
   }): Promise<
     { success: true; policy: { isolated: boolean; version: number; blockedDomains: string[] }; command: { type: string } } | { success: false; error: string }
   > => ipcRenderer.invoke(IPC.DASHBOARD_PUT_POLICY, payload),
-  dashboardListEvents: (payload?: { baseUrl?: string; deviceId?: string }): Promise<
+  dashboardListEvents: (payload?: { baseUrl?: string; token?: string; deviceId?: string }): Promise<
     | {
         success: true
         events: Array<{
@@ -580,7 +584,7 @@ const api = {
       }
     | { success: false; error: string }
   > => ipcRenderer.invoke(IPC.DASHBOARD_LIST_EVENTS, payload ?? {}),
-  dashboardListFindings: (payload?: { baseUrl?: string; deviceId?: string }): Promise<
+  dashboardListFindings: (payload?: { baseUrl?: string; token?: string; deviceId?: string }): Promise<
     | {
         success: true
         findings: Array<{
@@ -596,6 +600,7 @@ const api = {
   > => ipcRenderer.invoke(IPC.DASHBOARD_LIST_FINDINGS, payload ?? {}),
   dashboardIssueCommand: (payload: {
     baseUrl?: string
+    token?: string
     deviceId: string
     type: string
     parameters?: Record<string, unknown>

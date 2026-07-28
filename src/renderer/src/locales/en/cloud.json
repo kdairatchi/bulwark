@@ -189,5 +189,7 @@
   "parentNoFindings": "No findings yet. Request inventory from an enrolled device.",
   "parentRequestInventory": "Request inventory",
   "parentInventoryQueuedToast": "REQUEST_INVENTORY queued — agent will sync apps + findings",
-  "parentInventoryFailedToast": "Could not queue inventory request"
+  "parentInventoryFailedToast": "Could not queue inventory request",
+  "parentTokenPlaceholder": "Dashboard token (Bearer) — auto-filled via local bootstrap",
+  "parentTokenHint": "Write actions require Authorization: Bearer. Local cloud:dev exposes GET /v1/dashboard-bootstrap; production sets DASHBOARD_TOKEN."
 }

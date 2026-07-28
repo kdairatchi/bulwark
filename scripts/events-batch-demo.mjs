@@ -1,4 +1,5 @@
 /**
+import { fetchDashboardToken, dashboardAuthHeaders } from './dashboard-auth.mjs'
  * Demo: deeper posture findings + network-events batch ingest.
  *
  *   npm run cloud:dev
@@ -11,7 +12,9 @@ const BASE = (process.env.DEVICE_API_URL || 'http://127.0.0.1:8787').replace(/\/
 const sha256 = (s) => createHash('sha256').update(s).digest('hex')
 
 async function main() {
-  const pairing = await (await fetch(`${BASE}/v1/pairing-codes`, { method: 'POST' })).json()
+  const token = process.env.DASHBOARD_TOKEN || await fetchDashboardToken(BASE)
+  const dash = dashboardAuthHeaders(token)
+  const pairing = await (await fetch(`${BASE}/v1/pairing-codes`, { method: 'POST', headers: dash, body: '{}' })).json()
   const { publicKey, privateKey } = generateKeyPairSync('ed25519', {
     publicKeyEncoding: { type: 'spki', format: 'pem' },
     privateKeyEncoding: { type: 'pkcs8', format: 'pem' },

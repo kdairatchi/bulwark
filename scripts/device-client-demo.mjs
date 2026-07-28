@@ -1,4 +1,5 @@
 // Demo device client for the Bulwark device API.
+import { fetchDashboardToken, dashboardAuthHeaders } from './dashboard-auth.mjs'
 // Simulates a desktop/TV agent: get a pairing code, generate a per-device
 // Ed25519 key pair, enroll, then send SIGNED heartbeat / inventory / findings.
 // Finally reads back the dashboard views. No shared API key anywhere.
@@ -10,8 +11,10 @@ const BASE = process.env.DEVICE_API_URL || 'http://127.0.0.1:8787'
 const sha256 = (s) => createHash('sha256').update(s).digest('hex')
 
 async function main() {
+  const token = process.env.DASHBOARD_TOKEN || await fetchDashboardToken(BASE)
+  const dash = dashboardAuthHeaders(token)
   // 1. Dashboard issues a short-lived pairing code.
-  const pairing = await (await fetch(`${BASE}/v1/pairing-codes`, { method: 'POST' })).json()
+  const pairing = await (await fetch(`${BASE}/v1/pairing-codes`, { method: 'POST', headers: dash, body: '{}' })).json()
   console.log('1. pairing code:', pairing.code, '(expires', pairing.expiresAt + ')')
 
   // 2. Device generates its own key pair and enrolls with the code.

@@ -7,12 +7,16 @@
  */
 
 import { generateKeyPairSync, sign, createHash } from 'crypto'
+import { fetchDashboardToken, dashboardAuthHeaders } from './dashboard-auth.mjs'
 
 const BASE = (process.env.DEVICE_API_URL || 'http://127.0.0.1:8787').replace(/\/+$/, '')
 const sha256 = (s) => createHash('sha256').update(s).digest('hex')
 
 async function main() {
-  const pairing = await (await fetch(`${BASE}/v1/pairing-codes`, { method: 'POST' })).json()
+  const token = process.env.DASHBOARD_TOKEN || await fetchDashboardToken(BASE)
+  const dash = dashboardAuthHeaders(token)
+
+  const pairing = await (await fetch(`${BASE}/v1/pairing-codes`, { method: 'POST', headers: dash, body: '{}' })).json()
   console.log('1. pairing code:', pairing.code)
 
   const { publicKey, privateKey } = generateKeyPairSync('ed25519', {
@@ -57,7 +61,7 @@ async function main() {
 
   const put = await (await fetch(`${BASE}/v1/devices/${deviceId}/policy`, {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
+    headers: dash,
     body: JSON.stringify({
       blockedDomains: ['tracker.malware.test', 'ads.example.invalid'],
       dnsGuardRequired: true,
@@ -67,7 +71,7 @@ async function main() {
 
   const isolate = await (await fetch(`${BASE}/v1/devices/${deviceId}/isolate`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: dash,
     body: JSON.stringify({ reason: 'parent dashboard demo' }),
   })).json()
   console.log('5. isolated=', isolate.policy.isolated, '→', isolate.command.type)
@@ -92,7 +96,7 @@ async function main() {
     console.log('   -', e.type, e.subject)
   }
 
-  const cleared = await (await fetch(`${BASE}/v1/devices/${deviceId}/isolate`, { method: 'DELETE' })).json()
+  const cleared = await (await fetch(`${BASE}/v1/devices/${deviceId}/isolate`, { method: 'DELETE', headers: dash })).json()
   console.log('8. cleared isolation=', cleared.policy.isolated, '→', cleared.command.type)
   console.log('OK parent dashboard loop')
 }

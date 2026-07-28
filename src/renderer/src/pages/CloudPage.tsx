@@ -501,20 +501,40 @@ function ParentControlPanel({
   const [blockedText, setBlockedText] = useState('')
   const [dnsGuard, setDnsGuard] = useState(false)
   const [busy, setBusy] = useState(false)
+  const [dashboardToken, setDashboardToken] = useState('')
 
   const selected = devices.find((d) => d.id === selectedId) ?? null
+
+  const authPayload = useCallback(() => ({
+    baseUrl: baseUrl.trim() || undefined,
+    token: dashboardToken.trim() || undefined,
+  }), [baseUrl, dashboardToken])
+
+  const ensureToken = useCallback(async (): Promise<string> => {
+    if (dashboardToken.trim()) return dashboardToken.trim()
+    try {
+      const res = await window.kudu?.dashboardBootstrap?.({ baseUrl: baseUrl.trim() || undefined })
+      if (res?.success && res.token) {
+        setDashboardToken(res.token)
+        return res.token
+      }
+    } catch { /* ignore */ }
+    return ''
+  }, [baseUrl, dashboardToken])
 
   const refresh = useCallback(async () => {
     setLoading(true)
     try {
+      const token = await ensureToken()
+      const base = { baseUrl: baseUrl.trim() || undefined, token: token || undefined }
       const [devRes, evtRes, findRes] = await Promise.all([
-        window.kudu?.dashboardListDevices?.({ baseUrl: baseUrl.trim() || undefined }),
+        window.kudu?.dashboardListDevices?.(base),
         window.kudu?.dashboardListEvents?.({
-          baseUrl: baseUrl.trim() || undefined,
+          ...base,
           deviceId: selectedId || undefined,
         }),
         window.kudu?.dashboardListFindings?.({
-          baseUrl: baseUrl.trim() || undefined,
+          ...base,
           deviceId: selectedId || undefined,
         }),
       ])
@@ -534,7 +554,7 @@ function ParentControlPanel({
       toast.error(t('parentLoadFailedToast'))
     }
     setLoading(false)
-  }, [baseUrl, selectedId, t])
+  }, [baseUrl, selectedId, t, ensureToken])
 
   useEffect(() => {
     refresh()
@@ -551,7 +571,11 @@ function ParentControlPanel({
   const handleMint = async () => {
     setMinting(true)
     try {
-      const res = await window.kudu?.dashboardCreatePairingCode?.({ baseUrl: baseUrl.trim() || undefined })
+      const token = await ensureToken()
+      const res = await window.kudu?.dashboardCreatePairingCode?.({
+        ...authPayload(),
+        token: token || undefined,
+      })
       if (res?.success) {
         setMintedCode(res.code)
         toast.success(t('parentMintedToast'), { description: res.code })
@@ -568,8 +592,10 @@ function ParentControlPanel({
     if (!selected) return
     setBusy(true)
     try {
+      const token = await ensureToken()
       const res = await window.kudu?.dashboardIsolate?.({
-        baseUrl: baseUrl.trim() || undefined,
+        ...authPayload(),
+        token: token || undefined,
         deviceId: selected.id,
         reason: 'parent emergency isolate',
       })
@@ -589,8 +615,10 @@ function ParentControlPanel({
     if (!selected) return
     setBusy(true)
     try {
+      const token = await ensureToken()
       const res = await window.kudu?.dashboardClearIsolation?.({
-        baseUrl: baseUrl.trim() || undefined,
+        ...authPayload(),
+        token: token || undefined,
         deviceId: selected.id,
       })
       if (res?.success) {
@@ -610,8 +638,10 @@ function ParentControlPanel({
     setBusy(true)
     const blockedDomains = blockedText.split(/[\n,]+/).map((s) => s.trim().toLowerCase()).filter(Boolean)
     try {
+      const token = await ensureToken()
       const res = await window.kudu?.dashboardPutPolicy?.({
-        baseUrl: baseUrl.trim() || undefined,
+        ...authPayload(),
+        token: token || undefined,
         deviceId: selected.id,
         blockedDomains,
         dnsGuardRequired: dnsGuard,
@@ -632,8 +662,10 @@ function ParentControlPanel({
     if (!selected) return
     setBusy(true)
     try {
+      const token = await ensureToken()
       const res = await window.kudu?.dashboardIssueCommand?.({
-        baseUrl: baseUrl.trim() || undefined,
+        ...authPayload(),
+        token: token || undefined,
         deviceId: selected.id,
         type: 'REQUEST_INVENTORY',
       })
@@ -670,7 +702,7 @@ function ParentControlPanel({
         </button>
       </div>
 
-      <div className="flex flex-wrap items-center gap-2 mt-4 mb-4">
+      <div className="flex flex-wrap items-center gap-2 mt-4 mb-2">
         <input
           type="text"
           value={baseUrl}
@@ -689,6 +721,15 @@ function ParentControlPanel({
           {minting ? t('parentCreatingCode') : t('parentCreateCode')}
         </button>
       </div>
+      <input
+        type="password"
+        value={dashboardToken}
+        onChange={(e) => setDashboardToken(e.target.value)}
+        placeholder={t('parentTokenPlaceholder')}
+        className="w-full mb-4 rounded-xl px-4 py-2.5 text-[13px] text-zinc-300 outline-none placeholder:text-zinc-700 font-mono"
+        style={{ background: 'var(--bg-subtle)', border: '1px solid var(--border-medium)' }}
+      />
+      <p className="text-[11px] -mt-3 mb-4" style={{ color: 'var(--text-dim)' }}>{t('parentTokenHint')}</p>
 
       {mintedCode && (
         <div

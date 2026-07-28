@@ -21,14 +21,20 @@
 > (`deviceCommandAgent` in `src/main/services/device-command-agent.ts`).
 > The Android TV agent lives in `apps/android-tv/` (Compose TV UI + WorkManager).
 >
+> Dashboard **writes** require `Authorization: Bearer <token>`. Local `cloud:dev`
+> auto-generates a token (printed on startup) and allows
+> `GET /v1/dashboard-bootstrap`. Set `DASHBOARD_TOKEN` to supply a fixed token
+> and disable bootstrap.
+>
 > Implemented endpoints:
-> - `POST /v1/pairing-codes`, `POST /v1/devices/enroll`
+> - `POST /v1/pairing-codes` (dashboard auth), `POST /v1/devices/enroll`
+> - `GET /v1/dashboard-bootstrap` (local/dev only)
 > - `POST /v1/devices/{id}/heartbeat|inventory|findings` (device-signed)
 > - `GET /v1/devices`, `GET /v1/devices/{id}`, `GET /v1/findings`
 > - `GET /v1/server-key`
-> - `POST /v1/devices/{id}/commands` · `GET …/commands` · `POST …/commands/{id}/result`
-> - `GET /v1/devices/{id}/policy` (device-signed) · `PUT …/policy` (dashboard)
-> - `POST /v1/devices/{id}/isolate` · `DELETE …/isolate` (dashboard emergency)
+> - `POST /v1/devices/{id}/commands` (dashboard auth) · `GET …/commands` · `POST …/commands/{id}/result`
+> - `GET /v1/devices/{id}/policy` (device-signed) · `PUT …/policy` (dashboard auth)
+> - `POST /v1/devices/{id}/isolate` · `DELETE …/isolate` (dashboard auth)
 > - `POST /v1/devices/{id}/network-events` (device-signed) · `GET /v1/network-events`
 
 ## Device APIs (agent → cloud)

@@ -18,6 +18,48 @@ export function createPairingCode(store: DeviceStore): HandlerResult {
   return { status: 201, body: { code: pc.code, expiresAt: new Date(pc.expiresAt).toISOString() } }
 }
 
+/** Extract Bearer token from an Authorization header value. */
+export function parseBearerToken(authorization: string | undefined | null): string | null {
+  if (!authorization) return null
+  const m = authorization.trim().match(/^Bearer\s+(.+)$/i)
+  return m ? m[1].trim() : null
+}
+
+export type DashboardAuthResult =
+  | { ok: true }
+  | { ok: false; status: number; error: string }
+
+/** Require Authorization: Bearer <dashboard-token> for parent write routes. */
+export function authenticateDashboard(
+  store: DeviceStore,
+  authorization: string | undefined | null,
+): DashboardAuthResult {
+  const token = parseBearerToken(authorization)
+  if (!token) return { ok: false, status: 401, error: 'missing dashboard bearer token' }
+  if (!store.verifyDashboardToken(token)) {
+    return { ok: false, status: 401, error: 'invalid dashboard token' }
+  }
+  return { ok: true }
+}
+
+/**
+ * Local/dev helper: return the dashboard token when bootstrap is allowed
+ * (auto-generated token, not a production DASHBOARD_TOKEN env).
+ */
+export function dashboardBootstrap(store: DeviceStore): HandlerResult {
+  if (!store.canBootstrapDashboard()) {
+    return { status: 403, body: { error: 'dashboard bootstrap disabled' } }
+  }
+  return {
+    status: 200,
+    body: {
+      token: store.dashboardToken(),
+      tokenType: 'Bearer',
+      note: 'Local/dev only — set DASHBOARD_TOKEN to disable bootstrap',
+    },
+  }
+}
+
 export function enrollDevice(store: DeviceStore, input: unknown): HandlerResult {
   const o = (input ?? {}) as Record<string, unknown>
   const code = typeof o.code === 'string' ? o.code.trim().toUpperCase() : ''

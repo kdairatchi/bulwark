@@ -14,7 +14,8 @@ function asRecord(payload: unknown): Record<string, unknown> {
 function clientFromPayload(payload: unknown): DashboardApiClient {
   const o = asRecord(payload)
   const baseUrl = resolveDashboardBaseUrl(typeof o.baseUrl === 'string' ? o.baseUrl : undefined)
-  return new DashboardApiClient({ baseUrl })
+  const token = typeof o.token === 'string' ? o.token : undefined
+  return new DashboardApiClient({ baseUrl, token })
 }
 
 function httpErr(err: unknown): { success: false; error: string } {
@@ -54,6 +55,15 @@ export function registerDeviceApiIpc(): void {
   ipcMain.handle(IPC.DASHBOARD_CREATE_PAIRING_CODE, async (_event, payload: unknown) => {
     try {
       const result = await clientFromPayload(payload).createPairingCode()
+      return { success: true as const, ...result }
+    } catch (err) {
+      return httpErr(err)
+    }
+  })
+
+  ipcMain.handle(IPC.DASHBOARD_BOOTSTRAP, async (_event, payload: unknown) => {
+    try {
+      const result = await clientFromPayload(payload).bootstrap()
       return { success: true as const, ...result }
     } catch (err) {
       return httpErr(err)

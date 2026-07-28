@@ -5,7 +5,8 @@ import { createServer, type IncomingMessage, type ServerResponse, type Server } 
 import { DeviceStore } from './store'
 import {
   createPairingCode, enrollDevice, listDevices, getDevice, listFindings,
-  authenticateDevice, heartbeat, submitInventory, submitFindings,
+  authenticateDevice, authenticateDashboard, dashboardBootstrap,
+  heartbeat, submitInventory, submitFindings,
   getServerKey, issueCommand, pollCommands, commandResult,
   getPolicy, putPolicy, isolateDevice, clearIsolation,
   submitNetworkEvents, listNetworkEvents,
@@ -37,6 +38,15 @@ function parseJson(raw: string): unknown {
   try { return JSON.parse(raw) } catch { return null }
 }
 
+function requireDashboard(store: DeviceStore, req: IncomingMessage, res: ServerResponse): boolean {
+  const auth = authenticateDashboard(store, req.headers.authorization)
+  if (!auth.ok) {
+    send(res, { status: auth.status, body: { error: auth.error } })
+    return false
+  }
+  return true
+}
+
 export function createDeviceApiServer(store: DeviceStore): Server {
   return createServer(async (req, res) => {
     try {
@@ -46,7 +56,13 @@ export function createDeviceApiServer(store: DeviceStore): Server {
       const rawBody = method === 'GET' || method === 'DELETE' ? '' : await readBody(req)
 
       // ── Public / dashboard routes ──
-      if (method === 'POST' && path === '/v1/pairing-codes') return send(res, createPairingCode(store))
+      if (method === 'GET' && path === '/v1/dashboard-bootstrap') {
+        return send(res, dashboardBootstrap(store))
+      }
+      if (method === 'POST' && path === '/v1/pairing-codes') {
+        if (!requireDashboard(store, req, res)) return
+        return send(res, createPairingCode(store))
+      }
       if (method === 'POST' && path === '/v1/devices/enroll') {
         const body = parseJson(rawBody)
         if (body === null) return send(res, { status: 400, body: { error: 'invalid JSON' } })
@@ -67,26 +83,29 @@ export function createDeviceApiServer(store: DeviceStore): Server {
 
       const enqueue = path.match(/^\/v1\/devices\/([^/]+)\/commands$/)
       if (method === 'POST' && enqueue) {
+        if (!requireDashboard(store, req, res)) return
         const body = parseJson(rawBody)
         if (body === null) return send(res, { status: 400, body: { error: 'invalid JSON' } })
         return send(res, issueCommand(store, enqueue[1], body))
       }
 
-      // Dashboard policy write + emergency isolate (unsigned in this reference service;
-      // production would require dashboard auth).
+      // Dashboard policy write + emergency isolate (Bearer token required).
       const policyPath = path.match(/^\/v1\/devices\/([^/]+)\/policy$/)
       if (method === 'PUT' && policyPath) {
+        if (!requireDashboard(store, req, res)) return
         const body = parseJson(rawBody)
         if (body === null) return send(res, { status: 400, body: { error: 'invalid JSON' } })
         return send(res, putPolicy(store, policyPath[1], body))
       }
       const isolatePath = path.match(/^\/v1\/devices\/([^/]+)\/isolate$/)
       if (method === 'POST' && isolatePath) {
+        if (!requireDashboard(store, req, res)) return
         const body = parseJson(rawBody)
         if (body === null) return send(res, { status: 400, body: { error: 'invalid JSON' } })
         return send(res, isolateDevice(store, isolatePath[1], body))
       }
       if (method === 'DELETE' && isolatePath) {
+        if (!requireDashboard(store, req, res)) return
         return send(res, clearIsolation(store, isolatePath[1]))
       }
 

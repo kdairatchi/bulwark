@@ -45,6 +45,13 @@ export interface StoreDeps {
   now: () => number
   uuid: () => string
   code: () => string
+  /** Bearer token required for dashboard write routes. */
+  dashboardToken?: string
+  /**
+   * When true, `GET /v1/dashboard-bootstrap` returns the token (local/dev only).
+   * Defaults to true when the token was auto-generated (not from env/deps).
+   */
+  allowDashboardBootstrap?: boolean
 }
 
 const defaultDeps: StoreDeps = {
@@ -97,6 +104,28 @@ function defaultPolicy(now: number): DevicePolicy {
   }
 }
 
+function resolveDashboardAuth(deps: Partial<StoreDeps>): { token: string; allowBootstrap: boolean } {
+  const envToken = typeof process !== 'undefined' && process.env.DASHBOARD_TOKEN
+    ? process.env.DASHBOARD_TOKEN.trim()
+    : ''
+  if (deps.dashboardToken && deps.dashboardToken.trim()) {
+    return {
+      token: deps.dashboardToken.trim(),
+      allowBootstrap: deps.allowDashboardBootstrap === true,
+    }
+  }
+  if (envToken) {
+    return {
+      token: envToken,
+      allowBootstrap: deps.allowDashboardBootstrap === true,
+    }
+  }
+  return {
+    token: randomBytes(24).toString('hex'),
+    allowBootstrap: deps.allowDashboardBootstrap !== false,
+  }
+}
+
 export class DeviceStore {
   private pairing = new Map<string, PairingCode>()
   private devices = new Map<string, Device>()
@@ -106,9 +135,35 @@ export class DeviceStore {
   private policies = new Map<string, DevicePolicy>()
   private deps: StoreDeps
   private serverKeys = generateDeviceKeyPair()
+  private readonly dashboardTokenValue: string
+  private readonly allowDashboardBootstrap: boolean
 
   constructor(deps: Partial<StoreDeps> = {}) {
     this.deps = { ...defaultDeps, ...deps }
+    const auth = resolveDashboardAuth(deps)
+    this.dashboardTokenValue = auth.token
+    this.allowDashboardBootstrap = auth.allowBootstrap
+  }
+
+  /** Bearer token for dashboard write routes. */
+  dashboardToken(): string {
+    return this.dashboardTokenValue
+  }
+
+  /** Whether GET /v1/dashboard-bootstrap may return the token (local/dev). */
+  canBootstrapDashboard(): boolean {
+    return this.allowDashboardBootstrap
+  }
+
+  /** Constant-time-ish compare for Bearer tokens. */
+  verifyDashboardToken(candidate: string | undefined | null): boolean {
+    if (!candidate || !this.dashboardTokenValue) return false
+    if (candidate.length !== this.dashboardTokenValue.length) return false
+    let diff = 0
+    for (let i = 0; i < candidate.length; i++) {
+      diff |= candidate.charCodeAt(i) ^ this.dashboardTokenValue.charCodeAt(i)
+    }
+    return diff === 0
   }
 
   /** Public key devices use to verify command signatures. */

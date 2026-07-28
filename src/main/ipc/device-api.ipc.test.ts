@@ -17,6 +17,7 @@ vi.mock('../../shared/channels', () => ({
     DEVICE_API_GET_STATUS: 'device-api:get-status',
     DEVICE_API_POLL_NOW: 'device-api:poll-now',
     DASHBOARD_CREATE_PAIRING_CODE: 'dashboard:create-pairing-code',
+    DASHBOARD_BOOTSTRAP: 'dashboard:bootstrap',
     DASHBOARD_LIST_DEVICES: 'dashboard:list-devices',
     DASHBOARD_ISOLATE: 'dashboard:isolate',
     DASHBOARD_CLEAR_ISOLATION: 'dashboard:clear-isolation',
@@ -39,6 +40,7 @@ vi.mock('../services/device-command-agent', () => ({
 vi.mock('../services/dashboard-api-client', () => {
   const instance = {
     createPairingCode: vi.fn(),
+    bootstrap: vi.fn(),
     listDevices: vi.fn(),
     isolateDevice: vi.fn(),
     clearIsolation: vi.fn(),
@@ -89,8 +91,19 @@ describe('device-api IPC', () => {
     expect(handleMap.has('device-api:get-status')).toBe(true)
     expect(handleMap.has('device-api:poll-now')).toBe(true)
     expect(handleMap.has('dashboard:list-devices')).toBe(true)
+    expect(handleMap.has('dashboard:bootstrap')).toBe(true)
     expect(handleMap.has('dashboard:isolate')).toBe(true)
     expect(handleMap.has('dashboard:list-events')).toBe(true)
+  })
+
+  it('bootstraps dashboard token via client', async () => {
+    registerDeviceApiIpc()
+    const dash = (dashboardMod as unknown as { __mockDashboard: {
+      bootstrap: ReturnType<typeof vi.fn>
+    } }).__mockDashboard
+    dash.bootstrap.mockResolvedValue({ token: 'tok_test', bootstrapAllowed: true })
+    const result = await invoke('dashboard:bootstrap', { baseUrl: 'http://127.0.0.1:8787' })
+    expect(result).toEqual({ success: true, token: 'tok_test', bootstrapAllowed: true })
   })
 
   it('rejects short pairing codes', async () => {

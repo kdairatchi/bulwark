@@ -14,6 +14,11 @@ import { dnsResolver } from '../src/main/services/dns-resolver'
 const BASE = (process.env.DEVICE_API_URL || 'http://127.0.0.1:8787').replace(/\/+$/, '')
 const sha256 = (s: string) => createHash('sha256').update(s).digest('hex')
 
+async function dashAuth() {
+  const boot = await (await fetch(`${BASE}/v1/dashboard-bootstrap`)).json() as { token: string }
+  return { 'Content-Type': 'application/json', Authorization: `Bearer ${boot.token}` }
+}
+
 function query(name: string, qtype = 1): Buffer {
   const header = Buffer.alloc(12)
   header.writeUInt16BE(0x4242, 0)
@@ -38,7 +43,8 @@ function udpQuery(port: number, msg: Buffer, timeoutMs = 2000): Promise<Buffer> 
 }
 
 async function main() {
-  const pairing = await (await fetch(`${BASE}/v1/pairing-codes`, { method: 'POST' })).json() as { code: string }
+  const dash = await dashAuth()
+  const pairing = await (await fetch(`${BASE}/v1/pairing-codes`, { method: 'POST', headers: dash, body: '{}' })).json() as { code: string }
   const { publicKey, privateKey } = generateKeyPairSync('ed25519', {
     publicKeyEncoding: { type: 'spki', format: 'pem' },
     privateKeyEncoding: { type: 'pkcs8', format: 'pem' },
@@ -76,7 +82,7 @@ async function main() {
 
   await fetch(`${BASE}/v1/devices/${deviceId}/policy`, {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
+    headers: dash,
     body: JSON.stringify({
       blockedDomains: ['tracker.malware.test'],
       dnsGuardRequired: true,
@@ -85,7 +91,7 @@ async function main() {
   })
   await fetch(`${BASE}/v1/devices/${deviceId}/isolate`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: dash,
     body: JSON.stringify({ reason: 'desktop agent demo' }),
   })
 

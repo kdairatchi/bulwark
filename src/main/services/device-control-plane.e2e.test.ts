@@ -80,7 +80,18 @@ describe('device control plane e2e · isolate → tick → dns_blocked', () => {
   })
 
   it('parent isolate is applied by agent tick and blocked DNS is reported', async () => {
-    const pairing = await (await fetch(`${baseUrl}/v1/pairing-codes`, { method: 'POST' })).json() as { code: string }
+    const boot = await (await fetch(`${baseUrl}/v1/dashboard-bootstrap`)).json() as { token: string }
+    expect(boot.token).toBeTruthy()
+    const authHeaders = {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${boot.token}`,
+    }
+
+    const pairing = await (await fetch(`${baseUrl}/v1/pairing-codes`, {
+      method: 'POST',
+      headers: authHeaders,
+      body: '{}',
+    })).json() as { code: string }
     const enrolled = await agent.enroll({ code: pairing.code, name: 'E2E Laptop', baseUrl })
     expect(enrolled.success).toBe(true)
     if (!enrolled.success) return
@@ -91,10 +102,18 @@ describe('device control plane e2e · isolate → tick → dns_blocked', () => {
 
     const isolateRes = await fetch(`${baseUrl}/v1/devices/${deviceId}/isolate`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders,
       body: JSON.stringify({ reason: 'e2e parent isolate' }),
     })
     expect(isolateRes.status).toBe(202)
+
+    // Unauthenticated write must fail.
+    const denied = await fetch(`${baseUrl}/v1/devices/${deviceId}/isolate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reason: 'no token' }),
+    })
+    expect(denied.status).toBe(401)
 
     // First tick: heartbeat, pull isolated policy, execute ISOLATE_DEVICE, start resolver.
     await agent.tick()

@@ -37,11 +37,30 @@ describe('DashboardApiClient', () => {
     const fetchImpl = mockFetch((url, init) => {
       expect(url).toContain('/v1/pairing-codes')
       expect(init?.method).toBe('POST')
+      expect((init?.headers as Record<string, string>).Authorization).toBe('Bearer tok')
       return { status: 201, body: { code: 'A1B2-C3D4', expiresAt: 't' } }
     })
-    const client = new DashboardApiClient({ baseUrl: 'http://127.0.0.1:8787', fetchImpl: fetchImpl as unknown as typeof fetch })
+    const client = new DashboardApiClient({
+      baseUrl: 'http://127.0.0.1:8787',
+      token: 'tok',
+      fetchImpl: fetchImpl as unknown as typeof fetch,
+    })
     const res = await client.createPairingCode()
     expect(res.code).toBe('A1B2-C3D4')
+  })
+
+  it('bootstraps a dashboard token', async () => {
+    const fetchImpl = mockFetch((url) => {
+      expect(url).toContain('/v1/dashboard-bootstrap')
+      return { status: 200, body: { token: 'boot-tok' } }
+    })
+    const client = new DashboardApiClient({
+      baseUrl: 'http://127.0.0.1:8787',
+      fetchImpl: fetchImpl as unknown as typeof fetch,
+    })
+    const res = await client.bootstrap()
+    expect(res.token).toBe('boot-tok')
+    expect(client.getToken()).toBe('boot-tok')
   })
 
   it('isolates and clears isolation', async () => {

@@ -1,7 +1,7 @@
 /**
  * Parent / operator dashboard client for the Bulwark device API.
- * Uses unsigned dashboard routes on the reference service: list devices,
- * mint pairing codes, push policy, emergency isolate, and read events.
+ * Write routes require Authorization: Bearer <dashboard-token>.
+ * Local/dev servers expose GET /v1/dashboard-bootstrap when the token was auto-generated.
  */
 
 import { DeviceApiHttpError } from './device-api-client'
@@ -51,6 +51,8 @@ export interface DashboardFinding {
 
 export interface DashboardApiClientOptions {
   baseUrl: string
+  /** Bearer token for write routes (pairing, policy, isolate, commands). */
+  token?: string
   fetchImpl?: typeof fetch
 }
 
@@ -70,28 +72,54 @@ async function parseJson(res: Response): Promise<unknown> {
 
 export class DashboardApiClient {
   readonly baseUrl: string
+  private token: string
   private readonly fetchImpl: typeof fetch
 
   constructor(opts: DashboardApiClientOptions) {
     this.baseUrl = opts.baseUrl.replace(/\/+$/, '')
+    this.token = (opts.token ?? '').trim()
     this.fetchImpl = opts.fetchImpl ?? fetch
+  }
+
+  setToken(token: string): void {
+    this.token = token.trim()
+  }
+
+  getToken(): string {
+    return this.token
   }
 
   private async request(
     method: string,
     path: string,
     body?: unknown,
+    opts?: { auth?: boolean },
   ): Promise<{ status: number; body: unknown }> {
     const hasBody = body !== undefined && method !== 'GET' && method !== 'HEAD' && method !== 'DELETE'
     const rawBody = hasBody ? JSON.stringify(body) : ''
+    const headers: Record<string, string> = {}
+    if (hasBody || method === 'POST' || method === 'PUT') {
+      headers['Content-Type'] = 'application/json'
+    }
+    if (opts?.auth !== false && this.token) {
+      headers.Authorization = `Bearer ${this.token}`
+    }
     const res = await this.fetchImpl(joinUrl(this.baseUrl, path), {
       method,
-      headers: hasBody || method === 'POST' || method === 'PUT'
-        ? { 'Content-Type': 'application/json' }
-        : undefined,
+      headers: Object.keys(headers).length ? headers : undefined,
       body: hasBody ? rawBody : undefined,
     })
     return { status: res.status, body: await parseJson(res) }
+  }
+
+  /** Fetch token from local/dev bootstrap endpoint (no auth). */
+  async bootstrap(): Promise<{ token: string }> {
+    const { status, body } = await this.request('GET', '/v1/dashboard-bootstrap', undefined, { auth: false })
+    if (status < 200 || status >= 300) throw new DeviceApiHttpError(status, body)
+    const o = body as { token?: string }
+    if (!o.token) throw new DeviceApiHttpError(status, body)
+    this.token = o.token
+    return { token: o.token }
   }
 
   async createPairingCode(): Promise<{ code: string; expiresAt: string }> {
@@ -103,7 +131,7 @@ export class DashboardApiClient {
   }
 
   async listDevices(): Promise<DashboardDevice[]> {
-    const { status, body } = await this.request('GET', '/v1/devices')
+    const { status, body } = await this.request('GET', '/v1/devices', undefined, { auth: false })
     if (status < 200 || status >= 300) throw new DeviceApiHttpError(status, body)
     const devices = (body as { devices?: unknown }).devices
     return Array.isArray(devices) ? (devices as DashboardDevice[]) : []
@@ -147,7 +175,7 @@ export class DashboardApiClient {
     const path = deviceId
       ? `/v1/network-events?deviceId=${encodeURIComponent(deviceId)}`
       : '/v1/network-events'
-    const { status, body } = await this.request('GET', path)
+    const { status, body } = await this.request('GET', path, undefined, { auth: false })
     if (status < 200 || status >= 300) throw new DeviceApiHttpError(status, body)
     const events = (body as { events?: unknown }).events
     return Array.isArray(events) ? (events as DashboardNetworkEvent[]) : []
@@ -157,7 +185,7 @@ export class DashboardApiClient {
     const path = deviceId
       ? `/v1/findings?deviceId=${encodeURIComponent(deviceId)}`
       : '/v1/findings'
-    const { status, body } = await this.request('GET', path)
+    const { status, body } = await this.request('GET', path, undefined, { auth: false })
     if (status < 200 || status >= 300) throw new DeviceApiHttpError(status, body)
     const findings = (body as { findings?: unknown }).findings
     return Array.isArray(findings) ? (findings as DashboardFinding[]) : []
@@ -182,4 +210,9 @@ export class DashboardApiClient {
 export function resolveDashboardBaseUrl(input?: string): string {
   const raw = (input ?? process.env.DEVICE_API_URL ?? 'http://127.0.0.1:8787').trim()
   return raw.replace(/\/+$/, '') || 'http://127.0.0.1:8787'
+}
+
+/** Resolve dashboard token from payload or env. */
+export function resolveDashboardToken(input?: string): string {
+  return (input ?? process.env.DASHBOARD_TOKEN ?? '').trim()
 }

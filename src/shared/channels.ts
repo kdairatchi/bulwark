@@ -245,6 +245,7 @@ export const IPC = {
   DASHBOARD_LIST_EVENTS: 'dashboard:list-events',
   DASHBOARD_LIST_FINDINGS: 'dashboard:list-findings',
   DASHBOARD_ISSUE_COMMAND: 'dashboard:issue-command',
+  DASHBOARD_BOOTSTRAP: 'dashboard:bootstrap',
 
   // Threat Monitor
   THREAT_MONITOR_GET_SNAPSHOT: 'threat-monitor:get-snapshot',

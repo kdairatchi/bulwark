@@ -12,8 +12,14 @@ import type { InstalledApp } from '../src/main/platform/types'
 const BASE = (process.env.DEVICE_API_URL || 'http://127.0.0.1:8787').replace(/\/+$/, '')
 const sha256 = (s: string) => createHash('sha256').update(s).digest('hex')
 
+async function dashAuth() {
+  const boot = await (await fetch(`${BASE}/v1/dashboard-bootstrap`)).json() as { token: string }
+  return { 'Content-Type': 'application/json', Authorization: `Bearer ${boot.token}` }
+}
+
 async function main() {
-  const pairing = await (await fetch(`${BASE}/v1/pairing-codes`, { method: 'POST' })).json() as { code: string }
+  const dash = await dashAuth()
+  const pairing = await (await fetch(`${BASE}/v1/pairing-codes`, { method: 'POST', headers: dash, body: '{}' })).json() as { code: string }
   const { publicKey, privateKey } = generateKeyPairSync('ed25519', {
     publicKeyEncoding: { type: 'spki', format: 'pem' },
     privateKeyEncoding: { type: 'pkcs8', format: 'pem' },
@@ -87,7 +93,7 @@ async function main() {
 
   const cmd = await (await fetch(`${BASE}/v1/devices/${deviceId}/commands`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: dash,
     body: JSON.stringify({ type: 'REQUEST_INVENTORY', parameters: {} }),
   })).json() as { command: { type: string } }
   console.log('6. queued command:', cmd.command.type)
