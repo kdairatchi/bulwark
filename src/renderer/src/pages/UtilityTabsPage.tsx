@@ -59,8 +59,13 @@ const TABS: TabDef[] = [
 ]
 
 const CATEGORY_ORDER = ['browsers', 'utilities', 'media', 'communication', 'development', 'security']
-const REVERSIBLE_CONFIG_FEATURE_IDS = new Set(['f8-boot-recovery', 'daily-registry-backup'])
 const DESTRUCTIVE_CONFIG_FIX_IDS = new Set(['reset-network', 'reset-windows-update'])
+
+function canRevertConfigFeature(feature: UtilityConfigFeatureMetadata): boolean {
+  return feature.kind === 'optional-feature'
+    || feature.id === 'f8-boot-recovery'
+    || feature.id === 'daily-registry-backup'
+}
 
 function reportActionResult(t: (k: string, o?: Record<string, unknown>) => string, result: UtilityInstallActionResult) {
   if (result.succeeded > 0) toast.success(t('install.toastSuccess', { count: result.succeeded }))
@@ -216,7 +221,8 @@ function InstallTab() {
       (a) =>
         a.name.toLowerCase().includes(q)
         || a.id.toLowerCase().includes(q)
-        || a.category.toLowerCase().includes(q),
+        || a.category.toLowerCase().includes(q)
+        || (a.description?.toLowerCase().includes(q) ?? false),
     )
   }, [apps, query])
 
@@ -484,6 +490,9 @@ function InstallTab() {
                         )}
                         <div className="min-w-0 flex-1">
                           <p className="text-[13px] font-medium text-zinc-200 truncate">{app.name}</p>
+                          {app.description && (
+                            <p className="text-[11px] truncate" style={{ color: 'var(--text-muted)' }}>{app.description}</p>
+                          )}
                           <p className="text-[11px] font-mono truncate" style={{ color: 'var(--text-faint)' }}>{app.id}</p>
                         </div>
                         <span
@@ -1152,7 +1161,7 @@ function ConfigTab() {
             const StatusIcon = configStatusIcon(badgeStatus)
             const unavailable = status?.status === 'unavailable'
             const isSelected = selected.has(feature.id)
-            const canRevert = REVERSIBLE_CONFIG_FEATURE_IDS.has(feature.id)
+            const canRevert = canRevertConfigFeature(feature)
             return (
               <li key={feature.id} className="flex items-stretch gap-2 px-4 py-3 hover:bg-white/[0.02]">
                 <button

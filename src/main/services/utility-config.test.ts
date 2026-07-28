@@ -15,12 +15,14 @@ vi.mock('./elevation', () => ({
   isAdmin: isAdminMock,
 }))
 
-const {
+  const {
   getDailyRegistryBackupCreateCommand,
   getLegacyPanelCommand,
+  getOptionalFeatureDisableCommand,
   getOptionalFeatureEnableCommand,
   getOptionalFeatureStatusCommand,
   getUtilityFixCommandSequence,
+  revertUtilityConfigFeature,
   runUtilityConfigFix,
   validateUtilityConfigFeatureId,
   validateUtilityConfigFixId,
@@ -72,13 +74,18 @@ describe('utility-config helpers', () => {
   it('builds optional feature commands through PowerShell execFile specs', () => {
     const status = getOptionalFeatureStatusCommand('wsl')
     const enable = getOptionalFeatureEnableCommand('wsl')
+    const disable = getOptionalFeatureDisableCommand('wsl')
 
     expect(status?.file).toBe('powershell.exe')
     expect(enable?.file).toBe('powershell.exe')
+    expect(disable?.file).toBe('powershell.exe')
     expect(status?.args).toContain('-Command')
     expect(enable?.args.join(' ')).toContain('Enable-WindowsOptionalFeature')
     expect(enable?.args.join(' ')).toContain('Microsoft-Windows-Subsystem-Linux')
     expect(enable?.args.join(' ')).toContain('VirtualMachinePlatform')
+    expect(disable?.args.join(' ')).toContain('Disable-WindowsOptionalFeature')
+    expect(disable?.args.join(' ')).toContain('Microsoft-Windows-Subsystem-Linux')
+    expect(disable?.args.join(' ')).toContain('-NoRestart')
   })
 
   it('builds fixed command sequences for fixes without shell executables', () => {
@@ -144,5 +151,22 @@ describe('utility-config helpers', () => {
       current: 2,
       total: 2,
     })
+  })
+
+  it('reverts optional features through Disable-WindowsOptionalFeature', async () => {
+    Object.defineProperty(process, 'platform', { value: 'win32', configurable: true })
+    execFileMock.mockResolvedValue({
+      stdout: 'OK|TelnetClient|Disabled\n',
+      stderr: '',
+    })
+
+    const result = await revertUtilityConfigFeature('telnet-client')
+
+    expect(result.success).toBe(true)
+    expect(result.requiresReboot).toBe(true)
+    expect(execFileMock).toHaveBeenCalledTimes(1)
+    expect(execFileMock.mock.calls[0][0]).toBe('powershell.exe')
+    expect(execFileMock.mock.calls[0][1].join(' ')).toContain('Disable-WindowsOptionalFeature')
+    expect(execFileMock.mock.calls[0][1].join(' ')).toContain('TelnetClient')
   })
 })

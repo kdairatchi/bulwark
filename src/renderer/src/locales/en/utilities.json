@@ -96,7 +96,7 @@
     "windowsOnlyTitle": "Windows only",
     "windowsOnlyDescription": "Config tools require Windows optional feature, service, and Control Panel APIs.",
     "featuresTitle": "Windows Features",
-    "featuresDescription": "Check current feature state, enable selected features, and revert supported boot/task changes.",
+    "featuresDescription": "Check current feature state, enable or disable selected optional features, and revert boot/task changes.",
     "enableSelected": "Enable Selected",
     "refreshStatus": "Refresh Status",
     "clearSelection": "Clear Selection",

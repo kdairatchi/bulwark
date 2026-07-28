@@ -16,6 +16,7 @@ describe('utility-apps catalog', () => {
     for (const app of UTILITY_APP_CATALOG) {
       expect(isValidAppIdForSource(app.id, 'winget'), app.id).toBe(true)
       expect(app.name.length).toBeGreaterThan(0)
+      expect(app.description.length).toBeGreaterThan(0)
       expect(UTILITY_CATEGORY_ORDER).toContain(app.category)
     }
   })

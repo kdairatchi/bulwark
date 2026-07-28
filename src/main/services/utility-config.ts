@@ -107,6 +107,12 @@ export function getOptionalFeatureEnableCommand(id: UtilityConfigFeatureId): Uti
   return powershellCommand(optionalFeatureEnableScript(feature.featureNames))
 }
 
+export function getOptionalFeatureDisableCommand(id: UtilityConfigFeatureId): UtilityCommandSpec | null {
+  const feature = findFeature(id)
+  if (!feature?.featureNames?.length) return null
+  return powershellCommand(optionalFeatureDisableScript(feature.featureNames))
+}
+
 export function getLegacyPanelCommand(id: UtilityLegacyPanelId): UtilityCommandSpec {
   const panel = findPanel(id)
   if (!panel) throw new Error('Unknown legacy panel ID')
@@ -227,6 +233,7 @@ export async function revertUtilityConfigFeature(
   if (feature.requiresAdmin && !isAdmin()) return needsAdminResult(id)
 
   try {
+    if (feature.kind === 'optional-feature') return disableOptionalFeature(feature)
     if (feature.id === 'f8-boot-recovery') {
       const result = await runCommand({ file: 'bcdedit.exe', args: ['/set', '{default}', 'bootmenupolicy', 'standard'] })
       return {
@@ -461,6 +468,35 @@ async function enableOptionalFeature(
   }
 }
 
+async function disableOptionalFeature(
+  feature: UtilityConfigFeatureDefinition,
+): Promise<UtilityConfigActionResult> {
+  const command = getOptionalFeatureDisableCommand(feature.id)
+  if (!command) return actionError(feature.id, 'Feature has no optional feature names')
+
+  const result = await runCommand(command)
+  const parsed = parseActionLines(result.stdout)
+  const succeeded = parsed.filter((entry) => entry.ok)
+  const failed = parsed.filter((entry) => !entry.ok)
+
+  if (succeeded.length === 0) {
+    return actionError(feature.id, failed.map((entry) => `${entry.id}: ${entry.message}`).join('; ') || 'No feature was disabled')
+  }
+
+  const warning = failed.length > 0
+    ? ` Some feature names were unavailable or failed: ${failed.map((entry) => entry.id).join(', ')}.`
+    : ''
+
+  return {
+    id: feature.id,
+    success: true,
+    summary: `${feature.name} disable command completed.${warning}`,
+    log: result.stdout + result.stderr,
+    requiresReboot: true,
+    needsAdmin: false,
+  }
+}
+
 async function getF8BootRecoveryStatus(): Promise<UtilityConfigFeatureStatusResult> {
   const result = await runCommand({ file: 'bcdedit.exe', args: ['/enum', '{default}'] }, { ...COMMAND_OPTS, timeout: 30_000 })
   const legacy = /bootmenupolicy\s+legacy/i.test(result.stdout)
@@ -561,6 +597,21 @@ function optionalFeatureEnableScript(featureNames: string[]): string {
       try {
         Enable-WindowsOptionalFeature -Online -FeatureName $name -All -NoRestart -ErrorAction Stop | Out-Null
         Write-Output "OK|$name|Enabled"
+      } catch {
+        $message = ($_.Exception.Message -replace '\\r?\\n', ' ')
+        Write-Output "ERR|$name|$message"
+      }
+    }
+  `
+}
+
+function optionalFeatureDisableScript(featureNames: string[]): string {
+  return `
+    $names = @(${featureNames.map(psString).join(',')})
+    foreach ($name in $names) {
+      try {
+        Disable-WindowsOptionalFeature -Online -FeatureName $name -NoRestart -ErrorAction Stop | Out-Null
+        Write-Output "OK|$name|Disabled"
       } catch {
         $message = ($_.Exception.Message -replace '\\r?\\n', ' ')
         Write-Output "ERR|$name|$message"
