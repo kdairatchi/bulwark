@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   ShieldCheck, ShieldAlert, ShieldX, Search, Globe, Activity, Radar, Network,
   RefreshCw, Lock, ChevronDown, ChevronRight, ShieldOff, Plus, Trash2, Power,
+  List, GitBranch, Info, X, Filter, Monitor, Map,
 } from 'lucide-react'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { useNetworkGuardStore } from '@/stores/network-guard-store'
@@ -17,6 +18,9 @@ const DECISION_STYLE: Record<NetworkDecision, { label: string; color: string; bg
 }
 
 type Tab = 'connections' | 'dns' | 'rules' | 'scan' | 'check' | 'spn'
+type ConnectionView = 'list' | 'topology'
+type ConnectionFilter = 'all' | 'alerts' | 'blocked'
+type SelectedConnection = { app: AppConnections; connection: AppConnections['connections'][number] }
 
 export function NetworkGuardPage() {
   const { t } = useTranslation('networkGuard')
@@ -71,6 +75,10 @@ function ConnectionsTab() {
   const saveRules = useNetworkGuardStore((s) => s.saveRules)
   const loadRules = useNetworkGuardStore((s) => s.loadRules)
   const [live, setLive] = useState(true)
+  const [view, setView] = useState<ConnectionView>('list')
+  const [filter, setFilter] = useState<ConnectionFilter>('all')
+  const [query, setQuery] = useState('')
+  const [selected, setSelected] = useState<SelectedConnection | null>(null)
 
   useEffect(() => { if (!overview) refresh(); loadRules() }, [overview, refresh, loadRules])
 
@@ -95,6 +103,17 @@ function ConnectionsTab() {
     refresh()
   }
   const blockedSet = new Set(rules.filter((r) => r.action === 'block' && r.enabled).map((r) => r.match.domain || r.match.ip))
+  const visibleApps = useMemo(() => {
+    const normalizedQuery = query.trim().toLowerCase()
+    return (overview?.apps ?? []).map((app) => ({
+      ...app,
+      connections: app.connections.filter((connection) => {
+        const matchesFilter = filter === 'all' || (filter === 'blocked' ? connection.decision === 'block' : connection.decision === 'alert' || connection.decision === 'block')
+        const haystack = `${app.app} ${connection.remoteAddress} ${connection.country ?? ''} ${connection.category ?? ''} ${connection.reason}`.toLowerCase()
+        return matchesFilter && (!normalizedQuery || haystack.includes(normalizedQuery))
+      }),
+    })).filter((app) => app.connections.length > 0)
+  }, [filter, overview, query])
 
   return (
     <div>
@@ -133,9 +152,35 @@ function ConnectionsTab() {
           {t('noConnections')}
         </div>
       )}
-      <div className="space-y-2.5">
-        {overview?.apps.map((app, i) => <AppRow key={`${app.app}-${app.pid}-${i}`} app={app} onBlock={blockRemote} blockedSet={blockedSet} />)}
+      <div className="mb-4 flex flex-wrap items-center gap-2.5">
+        <div className="flex min-w-[230px] flex-1 items-center gap-2 rounded-xl px-3.5 py-2.5" style={{ background: 'var(--bg-hover-2)', border: '1px solid var(--border-default)' }}>
+          <Search className="h-4 w-4 shrink-0" style={{ color: 'var(--text-muted)' }} />
+          <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={t('connectionsSearch')} className="w-full bg-transparent text-[12px] text-zinc-100 outline-none" />
+          {query && <button onClick={() => setQuery('')} aria-label={t('clearSearch')}><X className="h-3.5 w-3.5" style={{ color: 'var(--text-muted)' }} /></button>}
+        </div>
+        <div className="flex items-center gap-1 rounded-xl p-1" style={{ background: 'var(--bg-subtle)', border: '1px solid var(--border-default)' }}>
+          {(['all', 'alerts', 'blocked'] as ConnectionFilter[]).map((value) => (
+            <button key={value} onClick={() => setFilter(value)} className="rounded-lg px-2.5 py-1.5 text-[11px] font-medium transition-colors" style={{ background: filter === value ? 'var(--accent-muted-border)' : 'transparent', color: filter === value ? 'var(--accent)' : 'var(--text-muted)' }}>
+              {value === 'all' ? t('filterAll') : value === 'alerts' ? t('filterAlerts') : t('filterBlocked')}
+            </button>
+          ))}
+        </div>
+        <div className="flex items-center gap-1 rounded-xl p-1" style={{ background: 'var(--bg-subtle)', border: '1px solid var(--border-default)' }}>
+          <button onClick={() => setView('list')} aria-pressed={view === 'list'} className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] font-medium" style={{ background: view === 'list' ? 'var(--accent-muted-border)' : 'transparent', color: view === 'list' ? 'var(--accent)' : 'var(--text-muted)' }}><List className="h-3.5 w-3.5" />{t('viewList')}</button>
+          <button onClick={() => setView('topology')} aria-pressed={view === 'topology'} className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] font-medium" style={{ background: view === 'topology' ? 'var(--accent-muted-border)' : 'transparent', color: view === 'topology' ? 'var(--accent)' : 'var(--text-muted)' }}><GitBranch className="h-3.5 w-3.5" />{t('viewTopology')}</button>
+        </div>
       </div>
+
+      {view === 'topology' ? (
+        <NetworkTopology apps={visibleApps} onSelect={setSelected} />
+      ) : (
+        <div className="space-y-2.5">
+          {visibleApps.map((app, i) => <AppRow key={`${app.app}-${app.pid}-${i}`} app={app} onBlock={blockRemote} onSelect={setSelected} blockedSet={blockedSet} />)}
+          {overview && visibleApps.length === 0 && <EmptyConnections text={query || filter !== 'all' ? t('noMatchingConnections') : t('noConnections')} />}
+        </div>
+      )}
+
+      {selected && <ConnectionInspector selected={selected} onClose={() => setSelected(null)} onBlock={blockRemote} blockedSet={blockedSet} />}
 
       {overview && overview.listeningPorts.length > 0 && (
         <div className="mt-6">
@@ -151,7 +196,7 @@ function ConnectionsTab() {
   )
 }
 
-function AppRow({ app, onBlock, blockedSet }: { app: AppConnections; onBlock: (remote: string) => void; blockedSet: Set<string | undefined> }) {
+function AppRow({ app, onBlock, onSelect, blockedSet }: { app: AppConnections; onBlock: (remote: string) => void; onSelect: (selected: SelectedConnection) => void; blockedSet: Set<string | undefined> }) {
   const { t } = useTranslation('networkGuard')
   const [open, setOpen] = useState(false)
   const s = DECISION_STYLE[app.worst]
@@ -174,7 +219,7 @@ function AppRow({ app, onBlock, blockedSet }: { app: AppConnections; onBlock: (r
             const cs = DECISION_STYLE[c.decision]
             const isBlocked = blockedSet.has(c.remoteAddress)
             return (
-              <div key={i} className="group flex items-center gap-3 py-1.5 font-mono text-[12px]">
+              <div key={i} role="button" tabIndex={0} onClick={() => onSelect({ app, connection: c })} onKeyDown={(event) => { if (event.key === 'Enter') onSelect({ app, connection: c }) }} className="group flex cursor-pointer items-center gap-3 rounded-lg py-1.5 font-mono text-[12px] hover:bg-white/[0.03]">
                 <span className="min-w-0 flex-1 truncate text-zinc-300">{c.remoteAddress}:{c.remotePort}</span>
                 {c.country && <span className="rounded px-1.5 py-0.5 text-[10px]" style={{ background: 'var(--bg-hover)', color: 'var(--text-muted)' }}>{c.country}</span>}
                 {c.category && <span style={{ color: 'var(--text-muted)' }}>{c.reason}</span>}
@@ -196,6 +241,118 @@ function AppRow({ app, onBlock, blockedSet }: { app: AppConnections; onBlock: (r
       )}
     </div>
   )
+}
+
+function NetworkTopology({ apps, onSelect }: { apps: AppConnections[]; onSelect: (selected: SelectedConnection) => void }) {
+  const { t } = useTranslation('networkGuard')
+  const destinations = Array.from(new Map(apps.flatMap((app) => app.connections.map((connection) => [`${connection.remoteAddress}:${connection.remotePort}`, connection] as const))).entries())
+    .map(([key, connection]) => ({ key, address: connection.remoteAddress, port: connection.remotePort, country: connection.country }))
+    .slice(0, 48)
+  const width = 960
+  const height = Math.max(360, Math.max(apps.length, destinations.length) * 46 + 56)
+  const appY = (index: number) => 42 + index * (height - 84) / Math.max(apps.length - 1, 1)
+  const destinationY = (index: number) => 42 + index * (height - 84) / Math.max(destinations.length - 1, 1)
+  const destinationIndex = new Map(destinations.map((destination, index) => [destination.key, index]))
+
+  if (apps.length === 0) return <EmptyConnections text={t('noMatchingConnections')} />
+
+  return (
+    <section className="overflow-hidden rounded-2xl" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-default)' }}>
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b px-5 py-4" style={{ borderColor: 'var(--border-default)' }}>
+        <div>
+          <p className="flex items-center gap-2 text-[13px] font-semibold text-zinc-100"><Map className="h-4 w-4" style={{ color: 'var(--accent)' }} />{t('topologyTitle')}</p>
+          <p className="mt-1 text-[11px]" style={{ color: 'var(--text-muted)' }}>{t('topologyDescription')}</p>
+        </div>
+        <div className="flex items-center gap-3 text-[11px]" style={{ color: 'var(--text-muted)' }}>
+          <span>{apps.length} {t('topologyApps')}</span><span>{destinations.length} {t('topologyDestinations')}</span>
+        </div>
+      </div>
+      <div className="overflow-x-auto p-3">
+        <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label={t('topologyAria')} className="min-w-[760px]" style={{ width: '100%', height: Math.min(height, 620) }}>
+          <defs>
+            <pattern id="network-grid" width="32" height="32" patternUnits="userSpaceOnUse">
+              <path d="M 32 0 L 0 0 0 32" fill="none" stroke="rgba(255,255,255,0.035)" strokeWidth="1" />
+            </pattern>
+          </defs>
+          <rect width={width} height={height} fill="url(#network-grid)" rx="14" />
+          <line x1="480" y1="24" x2="480" y2={height - 24} stroke="rgba(245,158,11,0.15)" strokeDasharray="4 8" />
+          {apps.flatMap((app, appIndex) => app.connections.map((connection, connectionIndex) => {
+            const destinationIndexForConnection = destinationIndex.get(`${connection.remoteAddress}:${connection.remotePort}`)
+            if (destinationIndexForConnection === undefined) return null
+            const color = DECISION_STYLE[connection.decision].color
+            const y1 = appY(appIndex)
+            const y2 = destinationY(destinationIndexForConnection)
+            return <path key={`${app.app}-${app.pid}-${connection.remoteAddress}-${connectionIndex}`} d={`M 270 ${y1} C 370 ${y1}, 590 ${y2}, 690 ${y2}`} fill="none" stroke={color} strokeWidth={connection.decision === 'block' ? 2.4 : 1.4} strokeOpacity={connection.decision === 'allow' ? 0.28 : 0.72} />
+          }))}
+          <g transform={`translate(420 ${height / 2 - 30})`}>
+            <rect width="120" height="60" rx="16" fill="rgba(245,158,11,0.12)" stroke="rgba(245,158,11,0.45)" />
+            <Monitor x="52" y="8" width="16" height="16" color="#fbbf24" />
+            <text x="60" y="42" textAnchor="middle" fill="#fef3c7" fontSize="12" fontWeight="600">{t('topologyThisDevice')}</text>
+          </g>
+          {apps.map((app, index) => {
+            const worst = DECISION_STYLE[app.worst]
+            return <g key={`${app.app}-${app.pid}`} transform={`translate(32 ${appY(index) - 22})`}>
+              <rect width="238" height="44" rx="12" fill="rgba(24,24,27,0.92)" stroke={`${worst.color}55`} />
+              <circle cx="22" cy="22" r="6" fill={worst.color} />
+              <text x="38" y="19" fill="#f4f4f5" fontSize="12" fontWeight="600">{app.app.length > 23 ? `${app.app.slice(0, 22)}…` : app.app}</text>
+              <text x="38" y="34" fill="#71717a" fontSize="10">{app.pid == null ? t('pidUnknown') : `pid ${app.pid}`} · {app.count} {t('connectionsShort')}</text>
+            </g>
+          })}
+          {destinations.map((destination, index) => {
+            const sample = apps.flatMap((app) => app.connections).find((connection) => connection.remoteAddress === destination.address)
+            const color = sample ? DECISION_STYLE[sample.decision].color : '#a1a1aa'
+            return <g key={destination.address} transform={`translate(690 ${destinationY(index) - 22})`} onClick={() => {
+              const match = apps.flatMap((app) => app.connections.map((connection) => ({ app, connection }))).find(({ connection }) => `${connection.remoteAddress}:${connection.remotePort}` === destination.key)
+              if (match) onSelect(match)
+            }} className="cursor-pointer">
+              <rect width="238" height="44" rx="12" fill="rgba(24,24,27,0.92)" stroke={`${color}55`} />
+              <circle cx="22" cy="22" r="6" fill={color} />
+              <text x="38" y="19" fill="#f4f4f5" fontSize="12" fontWeight="600">{destination.address}:{destination.port}</text>
+              <text x="38" y="34" fill="#71717a" fontSize="10">{destination.country ?? t('countryUnknown')} · {t('clickForDetails')}</text>
+            </g>
+          })}
+          <text x="32" y="24" fill="#71717a" fontSize="10" letterSpacing="1.5">{t('topologyApps').toUpperCase()}</text>
+          <text x="690" y="24" fill="#71717a" fontSize="10" letterSpacing="1.5">{t('topologyDestinations').toUpperCase()}</text>
+        </svg>
+      </div>
+      <div className="flex flex-wrap gap-4 border-t px-5 py-3 text-[11px]" style={{ borderColor: 'var(--border-default)', color: 'var(--text-muted)' }}>
+        {(['allow', 'alert', 'block'] as NetworkDecision[]).map((decision) => <span key={decision} className="flex items-center gap-2"><span className="h-2 w-2 rounded-full" style={{ background: DECISION_STYLE[decision].color }} />{DECISION_STYLE[decision].label}</span>)}
+        <span className="ml-auto">{t('topologyClickHint')}</span>
+      </div>
+    </section>
+  )
+}
+
+function ConnectionInspector({ selected, onClose, onBlock, blockedSet }: { selected: SelectedConnection; onClose: () => void; onBlock: (remote: string) => void; blockedSet: Set<string | undefined> }) {
+  const { t } = useTranslation('networkGuard')
+  const { app, connection } = selected
+  const decision = DECISION_STYLE[connection.decision]
+  const blocked = blockedSet.has(connection.remoteAddress)
+  return (
+    <aside className="mt-4 rounded-2xl p-5" style={{ background: 'var(--bg-card)', border: `1px solid ${decision.border}` }}>
+      <div className="flex items-start gap-3">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl" style={{ background: decision.bg }}><Info className="h-4 w-4" style={{ color: decision.color }} /></div>
+        <div className="min-w-0 flex-1"><p className="text-[13px] font-semibold text-zinc-100">{t('connectionDetails')}</p><p className="mt-1 truncate font-mono text-[12px]" style={{ color: 'var(--text-muted)' }}>{app.app} → {connection.remoteAddress}:{connection.remotePort}</p></div>
+        <button onClick={onClose} aria-label={t('closeDetails')}><X className="h-4 w-4" style={{ color: 'var(--text-muted)' }} /></button>
+      </div>
+      <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <Field label={t('detailProcess')} value={app.app} />
+        <Field label={t('detailPid')} value={app.pid == null ? t('pidUnknown') : String(app.pid)} />
+        <Field label={t('detailLocalPort')} value={String(connection.localPort)} />
+        <Field label={t('detailRemotePort')} value={String(connection.remotePort)} />
+        <Field label={t('detailCountry')} value={connection.country ?? t('countryUnknown')} />
+        <Field label={t('category')} value={connection.category ?? '—'} />
+        <Field label={t('confidence')} value={`${Math.round(connection.confidence * 100)}%`} />
+        <Field label={t('detailDecision')} value={decision.label} />
+      </div>
+      <div className="mt-4 rounded-xl px-3.5 py-3 text-[12px]" style={{ background: decision.bg, color: 'var(--text-muted)' }}><span className="font-medium text-zinc-200">{t('reason')}:</span> {connection.reason}</div>
+      {!blocked && <button onClick={() => onBlock(connection.remoteAddress)} className="mt-4 rounded-xl px-3.5 py-2 text-[12px] font-medium" style={{ background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)', color: '#f87171' }}>{t('blockDestination', { destination: connection.remoteAddress })}</button>}
+    </aside>
+  )
+}
+
+function EmptyConnections({ text }: { text: string }) {
+  return <div className="rounded-2xl px-4 py-12 text-center" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-default)', color: 'var(--text-muted)' }}><Filter className="mx-auto mb-3 h-5 w-5" /><p className="text-[13px]">{text}</p></div>
 }
 
 // ─── Port scanner ───────────────────────────────────────────
