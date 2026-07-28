@@ -289,12 +289,19 @@ export function CleanerPage() {
   const isScanning = store.status === ScanStatus.Scanning
   const isCleaning = store.status === ScanStatus.Cleaning
   const hasResults = store.results.length > 0
+  const activeCategoryDef = scanningCategory
+    ? visibleCategories.find((c) => c.type === scanningCategory)
+    : null
+  const activeCategoryLabel = activeCategoryDef ? t(activeCategoryDef.labelKey) : (store.progress?.category || '')
+  const progressDetail = isScanning
+    ? t('scanningDetail', { category: activeCategoryLabel || '…' })
+    : t('cleaningDetail', { category: store.progress?.category || activeCategoryLabel || '…' })
 
   return (
     <div className="animate-fade-in">
       <PageHeader
         title={t('pageTitle')}
-        description={t('pageDescription')}
+        description={platform === 'linux' ? t('pageDescriptionLinux') : t('pageDescription')}
         action={
           <div className="flex items-center gap-2.5">
             <button
@@ -387,6 +394,8 @@ export function CleanerPage() {
               currentPath={store.progress.currentPath}
               itemsFound={store.progress.itemsFound}
               sizeFound={store.progress.sizeFound}
+              detail={progressDetail}
+              focus={activeCategoryLabel || store.progress.category || undefined}
               className="mb-5"
             />
           )}

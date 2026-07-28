@@ -27,6 +27,11 @@ describe('linux paths', () => {
       expect(dirs.some((d) => d.includes('Documents'))).toBe(true)
     })
 
+    it('includes systemd user units and autostart', () => {
+      expect(dirs.some((d) => d.includes('systemd'))).toBe(true)
+      expect(dirs.some((d) => d.includes('autostart'))).toBe(true)
+    })
+
     it('includes /tmp', () => {
       expect(dirs).toContain('/tmp')
     })

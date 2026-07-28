@@ -145,6 +145,8 @@ export interface ProgressData {
   progress: number
   itemsFound: number
   sizeFound: number
+  /** Plain-language status for the cleaner hero (optional). */
+  detail?: string
 }
 
 export interface RegistryFixAction {
@@ -322,6 +324,13 @@ export interface MalwareScanProgress {
   completedSteps: string[]
   /** Per-category progress for the multi-phase UI */
   categories: MalwareCategoryProgress[]
+  /**
+   * Plain-language “what Bulwrk is doing in your environment right now”.
+   * Especially useful on Linux where engines (ClamAV/YARA/persistence) differ.
+   */
+  environmentNote?: string
+  /** Short surface nickname, e.g. "Downloads · common drop zone" */
+  environmentFocus?: string
 }
 
 export interface MalwareScanResult {
