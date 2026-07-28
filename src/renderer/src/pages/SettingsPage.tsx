@@ -194,9 +194,14 @@ export function SettingsPage() {
           <Toggle checked={settings.cleaner.closeBrowsersBeforeClean} onChange={(v) => save({ cleaner: { ...settings.cleaner, closeBrowsersBeforeClean: v } })} />
         </Row>
         {features.restorePoint && (
-          <Row label={t('createRestorePointLabel')} desc={t('createRestorePointDesc')}>
-            <Toggle checked={settings.cleaner.createRestorePoint} onChange={(v) => save({ cleaner: { ...settings.cleaner, createRestorePoint: v } })} />
-          </Row>
+          <>
+            <Row label={t('createRestorePointLabel')} desc={t('createRestorePointDesc')}>
+              <Toggle checked={settings.cleaner.createRestorePoint} onChange={(v) => save({ cleaner: { ...settings.cleaner, createRestorePoint: v } })} />
+            </Row>
+            <Row label={t('requireRestorePointLabel')} desc={t('requireRestorePointDesc')}>
+              <Toggle checked={settings.cleaner.requireRestorePoint} onChange={(v) => save({ cleaner: { ...settings.cleaner, requireRestorePoint: v } })} />
+            </Row>
+          </>
         )}
         <Row label={t('keepDeletionLogLabel')} desc={t('keepDeletionLogDesc')}>
           <Toggle checked={settings.cleaner.keepDeletionLog} onChange={(v) => save({ cleaner: { ...settings.cleaner, keepDeletionLog: v } })} />

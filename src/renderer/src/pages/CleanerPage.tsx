@@ -62,6 +62,7 @@ export function CleanerPage() {
   const recomputeStats = useStatsStore((s) => s.recompute)
   const historyStore = useHistoryStore()
   const createRestorePointEnabled = useSettingsStore((s) => s.settings.cleaner.createRestorePoint)
+  const requireRestorePoint = useSettingsStore((s) => s.settings.cleaner.requireRestorePoint)
   const protectRecycleBin = useSettingsStore((s) => s.settings.cleaner.protectRecycleBin)
   const visibleCategories = protectRecycleBin
     ? categories.filter((c) => c.type !== CleanerType.RecycleBin)
@@ -155,18 +156,32 @@ export function CleanerPage() {
     store.setStatus(ScanStatus.Cleaning)
     cleanStartRef.current = Date.now()
     try {
-      // Create a system restore point before cleaning if enabled
-      if (createRestorePointEnabled) {
+      // Phase 1: optional hard gate — refuse clean if restore is required and fails.
+      // Soft opt-in createRestorePoint still warns but continues when require is off.
+      const wantsRestore = createRestorePointEnabled || requireRestorePoint
+      if (wantsRestore) {
         try {
           const rpResult = await window.kudu.createRestorePoint(
-            `Kudu clean — ${new Date().toLocaleString()}`
+            `Bulwark clean — ${new Date().toLocaleString()}`
           )
           if (rpResult.success) {
             toast.success(t('toastRestorePointCreated'))
           } else {
+            const msg = (rpResult.error || '').toLowerCase()
+            const throttled = msg.includes('frequency') || msg.includes('1440') || msg.includes('already created')
+            if (requireRestorePoint && !throttled) {
+              toast.error(t('toastRestorePointSkipped'), { description: rpResult.error })
+              store.setStatus(ScanStatus.Complete)
+              return
+            }
             toast.warning(t('toastRestorePointSkipped'), { description: rpResult.error })
           }
         } catch {
+          if (requireRestorePoint) {
+            toast.error(t('toastRestorePointSkipped'), { description: t('toastRestorePointSkippedDescription') })
+            store.setStatus(ScanStatus.Complete)
+            return
+          }
           toast.warning(t('toastRestorePointSkipped'), { description: t('toastRestorePointSkippedDescription') })
         }
       }
@@ -268,7 +283,7 @@ export function CleanerPage() {
       store.setStatus(ScanStatus.Error)
     }
     store.setProgress(null)
-  }, [store.results, createRestorePointEnabled])
+  }, [store.results, createRestorePointEnabled, requireRestorePoint, t])
 
   const categoryResults = (type: CleanerType) => store.results.filter((r) => r.category === type)
   const categoryItemCount = (type: CleanerType) => categoryResults(type).reduce((sum, r) => sum + r.itemCount, 0)

@@ -78,6 +78,13 @@ describe('parseCliArgs', () => {
     expect(result.hasCleanFlag).toBe(true)
   })
 
+  it('detects --dry-run and --force flags', () => {
+    const result = parseCliArgs(['node', 'kudu', '--cli', '--all', '--clean', '--dry-run', '--force'])
+    expect(result.hasCleanFlag).toBe(true)
+    expect(result.hasDryRunFlag).toBe(true)
+    expect(result.hasForceFlag).toBe(true)
+  })
+
   it('handles no arguments after --cli', () => {
     const result = parseCliArgs(['node', 'kudu', '--cli'])
     expect(result.command).toBeUndefined()

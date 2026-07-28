@@ -22,10 +22,11 @@ const defaultSettings: KuduSettings = {
     skipRecentMinutes: 60,
     secureDelete: false,
     closeBrowsersBeforeClean: false,
-    createRestorePoint: false,
-    protectRecycleBin: true,
-    keepDeletionLog: false
-  },
+      createRestorePoint: false,
+      requireRestorePoint: false,
+      protectRecycleBin: true,
+      keepDeletionLog: false
+    },
   exclusions: [],
   ignoredSoftwareUpdates: [],
   backupPath: '',

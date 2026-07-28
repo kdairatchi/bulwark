@@ -112,6 +112,19 @@ describe('executeQuarantineFile', () => {
     expect(r.succeeded).toBe(2)
     expect(quarantine).toHaveBeenCalledWith(['/tmp/a', '/tmp/b'])
   })
+
+  it('dry-run reports wouldQuarantine without calling quarantine', async () => {
+    const quarantine = vi.fn(async () => ({ succeeded: 1, failed: 0, errors: [] }))
+    const r = await executeQuarantineFile({ path: '/tmp/evil.bin', dryRun: true }, {
+      isAllowed: (p) => p.startsWith('/tmp/'),
+      quarantine,
+    })
+    expect(r.ok).toBe(true)
+    expect(r.dryRun).toBe(true)
+    expect(r.applied).toBe(false)
+    expect(r.wouldQuarantine).toEqual(['/tmp/evil.bin'])
+    expect(quarantine).not.toHaveBeenCalled()
+  })
 })
 
 describe('executeRestartAgent', () => {

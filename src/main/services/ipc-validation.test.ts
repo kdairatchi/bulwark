@@ -125,6 +125,7 @@ describe('validateSettingsPartial', () => {
         secureDelete: false,
         closeBrowsersBeforeClean: false,
         createRestorePoint: false,
+        requireRestorePoint: false,
         protectRecycleBin: true,
         keepDeletionLog: false
       }

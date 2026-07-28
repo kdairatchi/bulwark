@@ -188,6 +188,21 @@ export async function executeQuarantineFile(
     }
   }
 
+  if (parameters.dryRun === true) {
+    return {
+      ok: true,
+      stub: false,
+      type: 'QUARANTINE_FILE',
+      applied: false,
+      dryRun: true,
+      wouldQuarantine: paths,
+      succeeded: 0,
+      failed: 0,
+      errors: [],
+      parameters,
+    }
+  }
+
   try {
     const result = await deps.quarantine(paths)
     return {

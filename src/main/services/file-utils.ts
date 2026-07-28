@@ -3,7 +3,7 @@ import { existsSync } from 'fs'
 import type { Dirent, Stats } from 'fs'
 import { join } from 'path'
 import { randomUUID, randomBytes } from 'crypto'
-import type { ScanItem, ScanResult, CleanResult, DeletedFileRecord, DeletionOrigin } from '../../shared/types'
+import type { ScanItem, ScanResult, CleanResult, CleanOptions, DeletedFileRecord, DeletionOrigin } from '../../shared/types'
 import { getCachedItems } from './scan-cache'
 import { getSettings } from './settings-store'
 import { recordDeletions } from './deletion-log-store'
@@ -162,12 +162,15 @@ async function listDescendantFiles(dirPath: string): Promise<{ paths: string[]; 
 
 /**
  * Look up cached scan items by ID, delete each one, and return a CleanResult.
+ * Pass `{ dryRun: true }` to enumerate would-delete results without removing files.
  */
 export async function cleanItems(
   itemIds: unknown,
   onProgress?: (processed: number, total: number, currentPath: string, cleanedSize: number) => void,
-  origin: DeletionOrigin = 'local'
+  origin: DeletionOrigin = 'local',
+  options: CleanOptions = {},
 ): Promise<CleanResult> {
+  const dryRun = options.dryRun === true
   // Validate input is a string array
   const validIds = Array.isArray(itemIds)
     ? itemIds.filter((v): v is string => typeof v === 'string')
@@ -182,7 +185,8 @@ export async function cleanItems(
   // Opt-in audit trail of what was removed (issue #247). Buffered so a clean of
   // 100k files doesn't turn into 100k appends, and flushed as we go so a crash
   // mid-clean still leaves a record of everything deleted up to that point.
-  const logDeletions = getSettings().cleaner.keepDeletionLog === true
+  // Dry-run never writes the deletion log — nothing was removed.
+  const logDeletions = !dryRun && getSettings().cleaner.keepDeletionLog === true
   const pending: DeletedFileRecord[] = []
   const flushPending = (): void => {
     if (pending.length === 0) return
@@ -209,7 +213,9 @@ export async function cleanItems(
     // recorded, so a failed delete never leaves phantom entries behind.
     const descendants = rootInfo?.isDirectory() ? await listDescendantFiles(item.path) : null
 
-    const result = await safeDelete(item.path)
+    const result = dryRun
+      ? { path: item.path, success: true as const }
+      : await safeDelete(item.path)
     if (result.success) {
       totalCleaned += item.size
       filesDeleted++
@@ -251,7 +257,7 @@ export async function cleanItems(
   flushPending()
 
   const needsElevation = errors.some((e) => e.reason === 'permission-denied')
-  return { totalCleaned, filesDeleted, filesSkipped, errors, needsElevation }
+  return { totalCleaned, filesDeleted, filesSkipped, errors, needsElevation, dryRun: dryRun || undefined }
 }
 
 export interface ScanRecencyOptions {

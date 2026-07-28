@@ -143,7 +143,7 @@ export function validateSettingsPartial(input: unknown): Record<string, unknown>
     if (typeof c !== 'object' || c === null || Array.isArray(c)) return null
     const allowedCleanerKeys = new Set([
       'skipRecentMinutes', 'secureDelete', 'closeBrowsersBeforeClean',
-      'createRestorePoint', 'protectRecycleBin', 'keepDeletionLog'
+      'createRestorePoint', 'requireRestorePoint', 'protectRecycleBin', 'keepDeletionLog'
     ])
     for (const key of Object.keys(c)) {
       if (!allowedCleanerKeys.has(key)) return null
@@ -152,6 +152,7 @@ export function validateSettingsPartial(input: unknown): Record<string, unknown>
     if ('secureDelete' in c && typeof c.secureDelete !== 'boolean') return null
     if ('closeBrowsersBeforeClean' in c && typeof c.closeBrowsersBeforeClean !== 'boolean') return null
     if ('createRestorePoint' in c && typeof c.createRestorePoint !== 'boolean') return null
+    if ('requireRestorePoint' in c && typeof c.requireRestorePoint !== 'boolean') return null
     if ('protectRecycleBin' in c && typeof c.protectRecycleBin !== 'boolean') return null
     if ('keepDeletionLog' in c && typeof c.keepDeletionLog !== 'boolean') return null
   }
