@@ -226,7 +226,7 @@ export function requestScan(store: DeviceStore, deviceId: string, input: unknown
   if (typeof o.scope === 'string' && parameters.scope === undefined) {
     parameters.scope = o.scope
   }
-  for (const key of ['kevSync', 'syncKev', 'osv', 'epss'] as const) {
+  for (const key of ['kevSync', 'syncKev', 'osv', 'nvd', 'epss'] as const) {
     if (o[key] !== undefined && parameters[key] === undefined) {
       parameters[key] = o[key]
     }

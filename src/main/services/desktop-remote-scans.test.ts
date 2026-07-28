@@ -96,6 +96,7 @@ describe('desktop-remote-scans', () => {
     }
   })
 
+
   it('executeRemoteScan dispatches by type', async () => {
     const apps = [app()]
     expect((await executeRemoteScan('RUN_HEALTH_ASSESSMENT', apps)).type).toBe('RUN_HEALTH_ASSESSMENT')

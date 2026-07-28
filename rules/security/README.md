@@ -34,6 +34,11 @@ with `parameters.kevSync=true` (parent vuln scan does this by default).
 
 **OSV:** pass `parameters.osv=true` for bounded OSV.dev package queries (parent checkbox).
 
+**NVD:** pass `parameters.nvd=true` for bounded NVD 2.0 CPE queries. The adapter
+only sends exact CPEs for known product mappings, caps requests per scan, and
+supports `NVD_API_KEY` for higher-rate deployments. It intentionally does not
+infer CPEs from arbitrary display names.
+
 ### Coverage vs gaps
 
 | Capability | Status |
@@ -42,7 +47,8 @@ with `parameters.kevSync=true` (parent vuln scan does this by default).
 | Live CISA KEV sync + disk cache | **Landed** (`kevSync`) |
 | EPSS enrichment | **Landed** (`epss`) |
 | Bounded OSV queries (`osv=true`) | **Landed (optional)** |
-| Full NVD CPE matching | **Phase 5 incomplete** |
+| Bounded NVD 2.0 CPE matching | **Landed (opt-in)** |
+| Full product/vendor normalization and NVD cache | Phase 5 in progress |
 | Live zero-day intel feed | Out of scope |
 | Full LOLBAS dump (~1000+ bins) | Seed catalog; expand iteratively |
 | ETW / process-tree / kernel | Not started |

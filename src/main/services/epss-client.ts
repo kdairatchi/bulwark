@@ -69,7 +69,7 @@ export function enrichFindingsWithEpss(
 ): InventoryFinding[] {
   if (scores.size === 0) return findings
   return findings.map((f) => {
-    if (f.category !== 'kev' && f.category !== 'osv' && f.category !== 'cve') return f
+    if (f.category !== 'kev' && f.category !== 'osv' && f.category !== 'nvd' && f.category !== 'cve') return f
     const score = scores.get(f.subjectName.toUpperCase())
     if (!score) return f
     const tag = `epss=${score.epss.toFixed(4)}:pct=${score.percentile.toFixed(4)}`
