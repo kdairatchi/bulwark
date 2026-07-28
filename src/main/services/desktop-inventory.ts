@@ -12,6 +12,10 @@ export interface InventoryFinding {
   category?: string
   /** Human-readable remediation hint (KEV requiredAction / upgrade floor). */
   fixRecommendation?: string
+  /** Optional calibrated confidence in this finding (0..1). */
+  confidence?: number
+  /** Short evidence tokens retained for review/remediation context. */
+  evidence?: string[]
 }
 
 export interface DesktopInventoryPayload {

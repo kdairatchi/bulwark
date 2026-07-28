@@ -48,6 +48,10 @@ Vendor and distro feed adapters should normalize their native ranges through
 KEV-style `vulnerableBelow`, Debian/RPM/Alpine revisions, and returns `unknown`
 when either side lacks enough version evidence.
 
+Finding submissions retain a calibrated `confidence` score and bounded
+`evidence` tokens. Repeated open findings merge the strongest level and
+confidence, preserve remediation text, and union evidence for review context.
+
 ### Coverage vs gaps
 
 | Capability | Status |

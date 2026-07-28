@@ -73,6 +73,10 @@ export interface StoredFinding {
   category: string | null
   /** Optional remediation hint from agents (KEV requiredAction / upgrade floor). */
   fixRecommendation: string | null
+  /** 0..1 confidence after source/category calibration. */
+  confidence: number
+  /** Short, deduplicated evidence tokens supporting the finding. */
+  evidence: string[]
   createdAt: string
   updatedAt: string | null
   status: StoredFindingStatus
@@ -92,6 +96,40 @@ export function normalizeFixRecommendation(raw: unknown): string | null {
   if (typeof raw !== 'string') return null
   const t = raw.trim().replace(/\s+/g, ' ').slice(0, 240)
   return t || null
+}
+
+export function normalizeFindingConfidence(raw: unknown): number | null {
+  if (typeof raw !== 'number' || !Number.isFinite(raw)) return null
+  return Math.max(0, Math.min(1, raw))
+}
+
+export function normalizeFindingEvidence(raw: unknown): string[] {
+  if (!Array.isArray(raw)) return []
+  return [...new Set(raw
+    .filter((v): v is string => typeof v === 'string')
+    .map((v) => v.trim().replace(/\s+/g, ' ').slice(0, 160))
+    .filter(Boolean))].slice(0, 12)
+}
+
+function defaultFindingConfidence(level: string, category: string | null): number {
+  const cat = category || ''
+  if (cat === 'kev') return 0.95
+  if (cat === 'osv') return 0.85
+  if (cat === 'nvd' || cat === 'cve') return 0.75
+  if (cat === 'technique' || cat === 'vuln_heuristic') return 0.65
+  if (cat === 'publisher') return 0.3
+  if (/confirmed|likely|critical|high/i.test(level)) return 0.75
+  if (/potential|medium/i.test(level)) return 0.5
+  return 0.25
+}
+
+function findingStrength(level: string): number {
+  const value = level.toLowerCase()
+  if (value.includes('critical') || value.includes('confirmed')) return 4
+  if (value.includes('likely') || value.includes('high') || value === 'dangerous') return 3
+  if (value.includes('potential') || value.includes('medium')) return 2
+  if (value === 'low') return 1
+  return 0
 }
 
 /**
@@ -441,6 +479,8 @@ export class DeviceStore {
     status?: string
     category?: string | null
     fixRecommendation?: string | null
+    confidence?: number | null
+    evidence?: string[]
   }>): number {
     const d = this.devices.get(deviceId)
     if (!d) return 0
@@ -450,11 +490,14 @@ export class DeviceStore {
       const status = typeof f.status === 'string' && isFindingStatus(f.status)
         ? f.status
         : (isFindingStatus(f.level) ? f.level : 'potential_match')
+      const level = f.level
       const category = normalizeFindingCategory(f.category)
       const fixRecommendation = normalizeFixRecommendation(f.fixRecommendation)
+      const confidence = normalizeFindingConfidence(f.confidence)
+        ?? defaultFindingConfidence(level, category)
+      const evidence = normalizeFindingEvidence(f.evidence)
       const subjectName = f.subjectName
       const reason = f.reason
-      const level = f.level
 
       // Dedupe open findings by (subjectName, category) — refresh in place.
       const openMatch = this.findings.find(
@@ -465,9 +508,16 @@ export class DeviceStore {
           && (x.category || null) === category,
       )
       if (openMatch) {
-        openMatch.level = level
-        openMatch.reason = reason
-        openMatch.fixRecommendation = fixRecommendation
+        if (
+          findingStrength(level) > findingStrength(openMatch.level)
+          || (findingStrength(level) === findingStrength(openMatch.level) && confidence >= openMatch.confidence)
+        ) {
+          openMatch.level = level
+          openMatch.reason = reason
+        }
+        openMatch.fixRecommendation = openMatch.fixRecommendation || fixRecommendation
+        openMatch.confidence = Math.max(openMatch.confidence, confidence)
+        openMatch.evidence = normalizeFindingEvidence([...openMatch.evidence, ...evidence, reason])
         openMatch.updatedAt = nowIso
         // Keep existing status if it's a review-style open status; otherwise align with level.
         if (!isFindingStatus(openMatch.status) || openMatch.status === 'unknown') {
@@ -485,6 +535,8 @@ export class DeviceStore {
         reason,
         category,
         fixRecommendation,
+        confidence,
+        evidence: normalizeFindingEvidence([...evidence, reason]),
         createdAt: nowIso,
         updatedAt: null,
         status,

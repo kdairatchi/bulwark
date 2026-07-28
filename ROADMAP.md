@@ -82,7 +82,7 @@ sync + emergency isolation, network-event batching, JVM demo (`:core:runAgentDem
 - [x] Expand product/vendor normalization without loose-name false positives.
 - [x] Add NVD cache/update workflow using last-modified windows and API-key support.
 - [ ] Add vendor/distro advisories and version-range evaluator beyond NVD CPE data.
-- [ ] Consolidate finding confidence, deduplication, and remediation evidence.
+- [x] Consolidate finding confidence, deduplication, and remediation evidence.
 
 ## Phase 6 — Public beta
 
