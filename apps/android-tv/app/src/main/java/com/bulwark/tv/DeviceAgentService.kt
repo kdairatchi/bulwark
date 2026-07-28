@@ -3,6 +3,12 @@ package com.bulwark.tv
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
+import android.os.Environment
+import android.os.Handler
+import android.os.Looper
+import androidx.work.ExistingWorkPolicy
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
 import com.bulwark.deviceapi.AppPosture
 import com.bulwark.deviceapi.AppRecord
 import com.bulwark.deviceapi.CommandExecutor
@@ -10,6 +16,8 @@ import com.bulwark.deviceapi.DeviceApiClient
 import com.bulwark.deviceapi.DeviceCrypto
 import com.bulwark.deviceapi.DeviceIdentity
 import com.bulwark.deviceapi.DnsGuardEnforcement
+import com.bulwark.deviceapi.FileQuarantine
+import java.io.File
 
 /**
  * Enrollment + one agent tick (heartbeat, poll/verify/execute, inventory sync).
@@ -271,6 +279,43 @@ class DeviceAgentService(
                     "threatsFound" to findings.count { it.level != "potential_match" },
                     "findings" to findings.size,
                     "details" to findings.take(25).map { it.toMap() },
+                )
+            }
+            "QUARANTINE_FILE" -> {
+                val paths = FileQuarantine.parsePaths(parameters)
+                val allowRoots = buildList {
+                    add(context.filesDir)
+                    add(context.cacheDir)
+                    context.getExternalFilesDir(null)?.let { add(it) }
+                    val downloads = Environment.getExternalStoragePublicDirectory(
+                        Environment.DIRECTORY_DOWNLOADS,
+                    )
+                    if (downloads.exists() && downloads.canRead()) add(downloads)
+                }
+                val quarantineDir = File(context.filesDir, "quarantine")
+                FileQuarantine.quarantineFiles(paths, allowRoots, quarantineDir) + mapOf(
+                    "parameters" to parameters,
+                )
+            }
+            "RESTART_AGENT" -> {
+                // Return immediately, then reschedule WorkManager after the result is posted.
+                Handler(Looper.getMainLooper()).postDelayed({
+                    val appCtx = context.applicationContext
+                    val wm = WorkManager.getInstance(appCtx)
+                    wm.cancelUniqueWork(AgentWorker.UNIQUE_NAME)
+                    (appCtx as? BulwarkApp)?.scheduleAgentWork()
+                    val oneShot = OneTimeWorkRequestBuilder<AgentWorker>().build()
+                    wm.enqueueUniqueWork(
+                        "bulwark-device-agent-now",
+                        ExistingWorkPolicy.REPLACE,
+                        oneShot,
+                    )
+                }, 1500L)
+                mapOf(
+                    "ok" to true,
+                    "stub" to false,
+                    "type" to type,
+                    "scheduled" to true,
                 )
             }
             else -> CommandExecutor.defaultExecute(type, parameters)

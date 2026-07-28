@@ -121,6 +121,14 @@ APPLY_POLICY
 | `UPDATE_THREAT_FEEDS` | Syncs enabled filter lists (URLhaus by default) into the local DoT blocklist; optional `domains[]` (+ `replace`) merges into remote blocks (Android-parity). Params: `syncLists` (default true), `listIds[]`, `domains[]`, `replace`. |
 | `QUARANTINE_FILE` | Moves `path` / `paths[]` into the app quarantine folder when under platform malware allowlist (`/tmp`, Downloads, …). |
 
+**Android TV enforcement (non-stub):**
+
+| Command | Behavior |
+|---------|----------|
+| `QUARANTINE_FILE` | Moves `path` / `paths[]` into `filesDir/quarantine` when under app-scoped roots (`filesDir`, `cacheDir`, `externalFilesDir`) or readable public Downloads. Rejects path escapes; honest failures for missing/permission errors. |
+| `RESTART_AGENT` | Returns `{ ok, scheduled: true }` immediately, then cancels/reschedules the unique periodic `AgentWorker` and enqueues a one-shot tick (`bulwark-device-agent-now`). Does **not** kill DnsGuard VPN or call `System.exit`. |
+| `BLOCK_DOMAIN` / `ISOLATE_DEVICE` / `CLEAR_ISOLATION` / `APPLY_POLICY` / `UPDATE_THREAT_FEEDS` / inventory & scans | Enforced in `DeviceAgentService` (DNS Guard VpnService + blocklist / PackageManager posture). JVM demo stubs remain in `CommandExecutor.defaultExecute` when no Android `Context` is available. |
+
 **Not allowed:** arbitrary shell / PowerShell / remote-exec (`RUN_SHELL` is rejected
 at enqueue with HTTP 400).
 
