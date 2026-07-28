@@ -29,4 +29,6 @@ export interface EnforcementStatus {
   autoRevertAt: string | null
   /** Non-fatal note/warning for the UI (e.g. elevation unavailable). */
   message: string | null
+  /** Active network services / interface names DNS was pointed at (Win/mac). */
+  targets?: string[]
 }
