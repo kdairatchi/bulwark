@@ -60,4 +60,14 @@ describe('finding-explain', () => {
     expect(e.recommended).toMatch(/manually/i)
     expect(e.recommended).not.toMatch(/^Quarantine the selected/)
   })
+
+  it('treats /etc/cron.daily paths as system policy', () => {
+    const e = explainMalwareThreat({
+      severity: 'high',
+      source: 'heuristic',
+      path: '/etc/cron.daily/evil',
+      selected: false,
+    })
+    expect(e.recommended).toMatch(/manually/i)
+  })
 })
