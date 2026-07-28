@@ -342,6 +342,8 @@ const api = {
     ipcRenderer.invoke(IPC.MALWARE_YARA_INFO),
   malwareYaraUpdate: (): Promise<{ success: boolean; error?: string; stats?: { rulesCount: number; version: string } }> =>
     ipcRenderer.invoke(IPC.MALWARE_YARA_UPDATE),
+  malwareNativeAvProbe: (): Promise<import('../main/platform/types').NativeAvProbe> =>
+    ipcRenderer.invoke(IPC.MALWARE_NATIVE_AV_PROBE),
   onYaraCompileProgress: (callback: (data: { loaded: number; total: number }) => void) => {
     const handler = (_event: Electron.IpcRendererEvent, data: { loaded: number; total: number }) => callback(data)
     ipcRenderer.on(IPC.MALWARE_YARA_COMPILE_PROGRESS, handler)

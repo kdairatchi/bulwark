@@ -284,12 +284,22 @@ export interface NativeAvResult {
   threatName: string
 }
 
+/** Result of probing whether the platform native AV binary is present. */
+export interface NativeAvProbe {
+  available: boolean
+  binaryPath?: string
+  note?: string
+}
+
 export interface PlatformMalware {
   /** Whether PE (Windows executable) analysis should run */
   shouldAnalyzePE(): boolean
 
   /** Scan a file with the platform's native antivirus. Returns null if not available. */
   scanWithNativeAv?(filePath: string): Promise<NativeAvResult | null>
+
+  /** Probe whether native AV is installed (without scanning a file). */
+  probeNativeAv?(): Promise<NativeAvProbe>
 
   /** Scannable file extensions for this platform */
   scannableExtensions(): string[]

@@ -1,8 +1,11 @@
 {
   "pageTitle": "System Cleaner",
   "pageDescription": "Scan and clean junk files from your system",
+  "pageDescriptionLinux": "Reclaim space from Linux caches, package leftovers, browser/app data, and trash — with a live readout of which surface Bulwrk is sweeping.",
   "scanButton": "Scan",
   "cleanButton": "Clean",
+  "scanningDetail": "Mapping reclaimable junk in {{category}} — only safe cache/temp targets, never your documents.",
+  "cleaningDetail": "Deleting selected junk in {{category}}. Protected and in-use files are skipped automatically.",
   "categorySystem": "System",
   "categorySystemDescription": "Temp files, logs, caches, dumps, updates",
   "categoryBrowsers": "Browsers",

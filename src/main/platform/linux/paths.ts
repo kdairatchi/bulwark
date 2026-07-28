@@ -50,6 +50,7 @@ export function createLinuxPaths(): PlatformPaths {
         // Persistence & config locations
         { path: join(HOME, '.local', 'bin'),        maxDepth: 2, maxFiles: 1000 },
         { path: join(HOME, '.config', 'autostart'), maxDepth: 2, maxFiles: 1000 },
+        { path: join(HOME, '.config', 'systemd', 'user'), maxDepth: 2, maxFiles: 500 },
         { path: CONFIG,                             maxDepth: 3, maxFiles: 5000 },
         { path: LOCAL_SHARE,                        maxDepth: 3, maxFiles: 5000 },
 

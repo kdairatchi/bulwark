@@ -144,6 +144,7 @@ export const IPC = {
   MALWARE_YARA_INFO: 'malware:yara:info',
   MALWARE_YARA_UPDATE: 'malware:yara:update',
   MALWARE_YARA_COMPILE_PROGRESS: 'malware:yara:compile-progress',
+  MALWARE_NATIVE_AV_PROBE: 'malware:native-av:probe',
 
   // Privacy Shield
   PRIVACY_SCAN: 'privacy:scan',

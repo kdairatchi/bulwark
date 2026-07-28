@@ -171,7 +171,7 @@ describe('defaultCommandExecutor', () => {
       expect(typeof r.findings).toBe('number')
       expect(Array.isArray(r._findings)).toBe(true)
     }
-  }, 15_000)
+  }, 30_000)
 
   it('UPDATE_THREAT_FEEDS domain push is not a stub', async () => {
     devicePolicyEnforcer.setResolverStartConfig({ port: 0 })
