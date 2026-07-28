@@ -508,6 +508,8 @@ Application Risk:
 Network Guard:
   net-check <domain|ip>      Evaluate a destination against a threat-indicator feed
     [--indicators <file>]    (allow/alert/block + reason + confidence; exit 7 if blocked)
+  geoip sync                 Download the IP→country database (for country rules)
+  geoip <ip>                 Look up the country of an IP address
 
 Software Updater:
   updates check              Check for software updates (via winget)
@@ -974,6 +976,34 @@ async function handleRisk(args: string[], ctx: CliContext): Promise<number | voi
 
   const worst = report.findings[0]?.level
   if (worst === 'critical' || worst === 'high') return ExitCode.SCAN_THREATS
+}
+
+async function handleGeoip(args: string[], ctx: CliContext): Promise<number | void> {
+  const sub = args[0]
+  const { syncGeoip, getGeoipStatus, lookupCountry } = await import('./services/geoip')
+
+  if (sub === 'sync') {
+    cliLog(ctx, 'Downloading GeoIP country database...')
+    const status = await syncGeoip()
+    cliOut(ctx, ctx.json ? status : `GeoIP ready: ${status.ranges.toLocaleString()} ranges. ${status.attribution}`)
+    return
+  }
+  if (sub === 'status') {
+    cliOut(ctx, getGeoipStatus())
+    return
+  }
+  // Treat the first arg as an IP to look up.
+  const ip = sub
+  if (!ip) { cliUsage(ctx, 'kudu --cli geoip <sync|status|<ip>>'); return ExitCode.INVALID_ARGS }
+  const country = lookupCountry(ip)
+  if (ctx.json) {
+    cliOut(ctx, { ip, country })
+  } else if (country) {
+    log(`  ${ip} → ${country}`)
+  } else {
+    log(`  ${ip} → unknown (run 'geoip sync' first, or IP not in database)`)
+  }
+  return country ? ExitCode.SUCCESS : ExitCode.NOTHING_FOUND
 }
 
 async function handleNetCheck(args: string[], ctx: CliContext): Promise<number | void> {
@@ -1688,6 +1718,7 @@ export async function runCli(): Promise<void> {
       case 'programs': exitCode = await handlePrograms(parsed.commandArgs, ctx); break
       case 'risk': exitCode = await handleRisk(parsed.commandArgs, ctx); break
       case 'net-check': exitCode = await handleNetCheck(parsed.commandArgs, ctx); break
+      case 'geoip': exitCode = await handleGeoip(parsed.commandArgs, ctx); break
       case 'updates': exitCode = await handleUpdates(parsed.commandArgs, ctx); break
       case 'perf': exitCode = await handlePerf(parsed.commandArgs, ctx); break
       case 'leftovers': exitCode = await handleLeftovers(parsed.commandArgs, ctx); break

@@ -8,6 +8,7 @@ import {
   isIpAddress,
   categoryDecision,
   hasBlockingEvent,
+  sanitizeIndicators,
 } from './network-guard'
 import type { ThreatIndicator } from '../../shared/network-guard'
 
@@ -126,6 +127,29 @@ describe('network-guard · evaluateDestination (full pipeline)', () => {
   it('is deterministic', () => {
     const input = { destination: '198.51.100.42', port: 8333, protocol: 'tcp' as const }
     expect(evaluateDestination(input, index, now)).toEqual(evaluateDestination(input, index, now))
+  })
+})
+
+describe('network-guard · sanitizeIndicators', () => {
+  it('keeps valid entries and drops malformed ones', () => {
+    const raw = [
+      { value: 'a.example', type: 'domain', category: 'c2', confidence: 0.9, source: 'feed' },
+      { value: '', type: 'domain', category: 'c2' }, // empty value
+      { value: 'b.example', type: 'bogus', category: 'c2' }, // bad type
+      { value: 'c.example', type: 'domain', category: 'not-a-category' }, // bad category
+      { value: 'd.example', type: 'domain', category: 'phishing', confidence: 5 }, // out-of-range confidence dropped
+      'not-an-object',
+    ]
+    const clean = sanitizeIndicators(raw)
+    expect(clean).toHaveLength(2)
+    expect(clean[0]).toEqual({ value: 'a.example', type: 'domain', category: 'c2', source: 'feed', confidence: 0.9 })
+    // out-of-range confidence is dropped but the indicator is kept
+    expect(clean[1]).toEqual({ value: 'd.example', type: 'domain', category: 'phishing' })
+  })
+
+  it('returns an empty array for non-array input', () => {
+    expect(sanitizeIndicators(null)).toEqual([])
+    expect(sanitizeIndicators({ indicators: [] })).toEqual([])
   })
 })
 

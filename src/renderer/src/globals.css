@@ -123,15 +123,16 @@
   --gauge-track: rgba(255, 255, 255, 0.06);
   --grid-line: rgba(255, 255, 255, 0.04);
 
-  /* Glass */
-  --glass-bg: rgba(255, 255, 255, 0.025);
-  --glass-border: rgba(255, 255, 255, 0.06);
-  --glass-inset: rgba(255, 255, 255, 0.03);
-  --glass-shadow: 0 4px 24px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.08);
-  --glass-hover-bg: rgba(255, 255, 255, 0.045);
-  --glass-hover-border: rgba(255, 255, 255, 0.10);
-  --glass-hover-inset: rgba(255, 255, 255, 0.05);
-  --glass-hover-shadow: 0 8px 40px rgba(0, 0, 0, 0.2), 0 2px 8px rgba(0, 0, 0, 0.12);
+  /* Glass — iOS-26 "liquid glass": more translucency + specular sheen */
+  --glass-bg: rgba(255, 255, 255, 0.045);
+  --glass-border: rgba(255, 255, 255, 0.10);
+  --glass-inset: rgba(255, 255, 255, 0.10);
+  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.28), 0 1px 2px rgba(0, 0, 0, 0.12);
+  --glass-hover-bg: rgba(255, 255, 255, 0.07);
+  --glass-hover-border: rgba(255, 255, 255, 0.16);
+  --glass-hover-inset: rgba(255, 255, 255, 0.16);
+  --glass-hover-shadow: 0 16px 48px rgba(0, 0, 0, 0.36), 0 2px 8px rgba(0, 0, 0, 0.16);
+  --glass-sheen: rgba(255, 255, 255, 0.12);
 
   /* Scrollbar */
   --scrollbar-thumb: rgba(255,255,255,0.06);
@@ -197,14 +198,15 @@
   --grid-line: rgba(0, 0, 0, 0.06);
 
   /* Glass */
-  --glass-bg: rgba(255, 255, 255, 0.65);
-  --glass-border: rgba(0, 0, 0, 0.08);
-  --glass-inset: rgba(255, 255, 255, 0.8);
-  --glass-shadow: 0 4px 24px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
-  --glass-hover-bg: rgba(255, 255, 255, 0.85);
-  --glass-hover-border: rgba(0, 0, 0, 0.12);
-  --glass-hover-inset: rgba(255, 255, 255, 0.9);
-  --glass-hover-shadow: 0 8px 40px rgba(0, 0, 0, 0.1), 0 2px 8px rgba(0, 0, 0, 0.06);
+  --glass-bg: rgba(255, 255, 255, 0.72);
+  --glass-border: rgba(255, 255, 255, 0.6);
+  --glass-inset: rgba(255, 255, 255, 0.9);
+  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.10), 0 1px 2px rgba(0, 0, 0, 0.05);
+  --glass-hover-bg: rgba(255, 255, 255, 0.88);
+  --glass-hover-border: rgba(255, 255, 255, 0.8);
+  --glass-hover-inset: rgba(255, 255, 255, 0.95);
+  --glass-hover-shadow: 0 16px 48px rgba(0, 0, 0, 0.14), 0 2px 8px rgba(0, 0, 0, 0.06);
+  --glass-sheen: rgba(255, 255, 255, 0.7);
 
   /* Scrollbar */
   --scrollbar-thumb: rgba(0,0,0,0.10);
@@ -287,7 +289,13 @@ html, body, #root {
 
 body {
   font-family: var(--font-sans);
-  background: var(--page-bg);
+  /* Liquid-glass ambient: soft amber + blue light pools behind the frosted UI */
+  background:
+    radial-gradient(1100px 620px at 12% -12%, rgba(245, 158, 11, 0.10), transparent 60%),
+    radial-gradient(1000px 560px at 108% 4%, rgba(59, 130, 246, 0.08), transparent 58%),
+    radial-gradient(900px 700px at 50% 120%, rgba(139, 92, 246, 0.06), transparent 60%),
+    var(--page-bg);
+  background-attachment: fixed;
   color: var(--text-primary);
   -webkit-font-smoothing: antialiased;
   font-size: 13px;
@@ -308,15 +316,29 @@ summary, .clickable { cursor: pointer; }
 .drag-region { -webkit-app-region: drag; }
 .no-drag     { -webkit-app-region: no-drag; }
 
-/* ── glass card system ───────────────────────── */
+/* ── glass card system (iOS-26 liquid glass) ──── */
 .glass-card {
-  background: var(--glass-bg);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
+  position: relative;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0.015) 42%, rgba(255, 255, 255, 0) 100%),
+    var(--glass-bg);
+  backdrop-filter: blur(30px) saturate(180%);
+  -webkit-backdrop-filter: blur(30px) saturate(180%);
   border: 1px solid var(--glass-border);
   box-shadow:
     inset 0 1px 0 0 var(--glass-inset),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.015),
     var(--glass-shadow);
+}
+/* Specular top sheen — the glossy "wet glass" highlight */
+.glass-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(180deg, var(--glass-sheen) 0%, rgba(255, 255, 255, 0) 40%);
+  opacity: 0.5;
 }
 
 .glass-card-hover {

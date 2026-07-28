@@ -5,6 +5,7 @@
   "securityHeading": "SECURITY",
   "malwareScanner": "Malware Scanner",
   "appRisk": "Application Risk",
+  "networkGuard": "Network Guard",
   "threatMonitor": "Threat Monitor",
   "systemHardening": "System Hardening",
   "cveScanner": "Vulnerabilities",

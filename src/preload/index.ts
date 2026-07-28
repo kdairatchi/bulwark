@@ -90,6 +90,13 @@ import type {
   ContextMenuScanResult,
 } from '../shared/types'
 import type { AppRiskReport } from '../shared/risk'
+import type { NetworkEvent, ThreatIndicator } from '../shared/network-guard'
+import type { ConnectionOverview, PortScanResult } from '../shared/network-monitor'
+import type { DnsResolverConfig, DnsResolverStats } from '../shared/dns'
+import type { NetworkRule } from '../shared/policy'
+import type { FilterListsState } from '../shared/filter-lists'
+import type { EnforcementStatus, EnforcementPlan } from '../shared/enforcement'
+import type { GeoipStatus } from '../shared/geoip'
 
 const api = {
   // Platform
@@ -427,6 +434,27 @@ const api = {
   },
   programSafetyFetch: (): Promise<StartupSafetyResult> => ipcRenderer.invoke(IPC.PROGRAM_SAFETY_FETCH),
   appRiskFetch: (): Promise<AppRiskReport> => ipcRenderer.invoke(IPC.APP_RISK_FETCH),
+  networkGuardCheck: (req: { destination: string; indicators?: ThreatIndicator[]; port?: number; protocol?: 'tcp' | 'udp' }): Promise<NetworkEvent> =>
+    ipcRenderer.invoke(IPC.NETWORK_GUARD_CHECK, req),
+  networkMonitorList: (indicators?: ThreatIndicator[]): Promise<ConnectionOverview> =>
+    ipcRenderer.invoke(IPC.NETWORK_MONITOR_LIST, indicators),
+  networkPortScan: (req: { host?: string; ports?: string; timeoutMs?: number }): Promise<PortScanResult> =>
+    ipcRenderer.invoke(IPC.NETWORK_PORT_SCAN, req),
+  dnsResolverStart: (config?: Partial<DnsResolverConfig>): Promise<DnsResolverStats> =>
+    ipcRenderer.invoke(IPC.DNS_RESOLVER_START, config),
+  dnsResolverStop: (): Promise<DnsResolverStats> => ipcRenderer.invoke(IPC.DNS_RESOLVER_STOP),
+  dnsResolverStatus: (): Promise<DnsResolverStats> => ipcRenderer.invoke(IPC.DNS_RESOLVER_STATUS),
+  networkRulesGet: (): Promise<NetworkRule[]> => ipcRenderer.invoke(IPC.NETWORK_RULES_GET),
+  networkRulesSet: (rules: NetworkRule[]): Promise<NetworkRule[]> => ipcRenderer.invoke(IPC.NETWORK_RULES_SET, rules),
+  filterListsGet: (): Promise<FilterListsState> => ipcRenderer.invoke(IPC.FILTER_LISTS_GET),
+  filterListsSetEnabled: (ids: string[]): Promise<FilterListsState> => ipcRenderer.invoke(IPC.FILTER_LISTS_SET_ENABLED, ids),
+  filterListsSync: (): Promise<FilterListsState> => ipcRenderer.invoke(IPC.FILTER_LISTS_SYNC),
+  dnsEnforceStatus: (): Promise<EnforcementStatus> => ipcRenderer.invoke(IPC.DNS_ENFORCE_STATUS),
+  dnsEnforcePlan: (): Promise<EnforcementPlan> => ipcRenderer.invoke(IPC.DNS_ENFORCE_PLAN),
+  dnsEnforceApply: (): Promise<EnforcementStatus> => ipcRenderer.invoke(IPC.DNS_ENFORCE_APPLY),
+  dnsEnforceRevert: (): Promise<EnforcementStatus> => ipcRenderer.invoke(IPC.DNS_ENFORCE_REVERT),
+  geoipStatus: (): Promise<GeoipStatus> => ipcRenderer.invoke(IPC.GEOIP_STATUS),
+  geoipSync: (): Promise<GeoipStatus> => ipcRenderer.invoke(IPC.GEOIP_SYNC),
   onProgramSafetyUpdated: (callback: (data: StartupSafetyResult) => void) => {
     const handler = (_event: Electron.IpcRendererEvent, data: StartupSafetyResult) => callback(data)
     ipcRenderer.on(IPC.PROGRAM_SAFETY_UPDATED, handler)
@@ -460,6 +488,43 @@ const api = {
     error: string | null
     threatBlacklist: { version: string; updatedAt: string; domains: number; ips: number; cidrs: number } | null
   }> => ipcRenderer.invoke(IPC.CLOUD_GET_STATUS),
+
+  // Device API (pairing code / Ed25519 — Bulwark control plane)
+  deviceApiEnroll: (payload: { code: string; name?: string; baseUrl?: string }): Promise<
+    { success: true; deviceId: string } | { success: false; error: string }
+  > => ipcRenderer.invoke(IPC.DEVICE_API_ENROLL, payload),
+  deviceApiUnenroll: (): Promise<{ success: boolean }> =>
+    ipcRenderer.invoke(IPC.DEVICE_API_UNENROLL),
+  deviceApiGetStatus: (): Promise<{
+    enrolled: boolean
+    running: boolean
+    deviceId: string | null
+    name: string | null
+    baseUrl: string | null
+    enrolledAt: string | null
+    lastHeartbeatAt: string | null
+    lastPollAt: string | null
+    lastCommandAt: string | null
+    lastCommandType: string | null
+    lastError: string | null
+    commandsProcessed: number
+    commandsRejected: number
+  }> => ipcRenderer.invoke(IPC.DEVICE_API_GET_STATUS),
+  deviceApiPollNow: (): Promise<{
+    enrolled: boolean
+    running: boolean
+    deviceId: string | null
+    name: string | null
+    baseUrl: string | null
+    enrolledAt: string | null
+    lastHeartbeatAt: string | null
+    lastPollAt: string | null
+    lastCommandAt: string | null
+    lastCommandType: string | null
+    lastError: string | null
+    commandsProcessed: number
+    commandsRejected: number
+  }> => ipcRenderer.invoke(IPC.DEVICE_API_POLL_NOW),
 
   // Duplicate Finder
   duplicatesSelectDir: (): Promise<string | null> =>

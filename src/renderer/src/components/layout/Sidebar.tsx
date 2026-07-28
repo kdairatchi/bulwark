@@ -37,6 +37,7 @@ import {
   Mail,
   MousePointerClick,
   ScanSearch,
+  Globe,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { LucideIcon } from 'lucide-react'
@@ -80,6 +81,7 @@ const navGroups: NavGroup[] = [
     items: [
       { icon: ShieldAlert, labelKey: 'malwareScanner', path: '/malware' },
       { icon: ScanSearch, labelKey: 'appRisk', path: '/app-risk' },
+      { icon: Globe, labelKey: 'networkGuard', path: '/network-guard' },
       {
         icon: Shield, labelKey: 'systemHardening', path: '/hardening',
         children: [

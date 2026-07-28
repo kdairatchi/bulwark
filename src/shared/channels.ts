@@ -170,6 +170,25 @@ export const IPC = {
   // Application Risk (local, transparent risk engine)
   APP_RISK_FETCH: 'app-risk:fetch',
 
+  // Network Guard (local threat-indicator matching)
+  NETWORK_GUARD_CHECK: 'network-guard:check',
+  NETWORK_MONITOR_LIST: 'network-guard:monitor',
+  NETWORK_PORT_SCAN: 'network-guard:port-scan',
+  DNS_RESOLVER_START: 'network-guard:dns-start',
+  DNS_RESOLVER_STOP: 'network-guard:dns-stop',
+  DNS_RESOLVER_STATUS: 'network-guard:dns-status',
+  NETWORK_RULES_GET: 'network-guard:rules-get',
+  NETWORK_RULES_SET: 'network-guard:rules-set',
+  FILTER_LISTS_GET: 'network-guard:filter-lists-get',
+  FILTER_LISTS_SET_ENABLED: 'network-guard:filter-lists-set',
+  FILTER_LISTS_SYNC: 'network-guard:filter-lists-sync',
+  DNS_ENFORCE_STATUS: 'network-guard:enforce-status',
+  DNS_ENFORCE_APPLY: 'network-guard:enforce-apply',
+  DNS_ENFORCE_REVERT: 'network-guard:enforce-revert',
+  DNS_ENFORCE_PLAN: 'network-guard:enforce-plan',
+  GEOIP_STATUS: 'network-guard:geoip-status',
+  GEOIP_SYNC: 'network-guard:geoip-sync',
+
   // Onboarding
   ONBOARDING_GET: 'onboarding:get',
   ONBOARDING_SET: 'onboarding:set',
@@ -211,6 +230,12 @@ export const IPC = {
   CLOUD_UNLINK: 'cloud:unlink',
   CLOUD_GET_STATUS: 'cloud:get-status',
   CLOUD_RECONNECT: 'cloud:reconnect',
+
+  // Device API (pairing / Ed25519 — separate from legacy API-key agent)
+  DEVICE_API_ENROLL: 'device-api:enroll',
+  DEVICE_API_UNENROLL: 'device-api:unenroll',
+  DEVICE_API_GET_STATUS: 'device-api:get-status',
+  DEVICE_API_POLL_NOW: 'device-api:poll-now',
 
   // Threat Monitor
   THREAT_MONITOR_GET_SNAPSHOT: 'threat-monitor:get-snapshot',
