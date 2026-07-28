@@ -176,6 +176,7 @@ function AppRow({ app, onBlock, blockedSet }: { app: AppConnections; onBlock: (r
             return (
               <div key={i} className="group flex items-center gap-3 py-1.5 font-mono text-[12px]">
                 <span className="min-w-0 flex-1 truncate text-zinc-300">{c.remoteAddress}:{c.remotePort}</span>
+                {c.country && <span className="rounded px-1.5 py-0.5 text-[10px]" style={{ background: 'var(--bg-hover)', color: 'var(--text-muted)' }}>{c.country}</span>}
                 {c.category && <span style={{ color: 'var(--text-muted)' }}>{c.reason}</span>}
                 <span style={{ color: cs.color }}>{cs.label}</span>
                 {isBlocked ? (
@@ -464,24 +465,30 @@ function RulesTab() {
   const rules = useNetworkGuardStore((s) => s.rules)
   const load = useNetworkGuardStore((s) => s.loadRules)
   const save = useNetworkGuardStore((s) => s.saveRules)
-  const [domain, setDomain] = useState('')
+  const geoip = useNetworkGuardStore((s) => s.geoip)
+  const geoipSyncing = useNetworkGuardStore((s) => s.geoipSyncing)
+  const loadGeoip = useNetworkGuardStore((s) => s.loadGeoip)
+  const syncGeoip = useNetworkGuardStore((s) => s.syncGeoip)
+  const [kind, setKind] = useState<'domain' | 'country'>('domain')
+  const [value, setValue] = useState('')
   const [action, setAction] = useState<'block' | 'allow'>('block')
 
-  useEffect(() => { load() }, [load])
+  useEffect(() => { load(); loadGeoip() }, [load, loadGeoip])
 
   const add = () => {
-    const d = domain.trim().toLowerCase()
-    if (!d) return
+    const v = value.trim()
+    if (!v) return
+    const match = kind === 'country' ? { country: v.toUpperCase() } : { domain: v.toLowerCase() }
     const rule: NetworkRule = {
       id: `rule_${Date.now()}`,
-      name: `${action} ${d}`,
+      name: `${action} ${kind === 'country' ? 'country ' : ''}${v}`,
       scope: { kind: 'global' },
-      match: { domain: d },
+      match,
       action,
       enabled: true,
     }
     save([...rules, rule])
-    setDomain('')
+    setValue('')
   }
   const remove = (id: string) => save(rules.filter((r) => r.id !== id))
   const toggle = (id: string) => save(rules.map((r) => (r.id === id ? { ...r, enabled: !r.enabled } : r)))
@@ -489,10 +496,14 @@ function RulesTab() {
   return (
     <div className="glass-card rounded-2xl p-6">
       <p className="mb-3 text-[13px]" style={{ color: 'var(--text-muted)' }}>{t('rulesHint')}</p>
-      <div className="flex gap-2.5">
+      <div className="flex flex-wrap gap-2.5">
+        <select value={kind} onChange={(e) => setKind(e.target.value as 'domain' | 'country')} className="rounded-xl px-3 text-[13px] text-zinc-100 outline-none" style={{ background: 'var(--bg-hover-2)', border: '1px solid var(--border-default)' }}>
+          <option value="domain">{t('rulesKindDomain')}</option>
+          <option value="country">{t('rulesKindCountry')}</option>
+        </select>
         <div className="flex flex-1 items-center gap-2 rounded-xl px-3.5" style={{ background: 'var(--bg-hover-2)', border: '1px solid var(--border-default)' }}>
           <Globe className="h-4 w-4 shrink-0" style={{ color: 'var(--text-muted)' }} />
-          <input value={domain} onChange={(e) => setDomain(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') add() }} placeholder={t('rulesPlaceholder')} className="w-full bg-transparent py-2.5 text-[13px] text-zinc-100 outline-none" />
+          <input value={value} onChange={(e) => setValue(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') add() }} placeholder={kind === 'country' ? t('rulesCountryPlaceholder') : t('rulesPlaceholder')} className="w-full bg-transparent py-2.5 text-[13px] text-zinc-100 outline-none" />
         </div>
         <select value={action} onChange={(e) => setAction(e.target.value as 'block' | 'allow')} className="rounded-xl px-3 text-[13px] text-zinc-100 outline-none" style={{ background: 'var(--bg-hover-2)', border: '1px solid var(--border-default)' }}>
           <option value="block">{t('rulesBlock')}</option>
@@ -503,15 +514,28 @@ function RulesTab() {
         </button>
       </div>
 
+      {kind === 'country' && (
+        <div className="mt-3 flex items-center gap-3 rounded-xl px-4 py-2.5 text-[12px]" style={{ background: 'var(--bg-hover-2)', border: '1px solid var(--border-default)' }}>
+          <Globe className="h-4 w-4 shrink-0" style={{ color: geoip?.ready ? '#4ade80' : 'var(--text-muted)' }} />
+          <span className="flex-1" style={{ color: 'var(--text-muted)' }}>
+            {geoip?.ready ? t('geoipReady', { count: geoip.ranges.toLocaleString() }) : t('geoipNotReady')}
+          </span>
+          <button onClick={() => syncGeoip()} disabled={geoipSyncing} className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[11px] font-medium text-zinc-100 disabled:opacity-60" style={{ background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)' }}>
+            <RefreshCw className={`h-3 w-3 ${geoipSyncing ? 'animate-spin' : ''}`} strokeWidth={1.8} /> {geoipSyncing ? t('geoipUpdating') : t('geoipUpdate')}
+          </button>
+        </div>
+      )}
+
       <div className="mt-5 space-y-2">
         {rules.length === 0 && <p className="text-[13px]" style={{ color: 'var(--text-muted)' }}>{t('rulesEmpty')}</p>}
         {rules.map((r) => {
           const isBlock = r.action === 'block'
           const color = isBlock ? '#f87171' : '#4ade80'
+          const label = r.match.country ? `country: ${r.match.country}` : (r.match.domain || r.match.ip || r.match.category || '*')
           return (
             <div key={r.id} className="flex items-center gap-3 rounded-xl px-4 py-2.5 text-[13px]" style={{ background: 'var(--bg-hover-2)', border: '1px solid var(--border-default)', opacity: r.enabled ? 1 : 0.5 }}>
               <span className="rounded-full px-2.5 py-0.5 text-[11px] font-semibold" style={{ color, background: `${color}1a`, border: `1px solid ${color}40` }}>{isBlock ? t('rulesBlock') : t('rulesAllow')}</span>
-              <span className="min-w-0 flex-1 truncate font-mono text-zinc-200">{r.match.domain || r.match.ip || r.match.category || '*'}</span>
+              <span className="min-w-0 flex-1 truncate font-mono text-zinc-200">{label}</span>
               <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>{r.scope.kind === 'app' ? r.scope.app : t('rulesGlobal')}</span>
               <button onClick={() => toggle(r.id)} className="text-[11px]" style={{ color: 'var(--text-muted)' }}>{r.enabled ? t('rulesOn') : t('rulesOff')}</button>
               <button onClick={() => remove(r.id)} style={{ color: '#f87171' }}><Trash2 className="h-4 w-4" strokeWidth={1.8} /></button>

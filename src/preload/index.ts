@@ -96,6 +96,7 @@ import type { DnsResolverConfig, DnsResolverStats } from '../shared/dns'
 import type { NetworkRule } from '../shared/policy'
 import type { FilterListsState } from '../shared/filter-lists'
 import type { EnforcementStatus, EnforcementPlan } from '../shared/enforcement'
+import type { GeoipStatus } from '../shared/geoip'
 
 const api = {
   // Platform
@@ -452,6 +453,8 @@ const api = {
   dnsEnforcePlan: (): Promise<EnforcementPlan> => ipcRenderer.invoke(IPC.DNS_ENFORCE_PLAN),
   dnsEnforceApply: (): Promise<EnforcementStatus> => ipcRenderer.invoke(IPC.DNS_ENFORCE_APPLY),
   dnsEnforceRevert: (): Promise<EnforcementStatus> => ipcRenderer.invoke(IPC.DNS_ENFORCE_REVERT),
+  geoipStatus: (): Promise<GeoipStatus> => ipcRenderer.invoke(IPC.GEOIP_STATUS),
+  geoipSync: (): Promise<GeoipStatus> => ipcRenderer.invoke(IPC.GEOIP_SYNC),
   onProgramSafetyUpdated: (callback: (data: StartupSafetyResult) => void) => {
     const handler = (_event: Electron.IpcRendererEvent, data: StartupSafetyResult) => callback(data)
     ipcRenderer.on(IPC.PROGRAM_SAFETY_UPDATED, handler)

@@ -147,17 +147,21 @@ export function enrichConnections(
   processNames: Map<number, string>,
   indicators: ThreatIndicator[],
   rules: NetworkRule[] = [],
+  lookupCountry: (ip: string) => string | null = () => null,
 ): ConnectionRecord[] {
   const index = buildIndicatorIndex(indicators)
   return connections.map((c) => {
     const process = (c.pid != null && processNames.get(c.pid)) || 'unknown'
+    const isIp = isIpAddress(c.remoteAddress)
+    const country = isIp ? (lookupCountry(c.remoteAddress) ?? undefined) : undefined
     const base = evaluateDestination({ destination: c.remoteAddress, port: c.remotePort, protocol: 'tcp' }, index)
-    // User rules override the automatic verdict.
+    // User rules (incl. country rules) override the automatic verdict.
     const event = applyPolicy(base, {
-      domain: isIpAddress(c.remoteAddress) ? undefined : c.remoteAddress,
-      ip: isIpAddress(c.remoteAddress) ? c.remoteAddress : undefined,
+      domain: isIp ? undefined : c.remoteAddress,
+      ip: isIp ? c.remoteAddress : undefined,
       port: c.remotePort,
       category: base.category,
+      country,
       app: process,
     }, rules)
     return {
@@ -170,6 +174,7 @@ export function enrichConnections(
       reason: event.reason,
       category: event.category,
       confidence: event.confidence,
+      country,
     }
   })
 }
@@ -205,8 +210,9 @@ export async function buildConnectionOverview(
   indicators: ThreatIndicator[],
   now: number = Date.now(),
   rules: NetworkRule[] = [],
+  lookupCountry: (ip: string) => string | null = () => null,
 ): Promise<ConnectionOverview> {
-  const records = enrichConnections(connections, processNames, indicators, rules)
+  const records = enrichConnections(connections, processNames, indicators, rules, lookupCountry)
   const apps = groupByApp(records)
   return {
     apps,

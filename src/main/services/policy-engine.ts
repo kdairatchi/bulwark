@@ -34,16 +34,19 @@ function ruleMatches(rule: NetworkRule, ctx: RuleContext): boolean {
   if (m.category) {
     if (ctx.category !== m.category) return false
   }
+  if (m.country) {
+    if (!ctx.country || ctx.country.toUpperCase() !== m.country.toUpperCase()) return false
+  }
   // A rule with no criteria and global scope would match everything; require at
   // least one criterion OR an app scope to avoid an accidental match-all.
-  const hasCriteria = !!(m.domain || m.ip || typeof m.port === 'number' || m.category)
+  const hasCriteria = !!(m.domain || m.ip || typeof m.port === 'number' || m.category || m.country)
   if (!hasCriteria && rule.scope.kind === 'global') return false
   return true
 }
 
 function specificity(rule: NetworkRule): number {
   const m = rule.match
-  return (m.domain ? 1 : 0) + (m.ip ? 1 : 0) + (typeof m.port === 'number' ? 1 : 0) + (m.category ? 1 : 0)
+  return (m.domain ? 1 : 0) + (m.ip ? 1 : 0) + (typeof m.port === 'number' ? 1 : 0) + (m.category ? 1 : 0) + (m.country ? 1 : 0)
 }
 
 /** Return the decisive rule for a context, or null if none apply. */

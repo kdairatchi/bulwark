@@ -19,6 +19,8 @@ export interface RuleMatch {
   port?: number
   /** Threat category from the indicator engine. */
   category?: ThreatCategory
+  /** ISO 2-letter country code of the remote (via GeoIP). */
+  country?: string
 }
 
 export interface NetworkRule {
@@ -36,6 +38,7 @@ export interface RuleContext {
   ip?: string
   port?: number
   category?: ThreatCategory
+  country?: string
   app?: string
 }
 

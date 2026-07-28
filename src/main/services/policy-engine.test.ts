@@ -64,6 +64,13 @@ describe('policy-engine · evaluateRules', () => {
     expect(evaluateRules({ domain: 'example.com' }, rules)?.rule.id).toBe('block')
   })
 
+  it('matches by country (case-insensitive)', () => {
+    const rules = [rule({ match: { country: 'CN' }, action: 'block' })]
+    expect(evaluateRules({ country: 'cn' }, rules)?.action).toBe('block')
+    expect(evaluateRules({ country: 'US' }, rules)).toBeNull()
+    expect(evaluateRules({}, rules)).toBeNull()
+  })
+
   it('matches by category and by port', () => {
     const catRule = [rule({ match: { category: 'c2' }, action: 'block' })]
     expect(evaluateRules({ category: 'c2' }, catRule)?.action).toBe('block')

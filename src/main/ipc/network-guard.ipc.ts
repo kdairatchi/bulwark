@@ -15,6 +15,8 @@ import { getEnabledListIds, setEnabledListIds } from '../services/filter-lists-s
 import type { FilterListsState } from '../../shared/filter-lists'
 import { DnsEnforcement, buildEnforcementPlan } from '../services/dns-enforcement'
 import type { EnforcementPlan, EnforcementStatus } from '../../shared/enforcement'
+import { getGeoipStatus, syncGeoip, lookupCountry } from '../services/geoip'
+import type { GeoipStatus } from '../../shared/geoip'
 import { cloudLog } from '../services/logger'
 import { getPlatform } from '../platform'
 
@@ -87,8 +89,12 @@ export function registerNetworkGuardIpc(): void {
       processNames.set(p.pid, p.name)
     }
     const indicators = sanitizeIndicators(indicatorsRaw)
-    return buildConnectionOverview(connections, listeningPorts, processNames, indicators, Date.now(), loadRules())
+    return buildConnectionOverview(connections, listeningPorts, processNames, indicators, Date.now(), loadRules(), lookupCountry)
   })
+
+  // ─── GeoIP (country lookup for country-based rules) ──────
+  ipcMain.handle(IPC.GEOIP_STATUS, async (): Promise<GeoipStatus> => getGeoipStatus())
+  ipcMain.handle(IPC.GEOIP_SYNC, async (): Promise<GeoipStatus> => syncGeoip())
 
   // ─── Secure DNS (DNS-over-TLS filtering resolver) ─────────
   ipcMain.handle(IPC.DNS_RESOLVER_START, async (_e, config?: Partial<DnsResolverConfig>): Promise<DnsResolverStats> => {

@@ -38,6 +38,13 @@
   "rulesGlobal": "global",
   "rulesOn": "on",
   "rulesOff": "off",
+  "rulesKindDomain": "Domain",
+  "rulesKindCountry": "Country",
+  "rulesCountryPlaceholder": "2-letter country code, e.g. CN, RU, KP",
+  "geoipReady": "GeoIP ready — {{count}} IP ranges. Country rules are active.",
+  "geoipNotReady": "GeoIP database not downloaded yet — click Update to enable country rules.",
+  "geoipUpdate": "Update GeoIP",
+  "geoipUpdating": "Downloading…",
 
   "filterListsTitle": "Filter lists",
   "filterListsTotal": "{{total}} domains blocked across enabled lists",

@@ -186,6 +186,8 @@ export const IPC = {
   DNS_ENFORCE_APPLY: 'network-guard:enforce-apply',
   DNS_ENFORCE_REVERT: 'network-guard:enforce-revert',
   DNS_ENFORCE_PLAN: 'network-guard:enforce-plan',
+  GEOIP_STATUS: 'network-guard:geoip-status',
+  GEOIP_SYNC: 'network-guard:geoip-sync',
 
   // Onboarding
   ONBOARDING_GET: 'onboarding:get',

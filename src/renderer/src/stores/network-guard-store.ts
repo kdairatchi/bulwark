@@ -5,6 +5,7 @@ import type { DnsResolverStats } from '@shared/dns'
 import type { NetworkRule } from '@shared/policy'
 import type { FilterListsState } from '@shared/filter-lists'
 import type { EnforcementStatus } from '@shared/enforcement'
+import type { GeoipStatus } from '@shared/geoip'
 
 // A small, clearly-labeled EXAMPLE feed so the checker is usable out of the box.
 // These use RFC 2606 reserved names — they are placeholders that demonstrate the
@@ -58,6 +59,11 @@ interface NetworkGuardState {
   enforceBusy: boolean
   loadEnforcement: () => Promise<void>
   toggleEnforcement: () => Promise<void>
+  // GeoIP
+  geoip: GeoipStatus | null
+  geoipSyncing: boolean
+  loadGeoip: () => Promise<void>
+  syncGeoip: () => Promise<void>
 }
 
 function parseFeed(text: string): ThreatIndicator[] {
@@ -180,5 +186,16 @@ export const useNetworkGuardStore = create<NetworkGuardState>((set, get) => ({
     } catch (err) {
       set({ error: err instanceof Error ? err.message : 'Enforcement error', enforceBusy: false })
     }
+  },
+
+  geoip: null,
+  geoipSyncing: false,
+  loadGeoip: async () => {
+    try { set({ geoip: await window.kudu.geoipStatus() }) } catch { /* ignore */ }
+  },
+  syncGeoip: async () => {
+    set({ geoipSyncing: true })
+    try { set({ geoip: await window.kudu.geoipSync(), geoipSyncing: false }) }
+    catch (err) { set({ error: err instanceof Error ? err.message : 'GeoIP sync failed', geoipSyncing: false }) }
   },
 }))

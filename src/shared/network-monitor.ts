@@ -33,6 +33,8 @@ export interface ConnectionRecord {
   reason: string
   category?: ThreatCategory
   confidence: number
+  /** ISO 2-letter country code of the remote (via GeoIP), if known. */
+  country?: string
 }
 
 /** Connections grouped by owning application (the Portmaster view). */
