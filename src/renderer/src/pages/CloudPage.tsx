@@ -31,6 +31,7 @@ import { PageHeader } from '@/components/layout/PageHeader'
 import { FindingExplainPanel, FindingExpand } from '@/components/shared/FindingExplainPanel'
 import { FamilyPairingWizard } from '@/components/cloud/FamilyPairingWizard'
 import { EmergencyIsolateWizard } from '@/components/cloud/EmergencyIsolateWizard'
+import { BreachMonitorWizard } from '@/components/cloud/BreachMonitorWizard'
 import { explainFinding, familyStatusLabel } from '@/lib/finding-explain'
 import { explainParentEvent } from '@/lib/parent-event-explain'
 import { cn } from '@/lib/utils'
@@ -567,6 +568,7 @@ function ParentControlPanel({
     open: false,
     mode: 'isolate',
   })
+  const [breachWizardOpen, setBreachWizardOpen] = useState(false)
 
   const selected = devices.find((d) => d.id === selectedId) ?? null
 
@@ -879,13 +881,14 @@ function ParentControlPanel({
     setBusy(false)
   }
 
-  const handleAddBreachMonitor = async () => {
+  const handleAddBreachMonitor = async (): Promise<boolean> => {
     const email = breachEmailInput.trim()
     if (!email) {
       toast.error(t('parentBreachEmailRequired'))
-      return
+      return false
     }
     setBusy(true)
+    let ok = false
     try {
       const token = await ensureToken()
       const res = await window.kudu?.dashboardCreateBreachMonitor?.({
@@ -901,6 +904,7 @@ function ParentControlPanel({
         toast.success(t('parentBreachAddedToast'), {
           description: res.source ? `source=${res.source}` : undefined,
         })
+        ok = true
       } else {
         toast.error(t('parentBreachAddFailedToast'), { description: res && 'error' in res ? res.error : undefined })
       }
@@ -908,6 +912,7 @@ function ParentControlPanel({
       toast.error(t('parentBreachAddFailedToast'))
     }
     setBusy(false)
+    return ok
   }
 
   const handleRemoveBreachMonitor = async (email: string) => {
@@ -1280,6 +1285,24 @@ function ParentControlPanel({
           </span>
         </div>
         <p className="text-[11px] mb-2" style={{ color: 'var(--text-dim)' }}>{t('parentBreachHint')}</p>
+        {breachEmails.length === 0 ? (
+          <div
+            className="rounded-xl px-4 py-4 mb-3"
+            style={{ background: 'var(--bg-subtle)', border: '1px solid var(--border-medium)' }}
+          >
+            <p className="text-[12px] mb-3" style={{ color: 'var(--text-secondary)' }}>{t('parentBreachEmpty')}</p>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => setBreachWizardOpen(true)}
+              className="rounded-xl px-3 py-2 text-[12px] font-medium disabled:opacity-40"
+              style={{ background: 'rgba(96,165,250,0.15)', border: '1px solid rgba(96,165,250,0.35)', color: '#93c5fd' }}
+            >
+              {t('breachWizardStart')}
+            </button>
+          </div>
+        ) : (
+          <>
         <div className="flex flex-wrap gap-2 mb-3">
           <input
             type="email"
@@ -1293,11 +1316,20 @@ function ParentControlPanel({
           <button
             type="button"
             disabled={busy}
-            onClick={handleAddBreachMonitor}
+            onClick={() => void handleAddBreachMonitor()}
             className="rounded-xl px-3 py-2 text-[12px] font-medium disabled:opacity-40"
             style={{ background: 'rgba(96,165,250,0.15)', border: '1px solid rgba(96,165,250,0.35)', color: '#93c5fd' }}
           >
             {t('parentBreachAdd')}
+          </button>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => setBreachWizardOpen(true)}
+            className="rounded-xl px-3 py-2 text-[12px] font-medium disabled:opacity-40"
+            style={{ background: 'var(--bg-subtle)', border: '1px solid var(--border-medium)', color: 'var(--text-secondary)' }}
+          >
+            {t('breachWizardLearnMore')}
           </button>
           <button
             type="button"
@@ -1309,9 +1341,6 @@ function ParentControlPanel({
             {t('parentBreachRefresh')}
           </button>
         </div>
-        {breachEmails.length === 0 ? (
-          <p className="text-[12px]" style={{ color: 'var(--text-dim)' }}>{t('parentBreachEmpty')}</p>
-        ) : (
           <div className="space-y-2 max-h-64 overflow-y-auto">
             {breachEmails.map((m) => (
               <div
@@ -1375,6 +1404,7 @@ function ParentControlPanel({
               </div>
             ))}
           </div>
+          </>
         )}
       </div>
 
@@ -1404,6 +1434,17 @@ function ParentControlPanel({
           if (isolateWizard.mode === 'isolate') return handleIsolate()
           return handleClear()
         }}
+      />
+      <BreachMonitorWizard
+        open={breachWizardOpen}
+        busy={busy}
+        email={breachEmailInput}
+        usage={breachUsage}
+        limit={breachLimit}
+        t={t}
+        onClose={() => setBreachWizardOpen(false)}
+        onEmailChange={setBreachEmailInput}
+        onConfirmAdd={handleAddBreachMonitor}
       />
     </div>
   )

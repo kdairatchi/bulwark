@@ -39,3 +39,39 @@ export function explainSecureDnsEnable(): NetworkGuardEnableExplanation {
       'Start the local resolver first, update filter lists, then enable Protect this device only if you want system-wide coverage.',
   }
 }
+
+export type NetworkGuardEnforceExplanation = {
+  why: string[]
+  whatHappens: string[]
+  stillWorks: string[]
+  risks: string[]
+  recommended: string
+}
+
+/** Explain enabling system-wide DNS enforcement (Protect this device). */
+export function explainSecureDnsEnforce(resolverAddress?: string): NetworkGuardEnforceExplanation {
+  const address = (resolverAddress || 'the local Bulwrk resolver').trim() || 'the local Bulwrk resolver'
+  return {
+    why: [
+      'Protect this device routes every app’s DNS lookups through Bulwrk’s filtering resolver — not just apps you configure by hand.',
+      'Lookups stay encrypted to the upstream resolver where supported, and filter lists / Network Guard rules apply system-wide.',
+      'Bulwrk still uses DNS names and connection metadata — not the contents of your traffic.',
+    ],
+    whatHappens: [
+      `System DNS is pointed at ${address}. Elevation may be required.`,
+      'Your previous DNS settings are backed up so Disable can restore them.',
+      'A safety backstop auto-reverts enforcement if something goes wrong.',
+    ],
+    stillWorks: [
+      'Allowed destinations keep resolving; listed tracker/malware domains stay blocked.',
+      'You can Disable anytime from the same Secure DNS tab to restore the backup.',
+      'The local resolver must stay running while enforcement is active.',
+    ],
+    risks: [
+      'If the resolver stops while enforcement is on, some apps may fail DNS until Disable or auto-revert runs.',
+      'Corporate or VPN DNS policies may conflict — Disable if you need the network’s DNS again.',
+    ],
+    recommended:
+      'Confirm the resolver is healthy, enable Protect this device, then verify a few sites load. Disable immediately if anything looks wrong.',
+  }
+}

@@ -6,6 +6,7 @@ import {
 } from 'lucide-react'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { NetworkGuardEnableWizard } from '@/components/network/NetworkGuardEnableWizard'
+import { NetworkGuardEnforceWizard } from '@/components/network/NetworkGuardEnforceWizard'
 import { useNetworkGuardStore } from '@/stores/network-guard-store'
 import type { NetworkDecision, NetworkEvent } from '@shared/network-guard'
 import type { AppConnections } from '@shared/network-monitor'
@@ -323,6 +324,7 @@ function VerdictCard({ event }: { event: NetworkEvent }) {
 // ─── Secure DNS (DNS-over-TLS filtering resolver) ───────────
 
 const DNS_WIZARD_SEEN_KEY = 'bulwrk.networkGuard.dnsEnableWizardSeen'
+const ENFORCE_WIZARD_SEEN_KEY = 'bulwrk.networkGuard.dnsEnforceWizardSeen'
 
 function SecureDnsTab() {
   const { t } = useTranslation('networkGuard')
@@ -337,6 +339,7 @@ function SecureDnsTab() {
   const toggleEnforcement = useNetworkGuardStore((s) => s.toggleEnforcement)
 
   const [wizardOpen, setWizardOpen] = useState(false)
+  const [enforceWizardOpen, setEnforceWizardOpen] = useState(false)
 
   useEffect(() => { status(); loadEnforcement() }, [status, loadEnforcement])
   const running = dns?.running
@@ -344,6 +347,10 @@ function SecureDnsTab() {
 
   const markWizardSeen = () => {
     try { localStorage.setItem(DNS_WIZARD_SEEN_KEY, '1') } catch { /* ignore */ }
+  }
+
+  const markEnforceWizardSeen = () => {
+    try { localStorage.setItem(ENFORCE_WIZARD_SEEN_KEY, '1') } catch { /* ignore */ }
   }
 
   const handleDnsPrimaryClick = () => {
@@ -368,6 +375,28 @@ function SecureDnsTab() {
     return true
   }
 
+  const handleEnforcePrimaryClick = () => {
+    if (enforcing) {
+      void toggleEnforcement()
+      return
+    }
+    let seen = false
+    try { seen = localStorage.getItem(ENFORCE_WIZARD_SEEN_KEY) === '1' } catch { /* ignore */ }
+    if (seen) {
+      void toggleEnforcement()
+      return
+    }
+    setEnforceWizardOpen(true)
+  }
+
+  const handleEnforceWizardConfirm = async (): Promise<boolean> => {
+    await toggleEnforcement()
+    const nowEnforcing = useNetworkGuardStore.getState().enforcement?.enforcing === true
+    if (!nowEnforcing) return false
+    markEnforceWizardSeen()
+    return true
+  }
+
   return (
     <div>
       <NetworkGuardEnableWizard
@@ -376,6 +405,14 @@ function SecureDnsTab() {
         t={t}
         onClose={() => setWizardOpen(false)}
         onConfirmStart={handleWizardConfirmStart}
+      />
+      <NetworkGuardEnforceWizard
+        open={enforceWizardOpen}
+        busy={enforceBusy}
+        resolverAddress={dns?.address}
+        t={t}
+        onClose={() => setEnforceWizardOpen(false)}
+        onConfirmEnable={handleEnforceWizardConfirm}
       />
       <div className="glass-card flex items-center gap-5 rounded-2xl p-6">
         <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl" style={{ background: running ? 'rgba(34,197,94,0.12)' : 'var(--bg-hover-2)', border: `1px solid ${running ? 'rgba(34,197,94,0.3)' : 'var(--border-default)'}` }}>
@@ -426,9 +463,19 @@ function SecureDnsTab() {
                   {enforcing ? t('enforceOn') : t('enforceOff', { address: dns?.address })}
                 </p>
                 {enforcement?.message && <p className="mt-1 text-[12px]" style={{ color: '#fbbf24' }}>{enforcement.message}</p>}
+                {!enforcing && (
+                  <button
+                    type="button"
+                    onClick={() => setEnforceWizardOpen(true)}
+                    className="mt-2 text-[12px] font-medium underline-offset-2 hover:underline"
+                    style={{ color: '#4ade80' }}
+                  >
+                    {t('enforceWizardLearnMore')}
+                  </button>
+                )}
               </div>
               <button
-                onClick={() => toggleEnforcement()}
+                onClick={handleEnforcePrimaryClick}
                 disabled={enforceBusy}
                 className="flex shrink-0 items-center gap-2 rounded-xl px-4 py-2 text-[12px] font-medium transition-colors disabled:opacity-60"
                 style={{ background: enforcing ? 'rgba(239,68,68,0.15)' : 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)', color: enforcing ? '#f87171' : '#fafafa', border: enforcing ? '1px solid rgba(239,68,68,0.3)' : 'none' }}>
