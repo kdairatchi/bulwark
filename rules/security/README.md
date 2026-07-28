@@ -43,6 +43,11 @@ The mapping includes conservative aliases for common products such as Firefox,
 Apache HTTP Server, VS Code, Acrobat, VLC, Edge, and Docker Desktop; generic
 names are intentionally rejected rather than guessed.
 
+Vendor and distro feed adapters should normalize their native ranges through
+`vendor-advisories.ts`. It supports inclusive `introduced`/`fixedIn` bounds,
+KEV-style `vulnerableBelow`, Debian/RPM/Alpine revisions, and returns `unknown`
+when either side lacks enough version evidence.
+
 ### Coverage vs gaps
 
 | Capability | Status |
