@@ -35,6 +35,7 @@
     "protectAllCategoryButton": "Protect All",
     "adminBadge": "Admin",
     "adminWarning": "Some settings require administrator privileges to modify. Run Bulwrk as administrator for full protection.",
+    "relaunchAsAdmin": "Relaunch as Admin",
     "scanFailed": "Privacy scan failed",
     "applyFailed": "Failed to apply privacy settings",
     "applyFailedDescription": "Try running as administrator",
