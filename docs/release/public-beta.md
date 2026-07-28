@@ -12,6 +12,10 @@ npm run validate:beta-report -- path/to/report.json
 Start from [`beta-report.template.json`](beta-report.template.json), then replace
 the placeholder build and device fields with the redacted test values.
 
+Unsigned Windows, macOS, and Linux tester artifacts can be generated from the
+GitHub Actions **Beta artifacts** workflow. Each run uploads a platform-labeled
+artifact for 14 days; testers should record its commit SHA in their report.
+
 ## Scope
 
 - Windows first, with macOS/Linux smoke coverage from the existing CI matrix.
