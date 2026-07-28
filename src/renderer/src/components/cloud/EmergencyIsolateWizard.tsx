@@ -35,7 +35,7 @@ export function EmergencyIsolateWizard({
   busy: boolean
   t: (key: string, opts?: Record<string, unknown>) => string
   onClose: () => void
-  onConfirm: () => void | Promise<void>
+  onConfirm: () => void | Promise<void> | boolean | Promise<boolean>
 }) {
   const [step, setStep] = useState(0)
   const total = mode === 'isolate' ? 4 : 3
@@ -231,7 +231,8 @@ export function EmergencyIsolateWizard({
                 accent={accent}
                 disabled={busy}
                 onClick={async () => {
-                  await onConfirm()
+                  const result = await onConfirm()
+                  if (result === false) return
                   setStep(total - 1)
                 }}
               >

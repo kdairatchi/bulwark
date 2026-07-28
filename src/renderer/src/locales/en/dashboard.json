@@ -87,5 +87,9 @@
   "toastPrivacyCheckFailed": "Privacy check failed",
   "toastStartupCheckFailed": "Startup check failed",
   "toastSoftwareUpdateCheckFailed": "Software update check failed",
-  "toastDriverCleanupFailed": "Driver cleanup failed"
+  "toastDriverCleanupFailed": "Driver cleanup failed",
+  "healthWhyToggle": "Why this score",
+  "healthWhyHide": "Hide score details",
+  "healthExplainWhy": "How this score is calculated",
+  "healthExplainRecommended": "How to improve it"
 }

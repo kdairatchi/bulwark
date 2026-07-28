@@ -658,9 +658,10 @@ function ParentControlPanel({
     setMinting(false)
   }
 
-  const handleIsolate = async () => {
-    if (!selected) return
+  const handleIsolate = async (): Promise<boolean> => {
+    if (!selected) return false
     setBusy(true)
+    let ok = false
     try {
       const token = await ensureToken()
       const res = await window.kudu?.dashboardIsolate?.({
@@ -672,6 +673,7 @@ function ParentControlPanel({
       if (res?.success) {
         toast.success(t('parentIsolatedToast'))
         await refresh()
+        ok = true
       } else {
         toast.error(t('parentIsolateFailedToast'), { description: res && 'error' in res ? res.error : undefined })
       }
@@ -679,11 +681,13 @@ function ParentControlPanel({
       toast.error(t('parentIsolateFailedToast'))
     }
     setBusy(false)
+    return ok
   }
 
-  const handleClear = async () => {
-    if (!selected) return
+  const handleClear = async (): Promise<boolean> => {
+    if (!selected) return false
     setBusy(true)
+    let ok = false
     try {
       const token = await ensureToken()
       const res = await window.kudu?.dashboardClearIsolation?.({
@@ -694,6 +698,7 @@ function ParentControlPanel({
       if (res?.success) {
         toast.success(t('parentClearedToast'))
         await refresh()
+        ok = true
       } else {
         toast.error(t('parentIsolateFailedToast'), { description: res && 'error' in res ? res.error : undefined })
       }
@@ -701,6 +706,7 @@ function ParentControlPanel({
       toast.error(t('parentIsolateFailedToast'))
     }
     setBusy(false)
+    return ok
   }
 
   const handleSavePolicy = async () => {
@@ -1404,8 +1410,8 @@ function ParentControlPanel({
         t={t}
         onClose={() => setIsolateWizard((w) => ({ ...w, open: false }))}
         onConfirm={async () => {
-          if (isolateWizard.mode === 'isolate') await handleIsolate()
-          else await handleClear()
+          if (isolateWizard.mode === 'isolate') return handleIsolate()
+          return handleClear()
         }}
       />
     </div>
