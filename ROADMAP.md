@@ -81,7 +81,7 @@ sync + emergency isolation, network-event batching, JVM demo (`:core:runAgentDem
 - [x] Bounded NVD 2.0 CPE adapter for known product mappings.
 - [x] Expand product/vendor normalization without loose-name false positives.
 - [x] Add NVD cache/update workflow using last-modified windows and API-key support.
-- [ ] Add vendor/distro advisories and version-range evaluator beyond NVD CPE data.
+- [x] Add vendor/distro advisories and version-range evaluator beyond NVD CPE data.
 - [x] Consolidate finding confidence, deduplication, and remediation evidence.
 
 ## Phase 6 — Public beta
@@ -89,6 +89,10 @@ sync + emergency isolation, network-event batching, JVM demo (`:core:runAgentDem
 20–50 testers, Windows first, 5+ Android TV boxes, multiple manufacturers. Measure:
 false-positive rate, scan duration, CPU/memory/battery, blocked-legitimate rate,
 failed remediations, enrollment failures, user comprehension.
+
+See [`docs/release/public-beta.md`](docs/release/public-beta.md) for the validation
+matrix and evidence package. The beta phase is not complete until the matrix has
+real-device observations and release artifacts are reproducible.
 
 ---
 
