@@ -81,7 +81,7 @@ sync + emergency isolation, network-event batching, JVM demo (`:core:runAgentDem
 - [x] EPSS enrichment for CVE/KEV/OSV/NVD findings.
 - [x] Bounded NVD 2.0 CPE adapter for known product mappings.
 - [ ] Expand product/vendor normalization without loose-name false positives.
-- [ ] Add NVD cache/update workflow using last-modified windows and API-key support.
+- [x] Add NVD cache/update workflow using last-modified windows and API-key support.
 - [ ] Add vendor/distro advisories and version-range evaluator beyond NVD CPE data.
 - [ ] Consolidate finding confidence, deduplication, and remediation evidence.
 
