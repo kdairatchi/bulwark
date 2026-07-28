@@ -203,4 +203,62 @@ export function registerDeviceApiIpc(): void {
       return httpErr(err)
     }
   })
+
+  ipcMain.handle(IPC.DASHBOARD_LIST_BREACH_MONITORS, async (_event, payload: unknown) => {
+    try {
+      const result = await clientFromPayload(payload).listBreachMonitors()
+      return { success: true as const, ...result }
+    } catch (err) {
+      return httpErr(err)
+    }
+  })
+
+  ipcMain.handle(IPC.DASHBOARD_CREATE_BREACH_MONITOR, async (_event, payload: unknown) => {
+    const o = asRecord(payload)
+    const email = typeof o.email === 'string' ? o.email : ''
+    if (!email.trim()) return { success: false, error: 'email is required' }
+    try {
+      const result = await clientFromPayload(payload).createBreachMonitor(email.trim())
+      return { success: true as const, ...result }
+    } catch (err) {
+      return httpErr(err)
+    }
+  })
+
+  ipcMain.handle(IPC.DASHBOARD_DELETE_BREACH_MONITOR, async (_event, payload: unknown) => {
+    const o = asRecord(payload)
+    const email = typeof o.email === 'string' ? o.email : ''
+    if (!email.trim()) return { success: false, error: 'email is required' }
+    try {
+      await clientFromPayload(payload).deleteBreachMonitor(email.trim())
+      return { success: true as const }
+    } catch (err) {
+      return httpErr(err)
+    }
+  })
+
+  ipcMain.handle(IPC.DASHBOARD_ACK_BREACHES, async (_event, payload: unknown) => {
+    const o = asRecord(payload)
+    const breachIds = Array.isArray(o.breachIds)
+      ? o.breachIds.filter((id): id is string => typeof id === 'string' && id.length > 0)
+      : []
+    if (breachIds.length === 0) return { success: false, error: 'breachIds required' }
+    try {
+      const result = await clientFromPayload(payload).acknowledgeBreaches(breachIds)
+      return { success: true as const, ...result }
+    } catch (err) {
+      return httpErr(err)
+    }
+  })
+
+  ipcMain.handle(IPC.DASHBOARD_REFRESH_BREACH_MONITORS, async (_event, payload: unknown) => {
+    const o = asRecord(payload)
+    const email = typeof o.email === 'string' ? o.email : undefined
+    try {
+      const result = await clientFromPayload(payload).refreshBreachMonitors(email)
+      return { success: true as const, ...result }
+    } catch (err) {
+      return httpErr(err)
+    }
+  })
 }

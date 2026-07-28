@@ -23,8 +23,9 @@ async function api(method, path, body) {
 
 // Clean email — stub returns no breaches.
 const clean = await api('POST', '/v1/breach-monitors', { email: 'safe@example.com' })
-console.log('clean', { status: clean.status, source: clean.json.source, breaches: clean.json.emails?.[0]?.breaches?.length })
-if (clean.json.emails?.[0]?.breaches?.length !== 0) {
+const cleanEntry = clean.json.emails?.find((e) => e.email === 'safe@example.com')
+console.log('clean', { status: clean.status, source: clean.json.source, breaches: cleanEntry?.breaches?.length })
+if (!cleanEntry || cleanEntry.breaches.length !== 0) {
   throw new Error('expected no breaches for safe@example.com')
 }
 
