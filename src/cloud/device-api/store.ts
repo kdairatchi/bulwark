@@ -50,7 +50,7 @@ export interface StoreDeps {
 const defaultDeps: StoreDeps = {
   now: () => Date.now(),
   uuid: () => randomUUID(),
-  // Human-enterable pairing code, e.g. "K7Q2-9F3M".
+  // Human-enterable pairing code, e.g. "A933-8F5C" (8 hex digits).
   code: () => {
     const raw = randomBytes(4).toString('hex').toUpperCase()
     return `${raw.slice(0, 4)}-${raw.slice(4, 8)}`

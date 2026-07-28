@@ -154,14 +154,15 @@ describe('defaultCommandExecutor', () => {
 })
 
 describe('isValidPairingCode', () => {
-  it('accepts dashed and undashed 8-char codes', async () => {
+  it('accepts dashed and undashed 8-char hex codes', async () => {
     const { isValidPairingCode, normalizePairingCode } = await import('./device-command-agent')
-    expect(normalizePairingCode('k7q29f3m')).toBe('K7Q2-9F3M')
-    expect(normalizePairingCode('K7Q2-9F3M')).toBe('K7Q2-9F3M')
-    expect(isValidPairingCode('K7Q2-9F3M')).toBe(true)
-    expect(isValidPairingCode('k7q2-9f3m')).toBe(true)
-    expect(isValidPairingCode('K7Q29F3M')).toBe(true)
+    expect(normalizePairingCode('a9338f5c')).toBe('A933-8F5C')
+    expect(normalizePairingCode('A933-8F5C')).toBe('A933-8F5C')
+    expect(isValidPairingCode('A933-8F5C')).toBe(true)
+    expect(isValidPairingCode('a933-8f5c')).toBe(true)
+    expect(isValidPairingCode('A9338F5C')).toBe(true)
     expect(isValidPairingCode('AB')).toBe(false)
     expect(isValidPairingCode('RUN_SHELL')).toBe(false)
+    expect(isValidPairingCode('K7Q2-9F3M')).toBe(false) // non-hex letters
   })
 })
