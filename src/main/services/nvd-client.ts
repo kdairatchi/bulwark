@@ -9,11 +9,18 @@
 
 import type { InstalledApp } from '../platform/types'
 import type { InventoryFinding } from './desktop-inventory'
+import { createHash } from 'crypto'
+import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'fs'
+import { join } from 'path'
+import { tmpdir } from 'os'
 
 export const DEFAULT_NVD_URL = 'https://services.nvd.nist.gov/rest/json/cves/2.0'
 const DEFAULT_TIMEOUT_MS = 8_000
 const MAX_QUERIES = 8
 const MAX_VULNS_PER_CPE = 10
+const DEFAULT_CACHE_TTL_MS = 6 * 60 * 60 * 1000
+const MAX_LAST_MODIFIED_WINDOW_MS = 120 * 24 * 60 * 60 * 1000
+const CACHE_VERSION = 1
 
 export interface NvdCpe {
   vendor: string
@@ -27,6 +34,20 @@ export interface NvdClientDeps {
   endpoint?: string
   apiKey?: string
   timeoutMs?: number
+  /** Explicit cache directory; omitted means no cache (use getNvdCacheDir in the app). */
+  cacheDir?: string
+  cacheTtlMs?: number
+  nowMs?: number
+  forceRefresh?: boolean
+}
+
+interface NvdCacheRecord {
+  version: number
+  cpe: string
+  vulnerabilities: NvdVulnerability[]
+  syncedAt: string
+  etag?: string
+  lastModified?: string
 }
 
 export interface NvdVulnerability {
@@ -116,6 +137,63 @@ function parseVulnerabilities(json: any): NvdVulnerability[] {
     .slice(0, MAX_VULNS_PER_CPE)
 }
 
+/** Resolve the production cache without importing Electron during unit tests. */
+export function getNvdCacheDir(): string {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { app } = require('electron') as { app: { getPath: (name: string) => string } }
+    return join(app.getPath('userData'), 'nvd-cache')
+  } catch {
+    return join(tmpdir(), 'bulwark-nvd-cache')
+  }
+}
+
+function cachePath(cacheDir: string, cpeName: string): string {
+  const key = createHash('sha256').update(cpeName).digest('hex')
+  return join(cacheDir, `${key}.json`)
+}
+
+function readCache(cacheDir: string, cpeName: string): NvdCacheRecord | null {
+  const path = cachePath(cacheDir, cpeName)
+  if (!existsSync(path)) return null
+  try {
+    const parsed = JSON.parse(readFileSync(path, 'utf8')) as Partial<NvdCacheRecord>
+    if (parsed.version !== CACHE_VERSION || parsed.cpe !== cpeName || !Array.isArray(parsed.vulnerabilities)) return null
+    if (typeof parsed.syncedAt !== 'string') return null
+    return {
+      version: CACHE_VERSION,
+      cpe: cpeName,
+      vulnerabilities: parsed.vulnerabilities.slice(0, MAX_VULNS_PER_CPE),
+      syncedAt: parsed.syncedAt,
+      etag: typeof parsed.etag === 'string' ? parsed.etag : undefined,
+      lastModified: typeof parsed.lastModified === 'string' ? parsed.lastModified : undefined,
+    }
+  } catch {
+    return null
+  }
+}
+
+function writeCache(cacheDir: string, record: NvdCacheRecord): void {
+  try {
+    mkdirSync(cacheDir, { recursive: true })
+    const path = cachePath(cacheDir, record.cpe)
+    const temp = `${path}.${process.pid}.tmp`
+    writeFileSync(temp, JSON.stringify(record), 'utf8')
+    renameSync(temp, path)
+  } catch {
+    // Vulnerability enrichment is best effort; a read-only cache must not fail scans.
+  }
+}
+
+function responseHeader(response: Response, name: string): string | undefined {
+  try {
+    const value = response.headers?.get(name)
+    return value || undefined
+  } catch {
+    return undefined
+  }
+}
+
 export async function queryNvd(
   cpe: NvdCpe,
   deps: NvdClientDeps = {},
@@ -123,18 +201,53 @@ export async function queryNvd(
   const fetchFn = deps.fetchFn ?? fetch
   const endpoint = deps.endpoint ?? DEFAULT_NVD_URL
   const timeoutMs = deps.timeoutMs ?? DEFAULT_TIMEOUT_MS
+  const cpeName = toCpe23(cpe)
+  const nowMs = deps.nowMs ?? Date.now()
+  const cached = deps.cacheDir ? readCache(deps.cacheDir, cpeName) : null
+  const syncedMs = cached ? Date.parse(cached.syncedAt) : NaN
+  const cacheTtlMs = deps.cacheTtlMs ?? DEFAULT_CACHE_TTL_MS
+  if (cached && !deps.forceRefresh && Number.isFinite(syncedMs) && nowMs - syncedMs < cacheTtlMs) {
+    return cached.vulnerabilities
+  }
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), timeoutMs)
   try {
-    const params = new URLSearchParams({ cpeName: toCpe23(cpe), isVulnerable: '', resultsPerPage: String(MAX_VULNS_PER_CPE) })
+    const params = new URLSearchParams({ cpeName, isVulnerable: '', resultsPerPage: String(MAX_VULNS_PER_CPE) })
     const headers: Record<string, string> = { Accept: 'application/json' }
     const apiKey = deps.apiKey ?? process.env.NVD_API_KEY
     if (apiKey) headers.apiKey = apiKey
+    if (cached) {
+      const startMs = Math.max(syncedMs - 1_000, nowMs - MAX_LAST_MODIFIED_WINDOW_MS)
+      if (Number.isFinite(startMs)) {
+        params.set('lastModStartDate', new Date(startMs).toISOString())
+        params.set('lastModEndDate', new Date(nowMs).toISOString())
+      }
+      if (cached.etag) headers['If-None-Match'] = cached.etag
+      if (cached.lastModified) headers['If-Modified-Since'] = cached.lastModified
+    }
     const res = await fetchFn(`${endpoint}?${params}`, { signal: controller.signal, headers })
-    if (!res.ok) return []
-    return parseVulnerabilities(await res.json())
+    if (res.status === 304 && cached) {
+      if (deps.cacheDir) writeCache(deps.cacheDir, { ...cached, syncedAt: new Date(nowMs).toISOString() })
+      return cached.vulnerabilities
+    }
+    if (!res.ok) return cached?.vulnerabilities ?? []
+    const incoming = parseVulnerabilities(await res.json())
+    const merged = new Map((cached?.vulnerabilities ?? []).map((v) => [v.id, v]))
+    for (const vulnerability of incoming) merged.set(vulnerability.id, vulnerability)
+    const vulnerabilities = [...merged.values()].slice(0, MAX_VULNS_PER_CPE)
+    if (deps.cacheDir) {
+      writeCache(deps.cacheDir, {
+        version: CACHE_VERSION,
+        cpe: cpeName,
+        vulnerabilities,
+        syncedAt: new Date(nowMs).toISOString(),
+        etag: responseHeader(res, 'etag'),
+        lastModified: responseHeader(res, 'last-modified'),
+      })
+    }
+    return vulnerabilities
   } catch {
-    return []
+    return cached?.vulnerabilities ?? []
   } finally {
     clearTimeout(timer)
   }

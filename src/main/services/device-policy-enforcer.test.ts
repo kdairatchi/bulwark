@@ -55,6 +55,7 @@ describe('DevicePolicyEnforcer', () => {
   it('blockDomain records an event and reports applied', async () => {
     const enforcer = new DevicePolicyEnforcer()
     enforcer.setLocalBlocklistProvider(() => [])
+    enforcer.setResolverStartConfig({ port: 0 })
     // Avoid starting the real singleton resolver in unit tests — stub reapply path
     // by applying policy without dnsGuard so start isn't required when domains empty...
     // blockDomain always calls reapply which may start dnsResolver singleton.

@@ -36,8 +36,10 @@ with `parameters.kevSync=true` (parent vuln scan does this by default).
 
 **NVD:** pass `parameters.nvd=true` for bounded NVD 2.0 CPE queries. The adapter
 only sends exact CPEs for known product mappings, caps requests per scan, and
-supports `NVD_API_KEY` for higher-rate deployments. It intentionally does not
-infer CPEs from arbitrary display names.
+supports `NVD_API_KEY` for higher-rate deployments. Results are cached per CPE
+under Electron user data and refreshed every six hours using bounded
+`lastModStartDate`/`lastModEndDate` windows plus HTTP validators when available.
+It intentionally does not infer CPEs from arbitrary display names.
 
 ### Coverage vs gaps
 
@@ -48,7 +50,7 @@ infer CPEs from arbitrary display names.
 | EPSS enrichment | **Landed** (`epss`) |
 | Bounded OSV queries (`osv=true`) | **Landed (optional)** |
 | Bounded NVD 2.0 CPE matching | **Landed (opt-in)** |
-| Full product/vendor normalization and NVD cache | Phase 5 in progress |
+| Full product/vendor normalization | Phase 5 in progress |
 | Live zero-day intel feed | Out of scope |
 | Full LOLBAS dump (~1000+ bins) | Seed catalog; expand iteratively |
 | ETW / process-tree / kernel | Not started |

@@ -19,7 +19,7 @@ import {
 import { matchKevAgainstApps, kevHitsToCloudFindings, getKevCatalogInfo } from './kev-matcher'
 import { getEffectiveKevCatalog } from './kev-feed'
 import { scanAppsWithOsv } from './osv-client'
-import { scanAppsWithNvd } from './nvd-client'
+import { getNvdCacheDir, scanAppsWithNvd } from './nvd-client'
 import { fetchEpssScores, enrichFindingsWithEpss } from './epss-client'
 
 export type CloudScanFinding = InventoryFinding
@@ -196,7 +196,7 @@ export async function runVulnerabilityScanPosture(
   const osvHits = enableOsv ? await scanAppsWithOsv(apps) : []
 
   const enableNvd = parameters.nvd === true || parameters.nvd === 'true'
-  const nvdHits = enableNvd ? await scanAppsWithNvd(apps) : []
+  const nvdHits = enableNvd ? await scanAppsWithNvd(apps, { cacheDir: getNvdCacheDir() }) : []
 
   const enableEpss = parameters.epss === true || parameters.epss === 'true'
   let cveFindings = [...kevHits, ...osvHits, ...nvdHits]
