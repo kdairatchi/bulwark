@@ -198,6 +198,7 @@
   "parentInventoryFailedToast": "Could not queue inventory request",
   "parentRunHealth": "Run health check",
   "parentRunMalware": "Run malware scan",
+  "parentRunLolbins": "Run LotL scan",
   "parentRunVuln": "Run vuln scan",
   "parentScanQueuedToast": "Scan queued — agent will post findings on next poll",
   "parentScanFailedToast": "Could not queue scan",

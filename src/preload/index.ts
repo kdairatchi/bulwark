@@ -612,7 +612,7 @@ const api = {
     baseUrl?: string
     token?: string
     deviceId: string
-    kind: 'health' | 'malware' | 'vulnerability'
+    kind: 'health' | 'malware' | 'vulnerability' | 'lolbins'
     scope?: string
   }): Promise<
     { success: true; command: { commandId: string; type: string } } | { success: false; error: string }

@@ -216,7 +216,7 @@ export class DashboardApiClient {
   /** Sugar for enqueueing RUN_*_SCAN / RUN_HEALTH_ASSESSMENT. */
   async requestScan(
     deviceId: string,
-    kind: 'health' | 'malware' | 'vulnerability',
+    kind: 'health' | 'malware' | 'vulnerability' | 'lolbins',
     opts?: { scope?: string },
   ): Promise<{ command: { commandId: string; type: string } }> {
     const payload: Record<string, unknown> = { kind }

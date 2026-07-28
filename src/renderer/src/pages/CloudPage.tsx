@@ -688,7 +688,7 @@ function ParentControlPanel({
     setBusy(false)
   }
 
-  const handleRequestScan = async (kind: 'health' | 'malware' | 'vulnerability') => {
+  const handleRequestScan = async (kind: 'health' | 'malware' | 'vulnerability' | 'lolbins') => {
     if (!selected) return
     setBusy(true)
     try {
@@ -698,7 +698,7 @@ function ParentControlPanel({
         token: token || undefined,
         deviceId: selected.id,
         kind,
-        scope: kind === 'malware' ? 'quick' : undefined,
+        scope: kind === 'malware' ? 'quick' : kind === 'lolbins' ? 'lolbins' : undefined,
       })
       if (res?.success) {
         toast.success(t('parentScanQueuedToast'), { description: res.command.type })
@@ -894,6 +894,15 @@ function ParentControlPanel({
                   >
                     <ShieldAlert className="h-3.5 w-3.5" strokeWidth={1.8} />
                     {t('parentRunMalware')}
+                  </button>
+                  <button
+                    onClick={() => handleRequestScan('lolbins')}
+                    disabled={busy}
+                    className="flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-[13px] font-medium disabled:opacity-40"
+                    style={{ background: 'var(--bg-subtle)', border: '1px solid var(--border-medium)', color: 'var(--text-secondary)' }}
+                  >
+                    <Radar className="h-3.5 w-3.5" strokeWidth={1.8} />
+                    {t('parentRunLolbins')}
                   </button>
                   <button
                     onClick={() => handleRequestScan('vulnerability')}

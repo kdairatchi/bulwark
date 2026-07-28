@@ -235,6 +235,10 @@ export function requestScan(store: DeviceStore, deviceId: string, input: unknown
       case 'run_malware_scan':
         if (parameters.scope === undefined) parameters.scope = 'quick'
         return 'RUN_MALWARE_SCAN'
+      case 'lolbins':
+      case 'lotl':
+        if (parameters.scope === undefined) parameters.scope = 'lolbins'
+        return 'RUN_MALWARE_SCAN'
       case 'vulnerability':
       case 'vuln':
       case 'vulnerability_scan':
@@ -247,7 +251,7 @@ export function requestScan(store: DeviceStore, deviceId: string, input: unknown
   if (!type) {
     return {
       status: 400,
-      body: { error: 'kind must be health, malware, or vulnerability' },
+      body: { error: 'kind must be health, malware, vulnerability, or lolbins' },
     }
   }
   return issueCommand(store, deviceId, { type, parameters })

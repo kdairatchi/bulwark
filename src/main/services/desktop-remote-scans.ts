@@ -1,6 +1,7 @@
 /**
  * Bounded remote-scan handlers for the device API.
- * Inventory + risk-engine posture only — not full YARA / NVD / ClamAV marathons.
+ * Inventory + risk-engine posture + offline LotL/technique grep.
+ * Not full YARA / NVD / ClamAV marathons.
  */
 
 import type { InstalledApp } from '../platform/types'
@@ -8,6 +9,12 @@ import type { InstalledProgram } from '../../shared/types'
 import { analyzeInstalledApps, type InventoryFinding } from './desktop-inventory'
 import { buildAppRiskReport } from './risk-engine'
 import type { CommandType } from '../../cloud/device-api/commands'
+import {
+  hitsToCloudFindings,
+  scanProcessLolbins,
+  matchLolbinContent,
+  getLolbinCatalogInfo,
+} from './lolbin-scanner'
 
 export type CloudScanFinding = InventoryFinding
 
@@ -101,14 +108,31 @@ export function runHealthAssessment(
   }
 }
 
-/** Quick malware: suspicious names + elevated risk-engine family statuses. */
-export function runMalwareScanQuick(
+async function collectLolbinFindings(opts?: {
+  techniquesOnly?: boolean
+}): Promise<InventoryFinding[]> {
+  const processHits = await scanProcessLolbins()
+  const filtered = opts?.techniquesOnly
+    ? processHits.filter((h) => h.category === 'technique')
+    : processHits
+  return hitsToCloudFindings(filtered)
+}
+
+/** Quick malware: inventory heuristics + LotL/technique process grep. */
+export async function runMalwareScanQuick(
   apps: InstalledApp[],
   parameters: Record<string, unknown> = {},
-): RemoteScanResult {
+): Promise<RemoteScanResult> {
+  const scope = typeof parameters.scope === 'string' ? parameters.scope : 'quick'
   const nameHits = analyzeInstalledApps(apps).filter((f) => f.reason === 'suspicious_app_name')
   const riskHits = riskToCloudFindings(apps, { familyOnly: ['needs_attention', 'dangerous'] })
-  const findings = [...nameHits, ...riskHits].slice(0, 200)
+  const lolHits = await collectLolbinFindings()
+  const catalog = (() => {
+    try { return getLolbinCatalogInfo() } catch { return { version: '0', ruleCount: 0 } }
+  })()
+  const findings = scope === 'lolbins' || scope === 'lotl'
+    ? [...lolHits, ...nameHits].slice(0, 200)
+    : [...nameHits, ...riskHits, ...lolHits].slice(0, 200)
   return {
     ok: true,
     stub: false,
@@ -116,19 +140,29 @@ export function runMalwareScanQuick(
     findings: findings.length,
     threatsFound: findings.length,
     appsAssessed: apps.length,
-    scope: typeof parameters.scope === 'string' ? parameters.scope : 'quick',
-    note: 'Quick inventory heuristics — not full YARA/ClamAV disk scan',
+    scope,
+    note: `Inventory + offline LotL/technique grep (catalog v${catalog.version}, ${catalog.ruleCount} rules) — not full YARA/disk scan`,
     parameters,
     _findings: findings,
   }
 }
 
-/** Vulnerability posture: elevated risk findings (no live NVD/OSV yet). */
-export function runVulnerabilityScanPosture(
+/**
+ * Vulnerability posture + technique grep (AMSI bypass, injection primitives, etc.).
+ * Live CVE/OSV matching remains Phase 5 — this is static pattern heuristics only.
+ */
+export async function runVulnerabilityScanPosture(
   apps: InstalledApp[],
   parameters: Record<string, unknown> = {},
-): RemoteScanResult {
-  const findings = riskToCloudFindings(apps, { minScore: 35 }).slice(0, 200)
+): Promise<RemoteScanResult> {
+  const posture = riskToCloudFindings(apps, { minScore: 35 })
+  const techniqueHits = await collectLolbinFindings({ techniquesOnly: true })
+  // Also grep install paths / names for technique markers (rare but cheap).
+  const nameBlob = apps.map((a) => `${a.name} ${a.publisher}`).join('\n')
+  const nameTech = hitsToCloudFindings(
+    matchLolbinContent(nameBlob, 'content').filter((h) => h.category === 'technique'),
+  )
+  const findings = [...posture, ...techniqueHits, ...nameTech].slice(0, 200)
   return {
     ok: true,
     stub: false,
@@ -137,18 +171,18 @@ export function runVulnerabilityScanPosture(
     threatsFound: findings.length,
     postureScore: buildAppRiskReport(installedAppsToPrograms(apps)).postureScore,
     appsAssessed: apps.length,
-    scope: 'inventory_posture',
-    note: 'Posture risk only — CVE/OSV matching is Phase 5',
+    scope: 'inventory_posture_plus_technique_grep',
+    note: 'Posture + offline technique grep — CVE/OSV matching is Phase 5 (not a live zero-day feed)',
     parameters,
     _findings: findings,
   }
 }
 
-export function executeRemoteScan(
+export async function executeRemoteScan(
   type: 'RUN_HEALTH_ASSESSMENT' | 'RUN_MALWARE_SCAN' | 'RUN_VULNERABILITY_SCAN',
   apps: InstalledApp[],
   parameters: Record<string, unknown> = {},
-): RemoteScanResult {
+): Promise<RemoteScanResult> {
   switch (type) {
     case 'RUN_HEALTH_ASSESSMENT':
       return runHealthAssessment(apps, parameters)
@@ -169,6 +203,8 @@ export function scanKindToCommandType(kind: string): CommandType | null {
     case 'malware':
     case 'malware_scan':
     case 'run_malware_scan':
+    case 'lolbins':
+    case 'lotl':
       return 'RUN_MALWARE_SCAN'
     case 'vulnerability':
     case 'vuln':

@@ -65,7 +65,7 @@ PUT  /v1/devices/{id}/policy                  # Bearer (merge policy + APPLY_POL
 POST /v1/devices/{id}/isolate                 # Bearer (emergency isolate + ISOLATE_DEVICE)
 DELETE /v1/devices/{id}/isolate               # Bearer (clear + CLEAR_ISOLATION)
 POST /v1/findings/{id}/review                 # Bearer (status=false_positive|accepted_risk|…)
-POST /v1/devices/{id}/scan                    # Bearer (kind=health|malware|vulnerability → RUN_*)
+POST /v1/devices/{id}/scan                    # Bearer (kind=health|malware|vulnerability|lolbins → RUN_*)
 GET  /v1/reports                              # planned
 POST /v1/breach-monitors                      # planned
 GET  /v1/audit-events                         # planned

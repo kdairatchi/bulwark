@@ -23,6 +23,7 @@ describe('desktop-remote-scans', () => {
   it('maps scan kinds to allowlisted command types', () => {
     expect(scanKindToCommandType('health')).toBe('RUN_HEALTH_ASSESSMENT')
     expect(scanKindToCommandType('malware')).toBe('RUN_MALWARE_SCAN')
+    expect(scanKindToCommandType('lolbins')).toBe('RUN_MALWARE_SCAN')
     expect(scanKindToCommandType('vulnerability')).toBe('RUN_VULNERABILITY_SCAN')
     expect(scanKindToCommandType('nope')).toBeNull()
   })
@@ -39,17 +40,18 @@ describe('desktop-remote-scans', () => {
     expect(r._findings.some((f) => f.subjectName === 'device_posture')).toBe(true)
   })
 
-  it('quick malware scan flags suspicious app names', () => {
-    const r = runMalwareScanQuick([
+  it('quick malware scan flags suspicious app names', async () => {
+    const r = await runMalwareScanQuick([
       app({ name: 'TotallyLegit keygen Tool', publisher: 'Unknown' }),
     ])
     expect(r.stub).toBe(false)
     expect(r.threatsFound).toBeGreaterThan(0)
     expect(r._findings.some((f) => f.reason === 'suspicious_app_name')).toBe(true)
+    expect(r.note).toMatch(/LotL|technique grep/i)
   })
 
-  it('vulnerability posture scan returns risk findings without stubbing', () => {
-    const r = runVulnerabilityScanPosture([
+  it('vulnerability posture scan returns risk findings without stubbing', async () => {
+    const r = await runVulnerabilityScanPosture([
       app({ name: 'Sketchy', publisher: '' }),
     ])
     expect(r.stub).toBe(false)
@@ -57,10 +59,10 @@ describe('desktop-remote-scans', () => {
     expect(r.appsAssessed).toBe(1)
   })
 
-  it('executeRemoteScan dispatches by type', () => {
+  it('executeRemoteScan dispatches by type', async () => {
     const apps = [app()]
-    expect(executeRemoteScan('RUN_HEALTH_ASSESSMENT', apps).type).toBe('RUN_HEALTH_ASSESSMENT')
-    expect(executeRemoteScan('RUN_MALWARE_SCAN', apps, { scope: 'quick' }).scope).toBe('quick')
-    expect(executeRemoteScan('RUN_VULNERABILITY_SCAN', apps).type).toBe('RUN_VULNERABILITY_SCAN')
+    expect((await executeRemoteScan('RUN_HEALTH_ASSESSMENT', apps)).type).toBe('RUN_HEALTH_ASSESSMENT')
+    expect((await executeRemoteScan('RUN_MALWARE_SCAN', apps, { scope: 'quick' })).scope).toBe('quick')
+    expect((await executeRemoteScan('RUN_VULNERABILITY_SCAN', apps)).type).toBe('RUN_VULNERABILITY_SCAN')
   })
 })

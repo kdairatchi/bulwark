@@ -109,6 +109,29 @@ for (const platform of PLATFORMS) {
   }
 }
 
+// Security / LotL grep catalog (separate schema from cleaner rules).
+console.log('\nsecurity:')
+{
+  const lolSchemaPath = path.join(RULES_DIR, 'schema', 'lolbins.schema.json')
+  const lolPath = path.join(RULES_DIR, 'security', 'lolbins.json')
+  try {
+    const lolSchema = JSON.parse(readFileSync(lolSchemaPath, 'utf-8'))
+    const lolValidate = ajv.compile(lolSchema)
+    const lolData = JSON.parse(readFileSync(lolPath, 'utf-8'))
+    if (!lolValidate(lolData)) {
+      const msgs = lolValidate.errors?.map((e) => `${e.instancePath} ${e.message}`).join('; ')
+      error(`lolbins.json: schema validation failed — ${msgs}`)
+    } else {
+      const ids = (lolData.rules as Array<{ id: string }>).map((r) => r.id)
+      const dupes = ids.filter((id, i) => ids.indexOf(id) !== i)
+      if (dupes.length) error(`lolbins.json: duplicate rule ids: ${dupes.join(', ')}`)
+      else ok(`lolbins.json passes schema (${ids.length} rules)`)
+    }
+  } catch (e) {
+    error(`lolbins.json: ${(e as Error).message}`)
+  }
+}
+
 console.log('')
 if (errors > 0) {
   console.error(`✗ ${errors} error(s) found`)

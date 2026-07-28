@@ -169,8 +169,8 @@ export function registerDeviceApiIpc(): void {
     const deviceId = typeof o.deviceId === 'string' ? o.deviceId : ''
     const kind = typeof o.kind === 'string' ? o.kind : ''
     if (!deviceId) return { success: false, error: 'deviceId is required' }
-    if (kind !== 'health' && kind !== 'malware' && kind !== 'vulnerability') {
-      return { success: false, error: 'kind must be health, malware, or vulnerability' }
+    if (kind !== 'health' && kind !== 'malware' && kind !== 'vulnerability' && kind !== 'lolbins') {
+      return { success: false, error: 'kind must be health, malware, vulnerability, or lolbins' }
     }
     const scope = typeof o.scope === 'string' ? o.scope : undefined
     try {

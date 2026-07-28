@@ -106,7 +106,7 @@ export async function defaultCommandExecutor(
     case 'RUN_HEALTH_ASSESSMENT': {
       try {
         const apps = await getPlatform().commands.getInstalledApps()
-        return executeRemoteScan(type, apps, parameters)
+        return await executeRemoteScan(type, apps, parameters)
       } catch (err) {
         return {
           ok: false,
