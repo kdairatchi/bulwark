@@ -59,19 +59,33 @@ export interface NvdVulnerability {
   lastModified?: string
 }
 
-const PRODUCT_MAP: Array<{ pattern: RegExp; vendor: string; product: string }> = [
+interface ProductMapping {
+  pattern: RegExp
+  vendor: string
+  product: string
+  /** Optional publisher gate prevents generic display names becoming CPEs. */
+  publisher?: RegExp
+}
+
+const PRODUCT_MAP: ProductMapping[] = [
   { pattern: /^(curl|libcurl)\b/i, vendor: 'haxx', product: 'curl' },
   { pattern: /^(openssl|libssl)\b/i, vendor: 'openssl', product: 'openssl' },
   { pattern: /^openssh\b/i, vendor: 'openbsd', product: 'openssh' },
   { pattern: /^nginx\b/i, vendor: 'nginx', product: 'nginx' },
-  { pattern: /^(apache\s+httpd|httpd)\b/i, vendor: 'apache', product: 'http_server' },
+  { pattern: /^(apache\s+(httpd|http\s+server)|httpd)\b/i, vendor: 'apache', product: 'http_server' },
   { pattern: /^(node(?:\.js|js))\b/i, vendor: 'nodejs', product: 'node.js' },
-  { pattern: /log4j/i, vendor: 'apache', product: 'log4j' },
+  { pattern: /^(apache\s+)?log4j\b/i, vendor: 'apache', product: 'log4j' },
   { pattern: /^(google\s+)?chrome\b/i, vendor: 'google', product: 'chrome' },
-  { pattern: /^firefox\b/i, vendor: 'mozilla', product: 'firefox' },
+  { pattern: /^(mozilla\s+)?firefox\b/i, vendor: 'mozilla', product: 'firefox' },
   { pattern: /^(7[- ]?zip)\b/i, vendor: '7-zip', product: '7-zip' },
-  { pattern: /^git\b/i, vendor: 'git-scm', product: 'git' },
+  { pattern: /^(git|git\s+for\s+windows)\b/i, vendor: 'git-scm', product: 'git' },
   { pattern: /^python(?:\s|$)/i, vendor: 'python', product: 'python' },
+  { pattern: /^visual\s+studio\s+code\b/i, vendor: 'microsoft', product: 'visual_studio_code' },
+  { pattern: /^adobe\s+acrobat(?:\s+reader)?\b/i, vendor: 'adobe', product: 'acrobat' },
+  { pattern: /^vlc(?:\s+media\s+player)?\b/i, vendor: 'videolan', product: 'vlc_media_player' },
+  { pattern: /^microsoft\s+edge\b/i, vendor: 'microsoft', product: 'edge' },
+  // "Edge" alone is intentionally excluded: it is too generic for CPE inference.
+  { pattern: /^docker\s+desktop\b/i, vendor: 'docker', product: 'docker_desktop' },
 ]
 
 function cleanVersion(raw: string): string {
@@ -83,7 +97,11 @@ export function guessNvdCpes(app: InstalledApp): NvdCpe[] {
   const name = (app.name || '').trim()
   const version = cleanVersion(app.version || '')
   if (!name || !version || version.toLowerCase() === 'unknown') return []
-  const match = PRODUCT_MAP.find((entry) => entry.pattern.test(name))
+  const publisher = (app.publisher || '').trim()
+  const match = PRODUCT_MAP.find((entry) => {
+    if (!entry.pattern.test(name)) return false
+    return !entry.publisher || entry.publisher.test(publisher)
+  })
   if (!match) return []
   return [{ vendor: match.vendor, product: match.product, version }]
 }

@@ -39,7 +39,9 @@ only sends exact CPEs for known product mappings, caps requests per scan, and
 supports `NVD_API_KEY` for higher-rate deployments. Results are cached per CPE
 under Electron user data and refreshed every six hours using bounded
 `lastModStartDate`/`lastModEndDate` windows plus HTTP validators when available.
-It intentionally does not infer CPEs from arbitrary display names.
+The mapping includes conservative aliases for common products such as Firefox,
+Apache HTTP Server, VS Code, Acrobat, VLC, Edge, and Docker Desktop; generic
+names are intentionally rejected rather than guessed.
 
 ### Coverage vs gaps
 
