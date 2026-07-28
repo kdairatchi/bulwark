@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "build": {
+    "commitSha": "replace-with-40-char-sha",
+    "appVersion": "replace-with-app-version",
+    "platform": "win32|darwin|linux|android-tv",
+    "osVersion": "replace-with-os-version",
+    "hardware": "replace-with-device-model"
+  },
+  "sample": {
+    "desktopTesters": 0,
+    "androidTvDevices": 0,
+    "androidTvManufacturers": 0
+  },
+  "metrics": {
+    "falsePositiveRate": 0,
+    "scanDurationP95Ms": 0,
+    "cpuPeakPercent": 0,
+    "rssPeakMb": 0,
+    "batteryImpactPercent": 0,
+    "blockedLegitimateCount": 0,
+    "remediationAttempted": 0,
+    "remediationSucceeded": 0,
+    "remediationFailed": 0,
+    "enrollmentAttempted": 0,
+    "enrollmentSucceeded": 0,
+    "comprehensionPassed": 0,
+    "comprehensionTotal": 0
+  }
+}

@@ -9,6 +9,9 @@ Reports use the versioned `BetaReport` shape and can be checked with:
 npm run validate:beta-report -- path/to/report.json
 ```
 
+Start from [`beta-report.template.json`](beta-report.template.json), then replace
+the placeholder build and device fields with the redacted test values.
+
 ## Scope
 
 - Windows first, with macOS/Linux smoke coverage from the existing CI matrix.
