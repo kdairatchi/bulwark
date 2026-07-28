@@ -215,6 +215,30 @@ describe('defaultCommandExecutor', () => {
     expect(r.domainsAdded).toBe(1)
   })
 
+  it('ISOLATE_DEVICE / CLEAR_ISOLATION apply via enforcer (not stubs)', async () => {
+    const iso = await defaultCommandExecutor('ISOLATE_DEVICE', { reason: 'test' })
+    expect(iso.stub).toBe(false)
+    expect(iso.applied).toBe(true)
+    expect(iso.isolated).toBe(true)
+    expect(iso.systemDnsUnchanged).toBe(true)
+
+    const clear = await defaultCommandExecutor('CLEAR_ISOLATION', {})
+    expect(clear.stub).toBe(false)
+    expect(clear.applied).toBe(true)
+    expect(clear.isolated).toBe(false)
+  })
+
+  it('APPLY_POLICY merges parameters into live enforcer policy', async () => {
+    const r = await defaultCommandExecutor('APPLY_POLICY', {
+      isolated: false,
+      dnsGuardRequired: true,
+      blockedDomains: ['blocked.example.test'],
+    })
+    expect(r.stub).toBe(false)
+    expect(r.applied).toBe(true)
+    expect(r.dnsGuardRequired).toBe(true)
+  })
+
   it('QUARANTINE_FILE rejects disallowed paths without stubbing', async () => {
     const r = await defaultCommandExecutor('QUARANTINE_FILE', { path: '/etc/passwd' })
     expect(r.stub).toBe(false)

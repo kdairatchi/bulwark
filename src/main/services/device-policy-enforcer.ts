@@ -206,6 +206,7 @@ export class DevicePolicyEnforcer {
       stub: false,
       applied: true,
       isolated: policy.isolated,
+      dnsGuardRequired: policy.dnsGuardRequired,
       version: policy.version,
       ...applied,
       systemDnsUnchanged: true,

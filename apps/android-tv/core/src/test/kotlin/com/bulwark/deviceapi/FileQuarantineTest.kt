@@ -131,6 +131,32 @@ class FileQuarantineTest {
     }
 
     @Test
+    fun rejectsSymlinks() {
+        val root = createTempDir()
+        try {
+            // Keep the symlink target inside the allow root so the batch allowlist
+            // check passes; act-time must still reject the symlink itself.
+            val target = File(root, "real.bin").also { it.writeText("payload") }
+            val link = File(root, "link.bin")
+            java.nio.file.Files.createSymbolicLink(link.toPath(), target.toPath())
+            val r = FileQuarantine.quarantineFiles(
+                listOf(link.absolutePath),
+                listOf(root),
+                File(root, "quarantine"),
+            )
+            assertEquals(false, r["ok"])
+            assertEquals(false, r["applied"])
+            @Suppress("UNCHECKED_CAST")
+            val errors = r["errors"] as? List<Map<String, String>>
+            assertTrue(errors != null && errors.isNotEmpty())
+            assertEquals("symlinks are not allowed", errors!![0]["reason"])
+            assertTrue(target.exists())
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+    @Test
     fun parsePathsFromPathOrPaths() {
         assertEquals(listOf("/a"), FileQuarantine.parsePaths(mapOf("path" to "/a")))
         assertEquals(

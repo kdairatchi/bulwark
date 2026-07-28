@@ -130,18 +130,42 @@ export async function defaultCommandExecutor(
         : typeof parameters.host === 'string' ? parameters.host : ''
       return devicePolicyEnforcer.blockDomain(domain)
     }
-    case 'ISOLATE_DEVICE':
-    case 'CLEAR_ISOLATION':
-    case 'APPLY_POLICY':
-      // Prefer the agent-bound executor (pulls fresh policy). Fallback keeps stubs honest.
-      return {
-        ok: true,
-        stub: true,
-        type,
-        applied: false,
-        reason: 'policy commands require agent-bound executor',
-        parameters,
-      }
+    case 'ISOLATE_DEVICE': {
+      const current = devicePolicyEnforcer.getPolicy()
+      const policy = parseRemotePolicy({
+        ...(current ?? {}),
+        isolated: true,
+        dnsGuardRequired: true,
+        version: (current?.version ?? 0) + 1,
+        updatedAt: new Date().toISOString(),
+      })
+      return devicePolicyEnforcer.applyRemotePolicy(policy)
+    }
+    case 'CLEAR_ISOLATION': {
+      const current = devicePolicyEnforcer.getPolicy()
+      const policy = parseRemotePolicy({
+        ...(current ?? {}),
+        isolated: false,
+        version: (current?.version ?? 0) + 1,
+        updatedAt: new Date().toISOString(),
+      })
+      return devicePolicyEnforcer.applyRemotePolicy(policy)
+    }
+    case 'APPLY_POLICY': {
+      // Prefer parameters as a full policy patch; fall back to current + defaults.
+      const current = devicePolicyEnforcer.getPolicy()
+      const policy = parseRemotePolicy({
+        ...(current ?? {}),
+        ...parameters,
+        version: typeof parameters.version === 'number'
+          ? parameters.version
+          : (current?.version ?? 0) + 1,
+        updatedAt: typeof parameters.updatedAt === 'string'
+          ? parameters.updatedAt
+          : new Date().toISOString(),
+      })
+      return devicePolicyEnforcer.applyRemotePolicy(policy)
+    }
     case 'RESTART_AGENT':
       return executeRestartAgent(parameters)
     default:

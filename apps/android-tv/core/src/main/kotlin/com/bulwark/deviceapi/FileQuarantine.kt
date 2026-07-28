@@ -71,14 +71,28 @@ object FileQuarantine {
             for (path in paths.take(MAX_PATHS)) {
                 val src = File(path)
                 try {
-                    if (!src.exists()) {
+                    // Re-check allowlist at act-time (closes TOCTOU / symlink races).
+                    if (!isUnderAllowRoots(src.path, roots)) {
                         failed++
-                        errors += mapOf("path" to path, "reason" to "file not found")
+                        errors += mapOf("path" to path, "reason" to "path outside allowed directories")
                         continue
                     }
-                    if (!src.isFile) {
+                    val srcPath = src.toPath()
+                    if (java.nio.file.Files.isSymbolicLink(srcPath)) {
                         failed++
-                        errors += mapOf("path" to path, "reason" to "not a regular file")
+                        errors += mapOf("path" to path, "reason" to "symlinks are not allowed")
+                        continue
+                    }
+                    if (!java.nio.file.Files.isRegularFile(
+                            srcPath,
+                            java.nio.file.LinkOption.NOFOLLOW_LINKS,
+                        )
+                    ) {
+                        failed++
+                        errors += mapOf(
+                            "path" to path,
+                            "reason" to if (!src.exists()) "file not found" else "not a regular file",
+                        )
                         continue
                     }
                     if (!src.canRead()) {
@@ -93,8 +107,13 @@ object FileQuarantine {
                     val dest = File(quarantineDir, quarantinedName)
                     val renamed = src.renameTo(dest)
                     if (!renamed) {
-                        // Cross-filesystem fallback: copy then delete.
-                        src.copyTo(dest, overwrite = false)
+                        // Cross-filesystem fallback: copy bytes without following links.
+                        java.nio.file.Files.copy(
+                            srcPath,
+                            dest.toPath(),
+                            java.nio.file.StandardCopyOption.REPLACE_EXISTING,
+                            java.nio.file.LinkOption.NOFOLLOW_LINKS,
+                        )
                         if (!src.delete()) {
                             dest.delete()
                             failed++

@@ -6,7 +6,7 @@ package com.bulwark.deviceapi
  *   ./gradlew :core:runAgentDemo
  *
  * Flow: create pairing code → enroll Ed25519 device → issue is done by this demo
- * as "dashboard" → poll → verify → execute stub → post result.
+ * as "dashboard" → poll → verify → execute (live JVM CommandExecutor) → post result.
  */
 fun main(args: Array<String>) {
     val base = args.firstOrNull()
@@ -62,6 +62,10 @@ fun main(args: Array<String>) {
     )
     println("7. verified+executed accepted=$accepted type=${cmd.type}")
     require(accepted) { "command rejected: $result" }
+    require(result["stub"] != true) { "expected live malware scan, got stub: $result" }
+    require((result["findings"] as? Number)?.toInt() ?: 0 >= 1) {
+        "expected posture findings from live JVM executor"
+    }
 
     client.postCommandResult(identity, cmd.commandId, result)
     println("8. result posted: $result")
