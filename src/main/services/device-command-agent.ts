@@ -204,6 +204,29 @@ export class DeviceCommandAgent {
     this.inventorySyncMs = opts?.inventorySyncMs ?? INVENTORY_SYNC_MS
   }
 
+  /**
+   * Test/demo helper: inject an enrolled identity without pairing I/O.
+   * Sets lastInventoryAt so the next tick skips an immediate inventory sync.
+   */
+  setIdentityForTest(identity: DeviceIdentity | null): void {
+    this.identity = identity
+    this.lastInventoryAt = identity ? Date.now() : 0
+    if (!identity) {
+      this.seenNonces.clear()
+      this.commandsProcessed = 0
+      this.commandsRejected = 0
+    }
+  }
+
+  /** Wait until any in-flight tick completes (tests). */
+  async waitForIdle(timeoutMs = 10_000): Promise<void> {
+    const start = Date.now()
+    while (this.tickInFlight) {
+      if (Date.now() - start > timeoutMs) throw new Error('device-api agent tick idle timeout')
+      await new Promise((r) => setTimeout(r, 15))
+    }
+  }
+
   getStatus(): DeviceAgentStatus {
     return {
       enrolled: !!this.identity,

@@ -68,10 +68,16 @@ export class DevicePolicyEnforcer {
   private pendingEvents: AgentNetworkEvent[] = []
   private localBlocklistProvider: () => string[] = () => []
   private hookInstalled = false
+  private resolverStartConfig: { port?: number } | undefined
 
   /** Provide local Network Guard domains (starter + filter lists + rules). */
   setLocalBlocklistProvider(fn: () => string[]): void {
     this.localBlocklistProvider = fn
+  }
+
+  /** Prefer ephemeral ports in tests (`{ port: 0 }`) to avoid clashing with :5353. */
+  setResolverStartConfig(config?: { port?: number }): void {
+    this.resolverStartConfig = config
   }
 
   getPolicy(): RemoteDevicePolicy | null {
@@ -109,6 +115,16 @@ export class DevicePolicyEnforcer {
     return out
   }
 
+  /** Clear remote policy / blocks / events (tests only). */
+  resetForTest(): void {
+    this.policy = null
+    this.manualBlocks.clear()
+    this.pendingEvents = []
+    this.hookInstalled = false
+    this.resolverStartConfig = undefined
+    this.localBlocklistProvider = () => []
+  }
+
   private ensureBlockHook(): void {
     if (this.hookInstalled) return
     dnsResolver.setOnBlocked((name, via) => {
@@ -131,7 +147,7 @@ export class DevicePolicyEnforcer {
     this.ensureBlockHook()
     const ensureStarted = async () => {
       if (!dnsResolver.getStats().running) {
-        await dnsResolver.start(startConfig)
+        await dnsResolver.start(startConfig ?? this.resolverStartConfig)
         cloudLog('INFO', 'device-policy: started loopback resolver', {
           address: dnsResolver.getStats().address,
         })
