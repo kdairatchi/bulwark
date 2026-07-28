@@ -12,6 +12,7 @@ import type { CommandType } from '../../cloud/device-api/commands'
 import {
   hitsToCloudFindings,
   scanProcessLolbins,
+  scanPersistenceLolbins,
   matchLolbinContent,
   getLolbinCatalogInfo,
 } from './lolbin-scanner'
@@ -110,11 +111,20 @@ export function runHealthAssessment(
 
 async function collectLolbinFindings(opts?: {
   techniquesOnly?: boolean
+  includeVulnHeuristics?: boolean
 }): Promise<InventoryFinding[]> {
-  const processHits = await scanProcessLolbins()
-  const filtered = opts?.techniquesOnly
-    ? processHits.filter((h) => h.category === 'technique')
-    : processHits
+  const [processHits, persistHits] = await Promise.all([
+    scanProcessLolbins(),
+    scanPersistenceLolbins(),
+  ])
+  const merged = [...processHits, ...persistHits]
+  const filtered = merged.filter((h) => {
+    if (opts?.techniquesOnly) {
+      return h.category === 'technique'
+        || (opts.includeVulnHeuristics && h.category === 'vuln_heuristic')
+    }
+    return true
+  })
   return hitsToCloudFindings(filtered)
 }
 
@@ -141,26 +151,32 @@ export async function runMalwareScanQuick(
     threatsFound: findings.length,
     appsAssessed: apps.length,
     scope,
-    note: `Inventory + offline LotL/technique grep (catalog v${catalog.version}, ${catalog.ruleCount} rules) — not full YARA/disk scan`,
+    note: `Inventory + offline LotL/technique/vuln-heuristic grep on process+persistence (catalog v${catalog.version}, ${catalog.ruleCount} rules) — not full YARA/disk/CVE feed`,
     parameters,
     _findings: findings,
   }
 }
 
 /**
- * Vulnerability posture + technique grep (AMSI bypass, injection primitives, etc.).
- * Live CVE/OSV matching remains Phase 5 — this is static pattern heuristics only.
+ * Vulnerability posture + technique / static vuln-heuristic grep
+ * (AMSI bypass, Log4Shell JNDI markers, Follina/msdt, etc.).
+ * Live CVE/OSV/KEV matching remains Phase 5 — this is static pattern heuristics only.
  */
 export async function runVulnerabilityScanPosture(
   apps: InstalledApp[],
   parameters: Record<string, unknown> = {},
 ): Promise<RemoteScanResult> {
   const posture = riskToCloudFindings(apps, { minScore: 35 })
-  const techniqueHits = await collectLolbinFindings({ techniquesOnly: true })
-  // Also grep install paths / names for technique markers (rare but cheap).
+  const techniqueHits = await collectLolbinFindings({
+    techniquesOnly: true,
+    includeVulnHeuristics: true,
+  })
+  // Also grep install paths / names for technique + vuln markers (rare but cheap).
   const nameBlob = apps.map((a) => `${a.name} ${a.publisher}`).join('\n')
   const nameTech = hitsToCloudFindings(
-    matchLolbinContent(nameBlob, 'content').filter((h) => h.category === 'technique'),
+    matchLolbinContent(nameBlob, 'content').filter(
+      (h) => h.category === 'technique' || h.category === 'vuln_heuristic',
+    ),
   )
   const findings = [...posture, ...techniqueHits, ...nameTech].slice(0, 200)
   return {
@@ -171,8 +187,8 @@ export async function runVulnerabilityScanPosture(
     threatsFound: findings.length,
     postureScore: buildAppRiskReport(installedAppsToPrograms(apps)).postureScore,
     appsAssessed: apps.length,
-    scope: 'inventory_posture_plus_technique_grep',
-    note: 'Posture + offline technique grep — CVE/OSV matching is Phase 5 (not a live zero-day feed)',
+    scope: 'inventory_posture_plus_technique_vuln_grep',
+    note: 'Posture + offline technique/vuln-heuristic grep — live CVE/OSV/KEV is Phase 5 (not a zero-day intel feed)',
     parameters,
     _findings: findings,
   }

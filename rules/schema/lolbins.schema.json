@@ -17,7 +17,7 @@
         "additionalProperties": false,
         "properties": {
           "id": { "type": "string", "pattern": "^[a-z0-9._-]+$" },
-          "category": { "type": "string", "enum": ["lolbin", "lolscript", "technique"] },
+          "category": { "type": "string", "enum": ["lolbin", "lolscript", "technique", "vuln_heuristic"] },
           "platforms": {
             "type": "array",
             "minItems": 1,

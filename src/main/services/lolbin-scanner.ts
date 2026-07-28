@@ -1,9 +1,9 @@
 /**
- * Offline Living-off-the-Land + technique grep scanner.
+ * Offline Living-off-the-Land + technique + static vuln-heuristic grep scanner.
  * Catalog: rules/security/lolbins.json — not a live CVE/zero-day feed.
  */
 
-import { readFileSync, statSync } from 'fs'
+import { readFileSync, statSync, readdirSync } from 'fs'
 import path from 'path'
 import { execFile } from 'child_process'
 import { promisify } from 'util'
@@ -12,7 +12,7 @@ import type { InventoryFinding } from './desktop-inventory'
 
 const execFileAsync = promisify(execFile)
 
-export type LolbinCategory = 'lolbin' | 'lolscript' | 'technique'
+export type LolbinCategory = 'lolbin' | 'lolscript' | 'technique' | 'vuln_heuristic'
 export type LolbinSurface = 'cmdline' | 'script' | 'lnk' | 'registry' | 'task' | 'content'
 export type LolbinSeverity = 'critical' | 'high' | 'medium' | 'low'
 
@@ -232,8 +232,136 @@ export function hitsToCloudFindings(hits: LolbinHit[]): InventoryFinding[] {
     level: h.severity === 'critical' || h.severity === 'high' ? 'likely_affected' : 'potential_match',
     subjectName: h.detectionName,
     reason: h.ruleId,
-    category: h.category === 'technique' ? 'technique' : 'lolbin',
+    category:
+      h.category === 'technique' ? 'technique'
+        : h.category === 'vuln_heuristic' ? 'vuln_heuristic'
+          : 'lolbin',
   }))
+}
+
+export interface PersistenceCmdline {
+  surface: 'registry' | 'task'
+  source: string
+  cmdline: string
+}
+
+/** Best-effort persistence cmdline inventory (Run keys, tasks, cron) for LotL grep. */
+export async function collectPersistenceCommandLines(): Promise<PersistenceCmdline[]> {
+  const out: PersistenceCmdline[] = []
+  try {
+    if (process.platform === 'win32') {
+      const keys = [
+        'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run',
+        'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\RunOnce',
+        'HKLM\\Software\\Microsoft\\Windows\\CurrentVersion\\Run',
+        'HKLM\\Software\\Microsoft\\Windows\\CurrentVersion\\RunOnce',
+      ]
+      for (const regKey of keys) {
+        try {
+          const { stdout } = await execFileAsync('reg', ['query', regKey], {
+            timeout: 5_000,
+            windowsHide: true,
+          })
+          for (const line of stdout.split('\n')) {
+            const match = line.match(/^\s+(\S+)\s+REG_(?:SZ|EXPAND_SZ)\s+(.+)$/i)
+            if (!match) continue
+            out.push({ surface: 'registry', source: `${regKey}\\${match[1].trim()}`, cmdline: match[2].trim() })
+          }
+        } catch { /* key missing / access denied */ }
+      }
+      try {
+        const { stdout } = await execFileAsync(
+          'schtasks',
+          ['/query', '/fo', 'LIST', '/v'],
+          { timeout: 12_000, maxBuffer: 8 * 1024 * 1024, windowsHide: true },
+        )
+        let taskName = ''
+        let taskToRun = ''
+        const flush = (): void => {
+          if (taskToRun.trim()) {
+            out.push({
+              surface: 'task',
+              source: taskName || 'schtasks',
+              cmdline: taskToRun.trim(),
+            })
+          }
+          taskName = ''
+          taskToRun = ''
+        }
+        for (const line of stdout.split('\n')) {
+          const nameM = line.match(/^\s*TaskName:\s*(.+)\s*$/i)
+          if (nameM) {
+            if (taskToRun) flush()
+            taskName = nameM[1].trim()
+            continue
+          }
+          const runM = line.match(/^\s*Task To Run:\s*(.+)\s*$/i)
+          if (runM) taskToRun = runM[1].trim()
+        }
+        if (taskToRun) flush()
+      } catch { /* schtasks unavailable */ }
+      return out.slice(0, 400)
+    }
+
+    // Linux / macOS: crontab + a few cron.d snippets
+    try {
+      const { stdout } = await execFileAsync('crontab', ['-l'], { timeout: 5_000 })
+      for (const line of stdout.split('\n')) {
+        const trimmed = line.trim()
+        if (!trimmed || trimmed.startsWith('#')) continue
+        // Strip schedule fields (first 5) when present
+        const parts = trimmed.split(/\s+/)
+        const cmd = parts.length > 5 ? parts.slice(5).join(' ') : trimmed
+        out.push({ surface: 'task', source: 'crontab', cmdline: cmd })
+      }
+    } catch { /* no crontab */ }
+
+    if (process.platform === 'linux') {
+      for (const dir of ['/etc/cron.d', '/etc/cron.daily']) {
+        try {
+          const entries = readdirSync(dir).slice(0, 40)
+          for (const name of entries) {
+            if (name.startsWith('.')) continue
+            try {
+              const raw = readFileSync(path.join(dir, name), 'utf-8')
+              for (const line of raw.split('\n')) {
+                const trimmed = line.trim()
+                if (!trimmed || trimmed.startsWith('#')) continue
+                out.push({ surface: 'task', source: `${dir}/${name}`, cmdline: trimmed })
+              }
+            } catch { /* unreadable */ }
+          }
+        } catch { /* dir missing */ }
+      }
+    }
+  } catch {
+    return out
+  }
+  return out.slice(0, 400)
+}
+
+/** Scan persistence surfaces (registry / tasks / cron) with the LotL catalog. */
+export async function scanPersistenceLolbins(opts?: {
+  platform?: NodeJS.Platform
+  catalogPath?: string
+}): Promise<LolbinHit[]> {
+  const entries = await collectPersistenceCommandLines()
+  const hits: LolbinHit[] = []
+  const seen = new Set<string>()
+  for (const e of entries) {
+    for (const h of matchLolbinCommand(e.cmdline, {
+      platform: opts?.platform,
+      surface: e.surface,
+      catalogPath: opts?.catalogPath,
+    })) {
+      const key = `${h.ruleId}|${e.source}|${h.sample}`
+      if (seen.has(key)) continue
+      seen.add(key)
+      hits.push({ ...h, path: e.source })
+      if (hits.length >= 100) return hits
+    }
+  }
+  return hits
 }
 
 export interface ProcessCmdline {
