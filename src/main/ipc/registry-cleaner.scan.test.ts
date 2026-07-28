@@ -46,7 +46,19 @@ vi.mock('../services/settings-store', () => ({
   updateRegistryIgnoredTweaks: vi.fn(),
 }))
 
-vi.mock('../services/ipc-validation', () => ({ validateStringArray: (a: string[]) => a }))
+vi.mock('../services/ipc-validation', () => ({
+  validateStringArray: (a: string[]) => a,
+  parseCleanOptions: () => ({}),
+}))
+
+vi.mock('../services/gated-clean', () => ({
+  assertCleanAllowed: vi.fn(async () => ({
+    allowed: true,
+    restoreAttempted: false,
+    restoreSucceeded: false,
+    skipReason: 'disabled',
+  })),
+}))
 
 import {
   scanRegistry,
@@ -54,6 +66,7 @@ import {
   normalizeHiveNames,
   isProtectedDeleteKey,
 } from './registry-cleaner.ipc'
+import { assertCleanAllowed } from '../services/gated-clean'
 
 const APP_PATHS_ROOT = 'HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\App Paths'
 
@@ -328,5 +341,27 @@ describe('fixRegistryEntries — protected key guard', () => {
     const deletes = mockExecNative.mock.calls.filter(c => c[0] === 'reg' && c[1][0] === 'delete')
     expect(deletes).toHaveLength(1)
     expect(deletes[0][1]).toEqual(['delete', target, '/f'])
+  })
+
+  it('dry-run reports would-fix without calling reg.exe', async () => {
+    mockExecNative.mockClear()
+    const target = `${APP_PATHS_ROOT}\\ghost.exe`
+    const result = await fixRegistryEntries([entry(target)] as any, undefined, undefined, { dryRun: true })
+    expect(result.dryRun).toBe(true)
+    expect(result.fixed).toBe(1)
+    expect(mockExecNative).not.toHaveBeenCalled()
+  })
+
+  it('blocks when restore gate denies', async () => {
+    vi.mocked(assertCleanAllowed).mockResolvedValueOnce({
+      allowed: false,
+      restoreAttempted: true,
+      restoreSucceeded: false,
+      skipReason: 'restore_failed',
+      error: 'Administrator privileges required',
+    })
+    const result = await fixRegistryEntries([entry(`${APP_PATHS_ROOT}\\ghost.exe`)] as any)
+    expect(result.blockedByRestoreGate).toBe(true)
+    expect(result.fixed).toBe(0)
   })
 })

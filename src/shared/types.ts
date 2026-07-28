@@ -346,6 +346,8 @@ export interface MalwareActionResult {
   succeeded: number
   failed: number
   errors: { path: string; reason: string }[]
+  dryRun?: boolean
+  blockedByRestoreGate?: boolean
 }
 
 export interface QuarantinedItem {
