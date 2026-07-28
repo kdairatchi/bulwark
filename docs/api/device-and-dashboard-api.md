@@ -1,7 +1,18 @@
 # API Design — Bulwark Control Plane
 
-> **Status: planned.** No cloud service exists in this repository yet. This is the
-> target contract for the desktop/Android agents and the dashboard.
+> **Status: device API implemented (reference service).** A dependency-free
+> Node/TypeScript reference implementation of the device side lives in
+> `src/cloud/device-api/` — run it with `npm run cloud:dev` (defaults to
+> `http://127.0.0.1:8787`). It implements pairing-code enrollment with
+> per-device Ed25519 keys and **signed** requests (no shared API key), plus
+> heartbeat / inventory / findings and the dashboard read views. A production
+> deployment swaps the in-memory store for PostgreSQL and adds the remaining
+> dashboard/command endpoints. Try it end-to-end with
+> `node scripts/device-client-demo.mjs` while the server is running.
+>
+> Implemented endpoints: `POST /v1/pairing-codes`, `POST /v1/devices/enroll`,
+> `POST /v1/devices/{id}/heartbeat|inventory|findings` (signed),
+> `GET /v1/devices`, `GET /v1/devices/{id}`, `GET /v1/findings`.
 
 ## Device APIs (agent → cloud)
 
