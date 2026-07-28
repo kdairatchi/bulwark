@@ -10,15 +10,25 @@ import { buildConnectionOverview, parsePortSpec, scanPorts } from '../services/n
 import { dnsResolver } from '../services/dns-resolver'
 import { STARTER_BLOCKLIST } from '../services/dns-filter'
 import { loadRules, saveRules } from '../services/network-rules-store'
+import { getFilterListsState, syncFilterLists, mergedBlocklistDomains } from '../services/filter-lists'
+import { getEnabledListIds, setEnabledListIds } from '../services/filter-lists-store'
+import type { FilterListsState } from '../../shared/filter-lists'
 import { getPlatform } from '../platform'
 
-/** Build the resolver's block set from the starter list + user domain block rules. */
+/**
+ * Build the resolver's block set from: the built-in starter list, all enabled
+ * filter lists, and user domain block-rules.
+ */
 function resolverBlocklist(rules: NetworkRule[]): string[] {
-  const domains = [...STARTER_BLOCKLIST]
+  const domains = [...STARTER_BLOCKLIST, ...mergedBlocklistDomains(getEnabledListIds())]
   for (const r of rules) {
     if (r.enabled && r.action === 'block' && r.match.domain) domains.push(r.match.domain)
   }
   return domains
+}
+
+function refreshResolverBlocklist(): void {
+  dnsResolver.setBlocklist(resolverBlocklist(loadRules()))
 }
 
 export interface NetworkGuardCheckRequest {
@@ -66,7 +76,7 @@ export function registerNetworkGuardIpc(): void {
 
   // ─── Secure DNS (DNS-over-TLS filtering resolver) ─────────
   ipcMain.handle(IPC.DNS_RESOLVER_START, async (_e, config?: Partial<DnsResolverConfig>): Promise<DnsResolverStats> => {
-    dnsResolver.setBlocklist(resolverBlocklist(loadRules()))
+    refreshResolverBlocklist()
     return dnsResolver.start(config)
   })
   ipcMain.handle(IPC.DNS_RESOLVER_STOP, async (): Promise<DnsResolverStats> => {
@@ -82,6 +92,22 @@ export function registerNetworkGuardIpc(): void {
     // Keep the running resolver's blocklist in sync with domain block rules.
     dnsResolver.setBlocklist(resolverBlocklist(saved))
     return saved
+  })
+
+  // ─── Filter lists (Secure DNS blocklists) ────────────────
+  ipcMain.handle(IPC.FILTER_LISTS_GET, async (): Promise<FilterListsState> => getFilterListsState(getEnabledListIds()))
+
+  ipcMain.handle(IPC.FILTER_LISTS_SET_ENABLED, async (_e, ids: string[]): Promise<FilterListsState> => {
+    const enabled = setEnabledListIds(Array.isArray(ids) ? ids : [])
+    refreshResolverBlocklist()
+    return getFilterListsState(enabled)
+  })
+
+  ipcMain.handle(IPC.FILTER_LISTS_SYNC, async (): Promise<FilterListsState> => {
+    const enabled = getEnabledListIds()
+    const state = await syncFilterLists(enabled)
+    refreshResolverBlocklist()
+    return state
   })
 
   // On-device TCP connect scanner. Defaults to localhost.

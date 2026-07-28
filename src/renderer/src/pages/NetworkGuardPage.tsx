@@ -331,6 +331,54 @@ function SecureDnsTab() {
           )}
         </>
       )}
+
+      <FilterListsPanel />
+    </div>
+  )
+}
+
+function FilterListsPanel() {
+  const { t } = useTranslation('networkGuard')
+  const state = useNetworkGuardStore((s) => s.filterLists)
+  const syncing = useNetworkGuardStore((s) => s.filterSyncing)
+  const load = useNetworkGuardStore((s) => s.loadFilterLists)
+  const toggle = useNetworkGuardStore((s) => s.toggleFilterList)
+  const sync = useNetworkGuardStore((s) => s.syncFilterLists)
+
+  useEffect(() => { if (!state) load() }, [state, load])
+
+  return (
+    <div className="mt-6 glass-card rounded-2xl p-6">
+      <div className="mb-3 flex items-center justify-between">
+        <div>
+          <p className="text-[14px] font-semibold text-white">{t('filterListsTitle')}</p>
+          <p className="mt-0.5 text-[12px]" style={{ color: 'var(--text-muted)' }}>
+            {t('filterListsTotal', { total: (state?.totalDomains ?? 0).toLocaleString() })}
+          </p>
+        </div>
+        <button
+          onClick={() => sync()}
+          disabled={syncing}
+          className="flex items-center gap-2 rounded-xl px-4 py-2 text-[12px] font-medium text-zinc-100 transition-colors disabled:opacity-60"
+          style={{ background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)' }}>
+          <RefreshCw className={`h-3.5 w-3.5 ${syncing ? 'animate-spin' : ''}`} strokeWidth={1.8} /> {syncing ? t('filterListsUpdating') : t('filterListsUpdate')}
+        </button>
+      </div>
+      <div className="space-y-2">
+        {state?.lists.map((l) => (
+          <div key={l.id} className="flex items-center gap-3 rounded-xl px-4 py-3 text-[13px]" style={{ background: 'var(--bg-hover-2)', border: '1px solid var(--border-default)' }}>
+            <input type="checkbox" checked={l.enabled} onChange={(e) => toggle(l.id, e.target.checked)} className="h-4 w-4 accent-amber-500" />
+            <div className="min-w-0 flex-1">
+              <p className="truncate font-medium text-zinc-100">{l.name} <span className="ml-1 rounded-md px-1.5 py-0.5 text-[10px]" style={{ background: 'var(--bg-hover)', color: 'var(--text-muted)' }}>{l.category}</span></p>
+              <p className="truncate text-[11px]" style={{ color: 'var(--text-muted)' }}>{l.description}</p>
+              {l.lastError && <p className="text-[11px]" style={{ color: '#f87171' }}>{l.lastError}</p>}
+            </div>
+            <span className="shrink-0 font-mono text-[12px]" style={{ color: l.cached ? '#4ade80' : 'var(--text-muted)' }}>
+              {l.cached ? t('filterListsCount', { count: l.domainCount.toLocaleString() }) : t('filterListsNotSynced')}
+            </span>
+          </div>
+        ))}
+      </div>
     </div>
   )
 }

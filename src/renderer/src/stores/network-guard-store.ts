@@ -3,6 +3,7 @@ import type { NetworkEvent, ThreatIndicator } from '@shared/network-guard'
 import type { ConnectionOverview, PortScanResult } from '@shared/network-monitor'
 import type { DnsResolverStats } from '@shared/dns'
 import type { NetworkRule } from '@shared/policy'
+import type { FilterListsState } from '@shared/filter-lists'
 
 // A small, clearly-labeled EXAMPLE feed so the checker is usable out of the box.
 // These use RFC 2606 reserved names — they are placeholders that demonstrate the
@@ -45,6 +46,12 @@ interface NetworkGuardState {
   rules: NetworkRule[]
   loadRules: () => Promise<void>
   saveRules: (rules: NetworkRule[]) => Promise<void>
+  // Filter lists
+  filterLists: FilterListsState | null
+  filterSyncing: boolean
+  loadFilterLists: () => Promise<void>
+  toggleFilterList: (id: string, enabled: boolean) => Promise<void>
+  syncFilterLists: () => Promise<void>
 }
 
 function parseFeed(text: string): ThreatIndicator[] {
@@ -134,5 +141,22 @@ export const useNetworkGuardStore = create<NetworkGuardState>((set, get) => ({
   saveRules: async (rules) => {
     try { set({ rules: await window.kudu.networkRulesSet(rules) }) }
     catch (err) { set({ error: err instanceof Error ? err.message : 'Failed to save rules' }) }
+  },
+
+  filterLists: null,
+  filterSyncing: false,
+  loadFilterLists: async () => {
+    try { set({ filterLists: await window.kudu.filterListsGet() }) } catch { /* ignore */ }
+  },
+  toggleFilterList: async (id, enabled) => {
+    const current = get().filterLists?.lists ?? []
+    const ids = current.filter((l) => (l.id === id ? enabled : l.enabled)).map((l) => l.id)
+    try { set({ filterLists: await window.kudu.filterListsSetEnabled(ids) }) }
+    catch (err) { set({ error: err instanceof Error ? err.message : 'Failed to update lists' }) }
+  },
+  syncFilterLists: async () => {
+    set({ filterSyncing: true })
+    try { set({ filterLists: await window.kudu.filterListsSync(), filterSyncing: false }) }
+    catch (err) { set({ error: err instanceof Error ? err.message : 'Sync failed', filterSyncing: false }) }
   },
 }))

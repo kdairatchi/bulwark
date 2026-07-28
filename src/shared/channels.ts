@@ -179,6 +179,9 @@ export const IPC = {
   DNS_RESOLVER_STATUS: 'network-guard:dns-status',
   NETWORK_RULES_GET: 'network-guard:rules-get',
   NETWORK_RULES_SET: 'network-guard:rules-set',
+  FILTER_LISTS_GET: 'network-guard:filter-lists-get',
+  FILTER_LISTS_SET_ENABLED: 'network-guard:filter-lists-set',
+  FILTER_LISTS_SYNC: 'network-guard:filter-lists-sync',
 
   // Onboarding
   ONBOARDING_GET: 'onboarding:get',

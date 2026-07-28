@@ -32,6 +32,13 @@
   "rulesOn": "on",
   "rulesOff": "off",
 
+  "filterListsTitle": "Filter lists",
+  "filterListsTotal": "{{total}} domains blocked across enabled lists",
+  "filterListsUpdate": "Update lists",
+  "filterListsUpdating": "Updating…",
+  "filterListsCount": "{{count}} domains",
+  "filterListsNotSynced": "not synced",
+
   "statApps": "Apps",
   "statConnections": "Connections",
   "statBlocked": "Blocked",
