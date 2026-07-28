@@ -1742,6 +1742,19 @@ async function runUpdatesLinux(
   const pm = await detectLinuxPackageManager()
   if (!pm) return { succeeded: 0, failed: 0, errors: [] }
 
+  // Package installation changes system-owned files. Do not invoke apt/dnf/
+  // pacman repeatedly when the desktop process is not elevated; that produces
+  // noisy dpkg lock errors and cannot succeed. The UI can show one actionable
+  // reason per selected package instead.
+  if (typeof process.getuid === 'function' && process.getuid() !== 0) {
+    const reason = `Administrator privileges are required to update ${pm} packages. Run the package manager with sudo, or use your system Software Manager; this desktop app should not be launched as root.`
+    return {
+      succeeded: 0,
+      failed: appIds.length,
+      errors: appIds.map((appId) => ({ appId, name: appId, reason })),
+    }
+  }
+
   let succeeded = 0
   let failed = 0
   const errors: UpdateResult['errors'] = []

@@ -1,4 +1,8 @@
 {
+  "pageHeaderUnavailableTitle": "Game Mode",
+  "pageHeaderUnavailableDescription": "Game-focused performance controls",
+  "notAvailableTitle": "Windows-only optimizations",
+  "notAvailableDescription": "Game Mode currently uses Windows services, registry, and power-plan controls. Linux and macOS support is planned; software updates, startup tools, and Network Guard remain available.",
   "pageTitle": "Game Mode",
   "pageDescription": "Optimize your system for maximum gaming performance",
   "activateButton": "ACTIVATE",

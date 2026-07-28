@@ -7,6 +7,18 @@ const execFileAsync = promisify(execFile)
 
 const LOOPBACK = new Set(['127.0.0.1', '::1', '0.0.0.0', '::'])
 
+function parseTasklistCsv(stdout: string, requested: Set<number>): Map<number, string> {
+  const names = new Map<number, string>()
+  for (const line of stdout.split(/\r?\n/)) {
+    const fields = [...line.matchAll(/"((?:""|[^"])*)"/g)].map((m) => m[1].replaceAll('""', '"'))
+    if (fields.length < 2) continue
+    const pid = Number(fields[1])
+    const name = fields[0]?.trim()
+    if (requested.has(pid) && name) names.set(pid, name)
+  }
+  return names
+}
+
 export function createWin32Network(): PlatformNetwork {
   return {
     async getEstablishedConnections(): Promise<ActiveConnection[]> {
@@ -73,6 +85,17 @@ export function createWin32Network(): PlatformNetwork {
         return results
       } catch {
         return []
+      }
+    },
+
+    async getProcessNames(pids: number[]): Promise<Map<number, string>> {
+      const requested = new Set(pids.filter((pid) => Number.isInteger(pid) && pid > 0))
+      if (requested.size === 0) return new Map()
+      try {
+        const { stdout } = await execFileAsync('tasklist', ['/FO', 'CSV', '/NH'], { timeout: 5000, windowsHide: true })
+        return parseTasklistCsv(stdout, requested)
+      } catch {
+        return new Map()
       }
     },
 

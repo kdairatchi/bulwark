@@ -22,6 +22,8 @@ import {
 import { toast } from 'sonner'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { useGameModeStore } from '@/stores/game-mode-store'
+import { usePlatform } from '@/hooks/usePlatform'
+import { EmptyState } from '@/components/shared/EmptyState'
 import type { GameModeOptimizationId, GameModeCategory } from '@shared/types'
 import type { LucideIcon } from 'lucide-react'
 
@@ -177,6 +179,20 @@ function HexGrid({ active }: { active: boolean }) {
 // ── Component ────────────────────────────────────────────────
 
 export function GameModePage() {
+  const { t } = useTranslation('gameMode')
+  const { features } = usePlatform()
+  if (!features.gameMode) {
+    return (
+      <div className="animate-fade-in">
+        <PageHeader title={t('pageHeaderUnavailableTitle')} description={t('pageHeaderUnavailableDescription')} />
+        <EmptyState icon={Gamepad2} title={t('notAvailableTitle')} description={t('notAvailableDescription')} />
+      </div>
+    )
+  }
+  return <GameModePageContent />
+}
+
+function GameModePageContent() {
   const { t } = useTranslation('gameMode')
   const store = useGameModeStore
   const active = useGameModeStore((s) => s.active)

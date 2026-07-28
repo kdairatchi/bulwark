@@ -12,6 +12,7 @@ import { ContextMenuCleanerPage } from './pages/ContextMenuCleanerPage'
 import { StartupPage } from './pages/StartupPage'
 import { DebloaterPage } from './pages/DebloaterPage'
 import { SoftwareUpdaterPage } from './pages/SoftwareUpdaterPage'
+import { UpdatesPage } from './pages/UpdatesPage'
 import { DriverManagerPage } from './pages/DriverManagerPage'
 import { DiskAnalyzerPage } from './pages/DiskAnalyzerPage'
 import { DuplicateFinderPage } from './pages/DuplicateFinderPage'
@@ -171,6 +172,7 @@ export function App() {
           <Route path="/firewall" element={<FirewallAuditPage />} />
           <Route path="/debloater" element={<DebloaterPage />} />
           <Route path="/updates" element={<SoftwareUpdaterPage />} />
+          <Route path="/software" element={<UpdatesPage />} />
           <Route path="/schedules" element={<SchedulesPage />} />
           {/* Legacy redirect */}
           <Route path="/hardening" element={<Navigate to="/privacy" replace />} />
@@ -229,6 +231,7 @@ const ROUTE_TITLES: Record<string, { key: string; ns?: string } | string> = {
   '/firewall': 'Firewall Audit',
   '/debloater': 'Bloatware Remover',
   '/updates': 'Software Updates',
+  '/software': 'Software',
   '/schedules': { key: 'schedules' },
   '/drivers': 'Driver Updates',
   '/cloud': 'Bulwrk Cloud',

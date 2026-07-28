@@ -341,6 +341,8 @@ export interface WifiProfile {
 export interface PlatformNetwork {
   /** Get established TCP connections with remote address, port, and PID */
   getEstablishedConnections(): Promise<ActiveConnection[]>
+  /** Resolve process names for connection PIDs without requiring a full process snapshot. */
+  getProcessNames?(pids: number[]): Promise<Map<number, string>>
   /** Get TCP ports currently in LISTEN state. Used to distinguish inbound vs outbound connections on servers. */
   getListeningPorts(): Promise<number[]>
   /** Get DNS cache entries. Returns empty array if not supported on this platform. */

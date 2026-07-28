@@ -164,6 +164,23 @@ describe('win32 network', () => {
     })
   })
 
+  describe('getProcessNames', () => {
+    it('resolves requested PIDs from tasklist CSV output', async () => {
+      execFileMock.mockResolvedValue({
+        stdout: '"chrome.exe","1234","Console","1","100,000 K"\n"ignored.exe","9999","Console","1","1,000 K"\n',
+        stderr: '',
+      })
+
+      await expect(network.getProcessNames?.([1234, 5678])).resolves.toEqual(new Map([[1234, 'chrome.exe']]))
+      expect(execFileMock).toHaveBeenCalledWith('tasklist', ['/FO', 'CSV', '/NH'], { timeout: 5000, windowsHide: true })
+    })
+
+    it('does not execute a process query when no valid PIDs are supplied', async () => {
+      await expect(network.getProcessNames?.([0, -1, 1.5])).resolves.toEqual(new Map())
+      expect(execFileMock).not.toHaveBeenCalled()
+    })
+  })
+
   describe('getDnsCacheEntries', () => {
     it('parses DNS cache entries', async () => {
       execFileMock.mockResolvedValue({
