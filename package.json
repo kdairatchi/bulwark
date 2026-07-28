@@ -2,6 +2,7 @@
   "name": "bulwrk",
   "version": "1.47.0",
   "description": "Bulwrk — a family-focused device security platform that protects Windows, macOS, and Linux endpoints from malware, vulnerable software, malicious traffic, and privacy risks. (Forked from Kudu; public domain/email still open.)",
+  "desktopName": "Bulwrk",
   "main": "./out/main/index.js",
   "scripts": {
     "dev": "electron-vite dev",
