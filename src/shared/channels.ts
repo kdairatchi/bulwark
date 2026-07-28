@@ -233,6 +233,14 @@ export const IPC = {
   UTILITY_INSTALL_UPGRADE_ALL: 'utility-install:upgrade-all',
   UTILITY_INSTALL_PROGRESS: 'utility-install:progress',
 
+  // Utility Tabs — Tweaks (reversible Windows tweaks)
+  UTILITY_TWEAKS_CATALOG: 'utility-tweaks:catalog',
+  UTILITY_TWEAKS_SCAN: 'utility-tweaks:scan',
+  UTILITY_TWEAKS_APPLY: 'utility-tweaks:apply',
+  UTILITY_TWEAKS_REVERT: 'utility-tweaks:revert',
+  UTILITY_TWEAKS_POWER_PLAN_GET: 'utility-tweaks:power-plan:get',
+  UTILITY_TWEAKS_POWER_PLAN_SET: 'utility-tweaks:power-plan:set',
+
   // Cloud Agent
   CLOUD_LINK: 'cloud:link',
   CLOUD_UNLINK: 'cloud:unlink',

@@ -1048,6 +1048,46 @@ export interface UtilityInstallActionResult {
   errors: Array<{ id: string; reason: string }>
 }
 
+export type UtilityTweakGroup = 'essential' | 'advanced'
+
+export interface UtilityTweakMetadata {
+  id: string
+  name: string
+  description: string
+  group: UtilityTweakGroup
+  requiresAdmin: boolean
+}
+
+export type UtilityPowerPlanTarget = 'balanced' | 'ultimate-performance'
+export type UtilityPowerPlanActive = UtilityPowerPlanTarget | 'other' | 'unknown'
+
+export interface UtilityPowerPlanState {
+  available: boolean
+  active: UtilityPowerPlanActive
+  guid: string | null
+  error?: string
+}
+
+export interface UtilityPowerPlanSetResult {
+  success: boolean
+  state?: UtilityPowerPlanState
+  error?: string
+}
+
+export interface UtilityTweaksScanResult {
+  available: boolean
+  tweaks: UtilityTweakMetadata[]
+  applied: Record<string, boolean>
+  powerPlan: UtilityPowerPlanState
+}
+
+export interface UtilityTweakActionResult {
+  succeeded: number
+  failed: number
+  errors: Array<{ id: string; reason: string }>
+  restorePoint?: RestorePointResult
+}
+
 export interface UpdateCheckResult {
   apps: UpdatableApp[]
   upToDate: UpToDateApp[]

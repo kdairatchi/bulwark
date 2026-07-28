@@ -59,6 +59,12 @@ import type {
   UtilityInstallActionResult,
   UtilityInstallProgress,
   UtilityWingetAction,
+  UtilityPowerPlanSetResult,
+  UtilityPowerPlanState,
+  UtilityPowerPlanTarget,
+  UtilityTweakActionResult,
+  UtilityTweakMetadata,
+  UtilityTweaksScanResult,
   FileTypeInfo,
   CloudActionEntry,
   ThreatSnapshot,
@@ -492,6 +498,20 @@ const api = {
     ipcRenderer.on(IPC.UTILITY_INSTALL_PROGRESS, handler)
     return () => { ipcRenderer.removeListener(IPC.UTILITY_INSTALL_PROGRESS, handler) }
   },
+
+  // Utility Tabs — Tweaks
+  utilityTweaksCatalog: (): Promise<UtilityTweakMetadata[]> =>
+    ipcRenderer.invoke(IPC.UTILITY_TWEAKS_CATALOG),
+  utilityTweaksScan: (): Promise<UtilityTweaksScanResult> =>
+    ipcRenderer.invoke(IPC.UTILITY_TWEAKS_SCAN),
+  utilityTweaksApply: (ids: string[]): Promise<UtilityTweakActionResult> =>
+    ipcRenderer.invoke(IPC.UTILITY_TWEAKS_APPLY, ids),
+  utilityTweaksRevert: (ids: string[]): Promise<UtilityTweakActionResult> =>
+    ipcRenderer.invoke(IPC.UTILITY_TWEAKS_REVERT, ids),
+  utilityTweaksPowerPlanGet: (): Promise<UtilityPowerPlanState> =>
+    ipcRenderer.invoke(IPC.UTILITY_TWEAKS_POWER_PLAN_GET),
+  utilityTweaksPowerPlanSet: (target: UtilityPowerPlanTarget): Promise<UtilityPowerPlanSetResult> =>
+    ipcRenderer.invoke(IPC.UTILITY_TWEAKS_POWER_PLAN_SET, target),
 
   // Cloud Agent
   cloudLink: (apiKey: string): Promise<{ success: boolean; error?: string }> =>
