@@ -5,51 +5,31 @@ This documents **CI signing secrets** and **Play Console upload** for
 
 Workflow: [`.github/workflows/android-tv-release.yml`](../../../.github/workflows/android-tv-release.yml)
 
-## Secrets to create (GitHub Actions)
+## GitHub Actions secrets (add these yourself)
 
-Repo → **Settings → Secrets and variables → Actions → New repository secret**:
+Repo secrets page (replace `OWNER/REPO` if needed):
 
-| Secret | Contents |
-|--------|----------|
-| `BULWARK_TV_KEYSTORE_BASE64` | Base64 of the **upload** keystore file (`.jks` / `.keystore`) |
-| `BULWARK_TV_STORE_PASSWORD` | Keystore password |
-| `BULWARK_TV_KEY_ALIAS` | Key alias |
+https://github.com/kdairatchi/bulwark/settings/secrets/actions
+
+| Secret | How to get it |
+|--------|----------------|
+| `BULWARK_TV_KEYSTORE_BASE64` | `./apps/android-tv/scripts/encode-keystore.sh path/to/upload.jks` |
+| `BULWARK_TV_STORE_PASSWORD` | Upload keystore password |
+| `BULWARK_TV_KEY_ALIAS` | Key alias (e.g. `bulwark-tv`) |
 | `BULWARK_TV_KEY_PASSWORD` | Key password |
-| `BULWARK_TV_PLAY_SERVICE_ACCOUNT_JSON` | Full Play Developer API service-account JSON (plain text, not base64) |
+| `BULWARK_TV_PLAY_SERVICE_ACCOUNT_JSON` | Play API service-account JSON (plain text) |
 
-Encode a keystore locally (never commit the raw file):
+## One-time Play Console / Cloud links
 
-```bash
-# from anywhere you keep the upload key
-base64 -w0 path/to/bulwark-tv-upload.jks | pbcopy   # macOS
-base64 -w0 path/to/bulwark-tv-upload.jks            # Linux → paste into the secret
-```
+1. [Play Console](https://play.google.com/console) — create app package `com.bulwark.tv`
+2. [Play App Signing](https://support.google.com/googleplay/android-developer/answer/9842756) — enroll; keep your **upload** key for CI
+3. [Google Cloud Console](https://console.cloud.google.com/) — create a service account + JSON key
+4. Enable [Google Play Android Developer API](https://console.cloud.google.com/apis/library/androidpublisher.googleapis.com)
+5. Play Console → **Users and permissions** — invite the service account (Internal testing release access)
+6. Run workflow: https://github.com/kdairatchi/bulwark/actions/workflows/android-tv-release.yml
 
-Or use the helper:
+Encode helper + full checklist: this file + `../scripts/encode-keystore.sh`.
 
-```bash
-./apps/android-tv/scripts/encode-keystore.sh path/to/bulwark-tv-upload.jks
-```
-
-## One-time Play Console setup
-
-1. Create the app in [Google Play Console](https://play.google.com/console) with
-   package name **`com.bulwark.tv`** (Android TV / Leanback).
-2. Enroll in **Play App Signing** (Google holds the app signing key; you keep the
-   **upload** key used by CI).
-3. Create a Google Cloud **service account** with Play Console access:
-   - Play Console → Users and permissions → Invite user → service account email
-   - Grant **Release to testing tracks** (at least Internal testing)
-4. In Google Cloud, enable **Google Play Android Developer API** and create a
-   JSON key for that service account → paste into
-   `BULWARK_TV_PLAY_SERVICE_ACCOUNT_JSON`.
-5. Complete Play Console store listing / TV questionnaire enough that the
-   Internal testing track accepts AABs (first upload may need a manual draft
-   created in the console).
-
-> Brand / signing identity: do not lock a public Play listing until the product
-> brand is trademark-cleared (see `ROADMAP.md` Phase 0). Internal testing is fine
-> earlier.
 
 ## How to ship
 

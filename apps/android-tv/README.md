@@ -14,7 +14,7 @@ remote commands.
 
 ## Prerequisites
 
-- JDK 17+
+- JDK **21+** (Gradle `:core` / `:app` target JVM 21; CI uses Temurin 21)
 - Android SDK 34 (`ANDROID_HOME` / `local.properties` `sdk.dir`)
 - Control plane: from the repo root, `npm run cloud:dev` (port 8787)
 
