@@ -55,7 +55,7 @@ export async function runDaemon(): Promise<void> {
   }
 
   // ─── Start ───────────────────────────────────────────────────
-  log(`Kudu daemon v${app.getVersion()} starting`)
+  log(`Bulwark daemon v${app.getVersion()} starting`)
   log(`Platform: ${process.platform} (${process.arch})`)
   log(`PID: ${process.pid}`)
   log(`Config: ${app.getPath('userData')}`)

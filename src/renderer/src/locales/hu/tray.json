@@ -1,10 +1,10 @@
 {
-  "trayTooltip": "Kudu",
-  "openKudu": "Kudu megnyitása",
+  "trayTooltip": "Bulwark",
+  "openKudu": "Bulwark megnyitása",
   "quit": "Kilépés",
-  "scheduledTaskNotificationTitle": "Kudu - Ütemezett feladat",
+  "scheduledTaskNotificationTitle": "Bulwark - Ütemezett feladat",
   "scheduledTaskNotificationBody": "\"{{name}}\" futtatása...",
-  "scanCompleteNotificationTitle": "Kudu - Vizsgálat befejezve",
+  "scanCompleteNotificationTitle": "Bulwark - Vizsgálat befejezve",
   "scanCompleteNotificationBody": "{{itemCount}} tisztítható elem található ({{sizeMB}} MB).",
   "scheduledScanName": "Ütemezett vizsgálat"
 }

@@ -9,7 +9,7 @@ describe('updateSysctlConfig', () => {
   it('creates a new file with header when existing is empty', () => {
     const result = updateSysctlConfig('', 'kernel.sysrq', '0', ' = ', header)
     expect(result).toBe(
-      '# Kudu system hardening — managed automatically\n' +
+      '# Bulwark system hardening — managed automatically\n' +
       `${header}\n` +
       '\n' +
       'kernel.sysrq = 0\n',
@@ -18,7 +18,7 @@ describe('updateSysctlConfig', () => {
 
   it('appends to an existing file without duplicating the header', () => {
     const existing =
-      '# Kudu system hardening — managed automatically\n' +
+      '# Bulwark system hardening — managed automatically\n' +
       `${header}\n` +
       '\n' +
       'kernel.randomize_va_space = 2\n'
@@ -26,7 +26,7 @@ describe('updateSysctlConfig', () => {
     expect(result).toContain('kernel.randomize_va_space = 2\n')
     expect(result).toContain('kernel.sysrq = 0\n')
     // Header should appear exactly once
-    expect(result.match(/Kudu system hardening/g)?.length).toBe(1)
+    expect(result.match(/Bulwark system hardening/g)?.length).toBe(1)
   })
 
   it('replaces an existing param (spaced format)', () => {

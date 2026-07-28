@@ -118,7 +118,7 @@
     "allUpToDateTitle": "Tüm sürücüler güncel",
     "allUpToDateDescription": "Kullanılabilir güncelleme yok ve eski paket bulunmadı.",
     "updatesDisabledTitle": "Windows'ta sürücü güncellemeleri kapalı",
-    "updatesDisabledText": "Windows, sürücüleri Windows Update dışında tutacak şekilde ayarlandığından Kudu sürücü güncellemelerini denetlemedi. Eski sürücü paketi temizliği yine de çalışır. Sürücü güncellemelerini Windows aygıt yükleme ayarlarından veya Grup İlkesi'nden yeniden etkinleştirebilirsiniz.",
+    "updatesDisabledText": "Windows, sürücüleri Windows Update dışında tutacak şekilde ayarlandığından Bulwark sürücü güncellemelerini denetlemedi. Eski sürücü paketi temizliği yine de çalışır. Sürücü güncellemelerini Windows aygıt yükleme ayarlarından veya Grup İlkesi'nden yeniden etkinleştirebilirsiniz.",
     "updatesAvailable": "Kullanılabilir Güncellemeler ({{count}})",
     "stalePackages": "Eski Paketler ({{count}})",
     "selectAll": "Tümünü Seç",

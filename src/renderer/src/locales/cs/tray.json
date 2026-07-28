@@ -1,10 +1,10 @@
 {
-  "trayTooltip": "Kudu",
-  "openKudu": "Otevřít Kudu",
+  "trayTooltip": "Bulwark",
+  "openKudu": "Otevřít Bulwark",
   "quit": "Ukončit",
-  "scheduledTaskNotificationTitle": "Kudu – Naplánovaná úloha",
+  "scheduledTaskNotificationTitle": "Bulwark – Naplánovaná úloha",
   "scheduledTaskNotificationBody": "Spouští se „{{name}}“…",
-  "scanCompleteNotificationTitle": "Kudu – Kontrola dokončena",
+  "scanCompleteNotificationTitle": "Bulwark – Kontrola dokončena",
   "scanCompleteNotificationBody": "Bylo nalezeno {{itemCount}} položek ({{sizeMB}} MB), které lze vyčistit.",
   "scheduledScanName": "Naplánovaná kontrola"
 }

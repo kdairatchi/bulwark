@@ -66,7 +66,7 @@ export const KNOWN_BLOATWARE: Omit<BloatwareApp, 'id' | 'size' | 'selected'>[] =
   { name: 'Xbox Identity Provider', packageName: 'Microsoft.XboxIdentityProvider', publisher: 'Microsoft', category: 'gaming', description: 'Xbox sign-in framework — only needed for Xbox games' },
   { name: 'Xbox TCUI', packageName: 'Microsoft.Xbox.TCUI', publisher: 'Microsoft', category: 'gaming', description: 'Xbox UI framework — only needed for Xbox games' },
   { name: 'Alarms & Clock', packageName: 'Microsoft.WindowsAlarms', publisher: 'Microsoft', category: 'utility', description: 'Alarms and timer app — remove if not needed' },
-  { name: 'PC Manager', packageName: 'Microsoft.MicrosoftPCManager', publisher: 'Microsoft', category: 'microsoft', description: 'PC optimization tool — redundant with Kudu' },
+  { name: 'PC Manager', packageName: 'Microsoft.MicrosoftPCManager', publisher: 'Microsoft', category: 'microsoft', description: 'PC optimization tool — redundant with Bulwark' },
   { name: 'Copilot+ AI Hub', packageName: 'Microsoft.Windows.Ai.Copilot.Provider', publisher: 'Microsoft', category: 'microsoft', description: 'AI hub for Copilot+ PCs — background AI services' },
   { name: 'Family Safety', packageName: 'MicrosoftCorporationII.MicrosoftFamily', publisher: 'Microsoft', category: 'microsoft', description: 'Family safety and parental controls' },
 

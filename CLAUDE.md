@@ -1,6 +1,8 @@
-# Kudu
+# Bulwark
 
-A modern, open-source system cleaner for Windows, macOS, and Linux built with Electron.
+A modern, open-source system cleaner and family device-security platform for
+Windows, macOS, and Linux built with Electron. (Desktop cleaning engine forked
+from Kudu; product name is Bulwark. Public domain/email stay open.)
 
 ## Releasing
 
@@ -15,8 +17,8 @@ This handles everything: version bump, changelog generation, commit, tag, push, 
 ## Testing
 
 ```
-npm test              # run all tests once (vitest run)
-npm run test:watch    # run tests in watch mode
+npm test # run all tests once (vitest run)
+npm run test:watch # run tests in watch mode
 npm run validate:rules # validate rule JSON files against schema
 ```
 

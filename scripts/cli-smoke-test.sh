@@ -110,7 +110,7 @@ echo ""
 echo "--- --version ---"
 run_cli --version
 assert_exit "version exits 0" 0
-assert_contains "version output" "Kudu v"
+assert_contains "version output" "Bulwark v"
 
 # 3. Unknown command → exit 6
 echo ""

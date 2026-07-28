@@ -1,10 +1,10 @@
 {
-  "trayTooltip": "Kudu",
-  "openKudu": "فتح Kudu",
+  "trayTooltip": "Bulwark",
+  "openKudu": "فتح Bulwark",
   "quit": "إنهاء",
-  "scheduledTaskNotificationTitle": "Kudu - مهمة مجدولة",
+  "scheduledTaskNotificationTitle": "Bulwark - مهمة مجدولة",
   "scheduledTaskNotificationBody": "جارٍ تشغيل \"{{name}}\"...",
-  "scanCompleteNotificationTitle": "Kudu - اكتمل الفحص",
+  "scanCompleteNotificationTitle": "Bulwark - اكتمل الفحص",
   "scanCompleteNotificationBody": "تم العثور على {{itemCount}} عنصرًا ({{sizeMB}} ميجابايت) يمكن تنظيفها.",
   "scheduledScanName": "فحص مجدول"
 }

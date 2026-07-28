@@ -1,10 +1,10 @@
 {
-  "trayTooltip": "Kudu",
-  "openKudu": "Kudu'yu Aç",
+  "trayTooltip": "Bulwark",
+  "openKudu": "Bulwark'yu Aç",
   "quit": "Çık",
-  "scheduledTaskNotificationTitle": "Kudu - Zamanlanmış Görev",
+  "scheduledTaskNotificationTitle": "Bulwark - Zamanlanmış Görev",
   "scheduledTaskNotificationBody": "\"{{name}}\" çalıştırılıyor...",
-  "scanCompleteNotificationTitle": "Kudu - Tarama Tamamlandı",
+  "scanCompleteNotificationTitle": "Bulwark - Tarama Tamamlandı",
   "scanCompleteNotificationBody": "Temizlenebilecek {{itemCount}} öğe ({{sizeMB}} MB) bulundu.",
   "scheduledScanName": "Zamanlanmış Tarama"
 }

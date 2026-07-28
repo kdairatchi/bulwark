@@ -34,7 +34,7 @@
     "unprotectedBadge": "{{count}} non protégé(s)",
     "protectAllCategoryButton": "Tout protéger",
     "adminBadge": "Admin",
-    "adminWarning": "Certains paramètres nécessitent des privilèges administrateur pour être modifiés. Exécutez Kudu en tant qu’administrateur pour une protection complète.",
+    "adminWarning": "Certains paramètres nécessitent des privilèges administrateur pour être modifiés. Exécutez Bulwark en tant qu’administrateur pour une protection complète.",
     "scanFailed": "Échec de l’analyse de confidentialité",
     "applyFailed": "Échec de l’application des paramètres de confidentialité",
     "applyFailedDescription": "Essayez d’exécuter en tant qu’administrateur",

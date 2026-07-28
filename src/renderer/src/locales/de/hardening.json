@@ -34,7 +34,7 @@
     "unprotectedBadge": "{{count}} ungeschützt",
     "protectAllCategoryButton": "Alle schützen",
     "adminBadge": "Admin",
-    "adminWarning": "Einige Einstellungen erfordern Administratorrechte, um geändert zu werden. Führen Sie Kudu als Administrator aus, um vollständigen Schutz zu erhalten.",
+    "adminWarning": "Einige Einstellungen erfordern Administratorrechte, um geändert zu werden. Führen Sie Bulwark als Administrator aus, um vollständigen Schutz zu erhalten.",
     "scanFailed": "Datenschutzscan fehlgeschlagen",
     "applyFailed": "Datenschutzeinstellungen konnten nicht angewendet werden",
     "applyFailedDescription": "Versuchen Sie, das Programm als Administrator auszuführen",

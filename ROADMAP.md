@@ -4,7 +4,7 @@ Bulwark is a **multi-phase program**, not a single deliverable. This file tracks
 phased plan. See [`docs/product/vision.md`](docs/product/vision.md) and
 [`docs/architecture/overview.md`](docs/architecture/overview.md) for context.
 
-## Phase 0 — De-brand & foundation  *(active cleanup)*
+## Phase 0 — De-brand & foundation  *(mostly landed)*
 
 Phase 0 establishes a coherent public identity and a trustworthy project baseline.
 It is complete when public metadata, packaging, visible UI copy, and documentation
@@ -20,16 +20,15 @@ requires an explicit migration plan and backward-compatibility tests.
 - [x] Repoint the update channel (electron-builder `publish` infers the new repo).
 - [x] Neutralize upstream service references: `BULWARK_CLOUD_URL` env override with a
       non-resolving placeholder default; cloud features stay dormant/opt-in.
-- [x] Rebrand the visible desktop name (window title, English UI strings, About).
+- [x] Rebrand the visible desktop name (window title, UI strings, About) to **Bulwark**.
 - [x] Author foundation docs: product vision, architecture, threat model, privacy,
       API design.
-- [x] Finish the visible in-app rename across the translated cloud locale bundles.
-- [ ] **Follow-up (own PR):** audit and complete any full UI restyle after the final
-      brand is selected.
-- [ ] **Follow-up (own PR):** internal-identifier rename (IPC channels, storage dirs,
+- [x] Finish the visible in-app rename across translated locale bundles.
+- [x] **Permanent product name:** Bulwark.
+- [ ] **Still open:** public marketing domain + support email (do not lock).
+- [ ] **Follow-up (own PR):** internal-identifier rename (`window.kudu`, IPC channels, storage dirs,
       Prometheus `kudu_` metric namespace, CLI binary name). These are API/data
       contracts asserted by tests and require careful migration.
-- [ ] Choose a final, trademark-cleared brand and only then lock signing identities.
 
 ### Phase 0 exit criteria
 

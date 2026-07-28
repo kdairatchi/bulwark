@@ -169,7 +169,7 @@ function WelcomeStep({ onBack, onNext }: { onBack: () => void; onNext: () => voi
   return (
     <StepWrapper>
       <div className="flex flex-col items-center text-center">
-        <img src={logoSrc} alt="Kudu" className="mb-5 h-20 w-20 rounded-2xl" />
+        <img src={logoSrc} alt="Bulwark" className="mb-5 h-20 w-20 rounded-2xl" />
         <h2 className="mb-2 text-[22px] font-bold text-zinc-100">{t('welcomeTitle')}</h2>
         <p className="mb-2 text-[13px] leading-relaxed text-zinc-400">
           {isWin ? t('welcomeDescriptionWindows') : t('welcomeDescriptionOther')}

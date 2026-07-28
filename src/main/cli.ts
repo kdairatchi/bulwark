@@ -439,7 +439,7 @@ async function cleanDatabasesCli(itemIds: string[]): Promise<CleanResult> {
 
 function printHelp(): void {
   log(`
-Kudu CLI — Full-featured command line interface
+Bulwark CLI — Full-featured command line interface
 
 Usage:
   kudu --cli <command> [subcommand] [options]
@@ -1250,7 +1250,7 @@ async function handleHistory(args: string[], ctx: CliContext): Promise<number | 
 
 async function handleRestorePoint(args: string[], ctx: CliContext): Promise<number | void> {
   const { createRestorePoint } = await import('./services/restore-point')
-  const description = args.slice(1).filter(a => !a.startsWith('--')).join(' ') || 'Kudu CLI restore point'
+  const description = args.slice(1).filter(a => !a.startsWith('--')).join(' ') || 'Bulwark CLI restore point'
 
   if (args[0] === 'create') {
     cliLog(ctx, `Creating restore point: ${description}...`)
@@ -1474,7 +1474,7 @@ WantedBy=multi-user.target
     } else {
       cliLog(ctx, 'Usage: kudu --cli service <install|uninstall|status>')
       cliLog(ctx, '')
-      cliLog(ctx, '  install     Install Kudu as a systemd service')
+      cliLog(ctx, '  install     Install Bulwark as a systemd service')
       cliLog(ctx, '  uninstall   Stop, disable, and remove the systemd service')
       cliLog(ctx, '  status      Show current service status')
     }
@@ -1565,7 +1565,7 @@ async function runLegacyScanClean(categories: string[], doClean: boolean, ctx: C
   const allResults: ScanResult[] = []
   const scanErrors: Array<{ category: string; error: string }> = []
 
-  cliLog(ctx, `Kudu CLI v${app.getVersion()}`)
+  cliLog(ctx, `Bulwark CLI v${app.getVersion()}`)
   cliLog(ctx, `Scanning: ${categories.join(', ')}`)
   cliLog(ctx, '')
 
@@ -1673,7 +1673,7 @@ export async function runCli(): Promise<void> {
   const parsed = parseCliArgs(process.argv)
 
   if (parsed.help) { printHelp(); app.exit(ExitCode.SUCCESS); return }
-  if (parsed.version) { log(`Kudu v${app.getVersion()}`); app.exit(ExitCode.SUCCESS); return }
+  if (parsed.version) { log(`Bulwark v${app.getVersion()}`); app.exit(ExitCode.SUCCESS); return }
 
   const { ctx } = parsed
 

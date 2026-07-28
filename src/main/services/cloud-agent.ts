@@ -56,11 +56,11 @@ import { threatMonitor } from './threat-monitor'
 import { isLikelyFalsePositive, deduplicateCves } from './cve-filter'
 
 const execFileAsync = promisify(execFile)
-// Cloud control plane base URL. The upstream service
-// is intentionally NOT part of this fork — point this at your own control
-// plane. Overridable via env for local/self-hosted development. Cloud features
-// stay dormant until the user opts in with an API key, so the placeholder
-// default never runs unless explicitly configured.
+// Cloud control plane base URL. Upstream legacy hosts are not part of this
+// product — set BULWARK_CLOUD_URL when you have a real endpoint. Public
+// marketing domain / support email stay open (not locked). Cloud features stay
+// dormant until the user opts in with an API key, so the placeholder default
+// never runs unless explicitly configured.
 const DEFAULT_SERVER_URL = process.env.BULWARK_CLOUD_URL || 'https://cloud.invalid'
 
 /**

@@ -29,7 +29,7 @@ import { useSettingsStore } from '@/stores/settings-store'
 import { usePlatform } from '@/hooks/usePlatform'
 import type { UpdateProgress, UpdatableApp, UpToDateApp, WindowsPackageManager } from '@shared/types'
 
-/** Windows managers Kudu can aggregate, with their display labels. */
+/** Windows managers Bulwark can aggregate, with their display labels. */
 const WINDOWS_MANAGER_OPTIONS: { id: WindowsPackageManager; label: string }[] = [
   { id: 'winget', label: 'winget' },
   { id: 'choco', label: 'Chocolatey' },

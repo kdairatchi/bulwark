@@ -17,12 +17,11 @@
   <a href="CLI.md"><b>CLI Docs</b></a>
 </p>
 
-> **Naming notice.** `Bulwark` is a **temporary internal codename**, not a final brand.
-> Product IDs, signing identities, and public URLs must not be locked to a final
-> name until it clears the trademark/domain checks described in
-> [`docs/product/vision.md`](docs/product/vision.md). This repository is a fork of
-> the upstream [Kudu](https://github.com/adventdevinc/kudu) system cleaner and reuses
-> its cleaning/scanning engine as the **desktop endpoint agent**.
+> **Brand.** **Bulwark** is the permanent product name. Public marketing **domain**
+> and **support email** stay open — do not lock those until chosen. Cloud hosts are
+> env-configured (`BULWARK_CLOUD_URL`); defaults are non-resolving placeholders.
+> This repository is a fork of the upstream [Kudu](https://github.com/adventdevinc/kudu)
+> system cleaner and reuses its cleaning/scanning engine as the **desktop endpoint agent**.
 
 ---
 

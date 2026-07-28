@@ -9,7 +9,7 @@
 // ─── Sysctl config editing ─────────────────────────────────
 
 const SYSCTL_HEADER = [
-  '# Kudu system hardening — managed automatically',
+  '# Bulwark system hardening — managed automatically',
 ]
 
 /**

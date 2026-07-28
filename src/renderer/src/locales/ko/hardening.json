@@ -34,7 +34,7 @@
     "unprotectedBadge": "{{count}}개 미보호",
     "protectAllCategoryButton": "모두 보호",
     "adminBadge": "관리자",
-    "adminWarning": "일부 설정은 변경하려면 관리자 권한이 필요합니다. 전체 보호를 위해 Kudu를 관리자 권한으로 실행하세요.",
+    "adminWarning": "일부 설정은 변경하려면 관리자 권한이 필요합니다. 전체 보호를 위해 Bulwark를 관리자 권한으로 실행하세요.",
     "scanFailed": "개인정보 보호 검사 실패",
     "applyFailed": "개인정보 보호 설정을 적용하지 못했습니다",
     "applyFailedDescription": "관리자 권한으로 실행해 보세요",

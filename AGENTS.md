@@ -26,7 +26,7 @@ Breaking changes must include `!` after the type/scope.
 
 ## Cursor Cloud specific instructions
 
-Kudu is a single Electron desktop app (React 19 renderer + Node main process, built by electron-vite). There is no separate backend/frontend server. Commands (`npm run dev`, `npm test`, `npm run validate:rules`, `npm run build`) are documented in `CLAUDE.md` / `CONTRIBUTING.md`.
+Bulwark is a single Electron desktop app (React 19 renderer + Node main process, built by electron-vite). There is no separate backend/frontend server. Commands (`npm run dev`, `npm test`, `npm run validate:rules`, `npm run build`) are documented in `CLAUDE.md` / `CONTRIBUTING.md`. Product name is **Bulwark**; public marketing domain and support email stay open (cloud hosts via `BULWARK_CLOUD_URL`). Internal bridge/metrics may still say `kudu` until a dedicated migration.
 
 - Dependencies are refreshed by the startup update script (`npm install`); its `postinstall` runs `patch-package` and `electron-rebuild -w better-sqlite3`. If native modules misbehave after changing Electron/Node, re-run `npm install` to rebuild `better-sqlite3`.
 - GUI: run `npm run dev` with `DISPLAY=:1` (the VM's X server). The Electron window then renders on that display and can be driven via computer use. On startup you'll see harmless `dbus/bus.cc` connection errors and a one-time `[yara] Updated rules` line — these are normal, not failures.

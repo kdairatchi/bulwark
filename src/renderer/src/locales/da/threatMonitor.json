@@ -3,7 +3,7 @@
   "pageDescription": "Overvågning i realtid af netværksforbindelser mod kendte trusselslister.",
   "cloudNotConfigured": {
     "title": "Cloud er ikke konfigureret",
-    "description": "Knyt din enhed til Kudu Cloud i Indstillinger for at aktivere trusselsovervågning. Trusselssortlisten leveres af cloudtjenesten."
+    "description": "Knyt din enhed til Bulwark Cloud i Indstillinger for at aktivere trusselsovervågning. Trusselssortlisten leveres af cloudtjenesten."
   },
   "loading": "Indlæser...",
   "inactive": {

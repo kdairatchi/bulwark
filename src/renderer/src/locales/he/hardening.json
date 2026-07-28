@@ -34,7 +34,7 @@
     "unprotectedBadge": "{{count}} לא מוגנים",
     "protectAllCategoryButton": "הגן על הכול",
     "adminBadge": "מנהל",
-    "adminWarning": "חלק מההגדרות דורשות הרשאות מנהל כדי לשנותן. הפעל את Kudu כמנהל לקבלת הגנה מלאה.",
+    "adminWarning": "חלק מההגדרות דורשות הרשאות מנהל כדי לשנותן. הפעל את Bulwark כמנהל לקבלת הגנה מלאה.",
     "scanFailed": "סריקת הפרטיות נכשלה",
     "applyFailed": "החלת הגדרות הפרטיות נכשלה",
     "applyFailedDescription": "נסה להפעיל כמנהל",

@@ -26,6 +26,7 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { openPublicCloudDashboard } from '@/lib/cloud-dashboard-url'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { cn } from '@/lib/utils'
 import { useSettingsStore } from '@/stores/settings-store'
@@ -254,7 +255,13 @@ export function CloudPage() {
             {t('heroDescription')}
           </p>
           <button
-            onClick={() => window.open('https://cloud.invalid', '_blank')}
+onClick={() => {
+              openPublicCloudDashboard('', () => {
+                toast.message(t('cloudDashboardNotConfigured', {
+                  defaultValue: 'No public cloud dashboard URL is configured yet. Domain stays open — use device pairing below, or set VITE_BULWARK_CLOUD_URL when you have a host.',
+                }))
+              })
+            }}
             className="flex items-center gap-2 rounded-xl px-5 py-2.5 text-[13px] font-medium transition-all"
             style={{ background: 'var(--accent)', color: 'var(--text-on-accent)' }}
           >
@@ -400,7 +407,13 @@ export function CloudPage() {
 
         <div className="flex gap-3 mb-4">
           <button
-            onClick={() => window.open('https://cloud.invalid', '_blank')}
+onClick={() => {
+              openPublicCloudDashboard('', () => {
+                toast.message(t('cloudDashboardNotConfigured', {
+                  defaultValue: 'No public cloud dashboard URL is configured yet. Domain stays open — use device pairing below, or set VITE_BULWARK_CLOUD_URL when you have a host.',
+                }))
+              })
+            }}
             className="flex items-center gap-2 rounded-xl px-5 py-3 text-[13px] font-medium transition-all"
             style={{ background: 'var(--accent)', color: 'var(--text-on-accent)' }}
           >

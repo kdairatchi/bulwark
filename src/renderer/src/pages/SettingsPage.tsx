@@ -300,13 +300,13 @@ function BackupFolderRow({
 }) {
   const { t } = useTranslation('settings')
   const isCustom = path.length > 0
-  const displayPath = isCustom ? path : t('backupFolderDefaultLabel', 'Default (Documents/Kudu Backups)')
+  const displayPath = isCustom ? path : t('backupFolderDefaultLabel', 'Default (Documents backup folder)')
   return (
     <div className="space-y-3">
       <div>
         <p className="text-[13px] font-medium text-zinc-300">{t('backupFolderLabel', 'Backup folder')}</p>
         <p className="mt-0.5 text-[12px]" style={{ color: 'var(--text-muted)' }}>
-          {t('backupFolderDesc', 'Where Kudu writes registry and shell-extension backups before making changes. Existing backups stay in their previous location when you switch folders.')}
+          {t('backupFolderDesc', 'Where Bulwark writes registry and shell-extension backups before making changes. Existing backups stay in their previous location when you switch folders.')}
         </p>
       </div>
       <div className="flex items-center gap-2.5">

@@ -145,7 +145,7 @@ export function registerCleanerIpc(getWindow: WindowGetter): void {
   ipcMain.handle(IPC.SETTINGS_SELECT_BACKUP_DIR, async () => {
     const win = getWindow()
     const opts: Electron.OpenDialogOptions = {
-      title: 'Choose Kudu backup folder',
+      title: 'Choose Bulwark backup folder',
       properties: ['openDirectory', 'createDirectory'],
       defaultPath: getBackupDir(),
     }
@@ -222,7 +222,7 @@ export function registerCleanerIpc(getWindow: WindowGetter): void {
   ipcMain.handle(IPC.RESTORE_POINT_CREATE, (_event, description: string) => {
     if (typeof description !== 'string') description = ''
     // Sanitize: restrict to safe characters and cap length
-    const sanitized = (description || 'Kudu pre-clean restore point')
+    const sanitized = (description || 'Bulwark pre-clean restore point')
       .replace(/[^A-Za-z0-9 ._\-()]/g, '')
       .slice(0, 200)
     return createRestorePoint(sanitized)

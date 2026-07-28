@@ -1,6 +1,9 @@
 # CLI Mode
 
-Kudu can run entirely from the command line — no GUI window is opened. This is useful for scripting, IT admin workflows, and scheduled tasks beyond the built-in scheduler.
+Bulwark can run entirely from the command line — no GUI window is opened. This is useful for scripting, IT admin workflows, and scheduled tasks beyond the built-in scheduler.
+
+> Note: the CLI binary/entrypoint may still be invoked as `kudu` until the
+> internal-identifier migration lands. Product name in docs and UI is Bulwark.
 
 ## Usage
 

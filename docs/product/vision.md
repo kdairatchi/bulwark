@@ -1,9 +1,9 @@
 # Product Vision — Bulwark
 
-> **Codename notice.** `Bulwark` is a **temporary internal codename**, not a final,
-> trademark-cleared brand. Do not lock product IDs, signing identities, or public
-> URLs to a final name until it passes the checks in
-> [Naming & trademark process](#naming--trademark-process).
+> **Brand.** **Bulwark** is the permanent product name.
+> **Still open:** public marketing domain and support email — do not lock those
+> until chosen. Cloud hosts stay env-configured; defaults are non-resolving
+> placeholders.
 
 ## The pitch
 
@@ -39,6 +39,7 @@ Desktop Agent          Android Agent           Network Sensor          Cloud Con
                                                    analysis            └── Remote actions
 ```
 
+
 ## Principles (non-negotiable)
 
 - **Local-first.** Core protection works without the cloud.
@@ -71,9 +72,18 @@ threat intelligence are the paid service.
 
 MVP scope and explicit non-goals live in [`ROADMAP.md`](../../ROADMAP.md).
 
-## Naming & trademark process
+## Naming, domain & email
 
-`Bulwark` is a working codename. Before adopting any final brand (or committing it
-to package IDs / signing identities / URLs), run: USPTO search, GitHub search, npm
-search, App Store + Google Play search, domain search, company-registry search, and
-review with trademark counsel.
+**Product name:** Bulwark (permanent).
+
+**Still open:** public marketing domain and support email. Do not invent or ship a
+locked `bulwark.com` / `support@…` until those are chosen. Cloud control-plane hosts
+remain env-configured (`BULWARK_CLOUD_URL` / `VITE_BULWARK_CLOUD_URL`) with
+non-resolving placeholders by default.
+
+**Package IDs already in use:** `com.bulwark.app` (desktop), `com.bulwark.tv`
+(Android TV). Prefer keeping these stable. Store signing may proceed under those
+IDs; public listing copy should say Bulwark.
+
+Optional hygiene before a public launch: USPTO / store / domain searches for
+conflicts on the chosen *domain and email*, plus counsel review.

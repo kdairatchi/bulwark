@@ -34,7 +34,7 @@
     "unprotectedBadge": "{{count}} nechráněno",
     "protectAllCategoryButton": "Chránit vše",
     "adminBadge": "Správce",
-    "adminWarning": "Některá nastavení vyžadují ke změně oprávnění správce. Pro plnou ochranu spusťte Kudu jako správce.",
+    "adminWarning": "Některá nastavení vyžadují ke změně oprávnění správce. Pro plnou ochranu spusťte Bulwark jako správce.",
     "scanFailed": "Kontrola soukromí se nezdařila",
     "applyFailed": "Nepodařilo se použít nastavení soukromí",
     "applyFailedDescription": "Zkuste spustit jako správce",

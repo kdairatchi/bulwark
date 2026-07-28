@@ -3,7 +3,7 @@
   "pageDescription": "Monitorizare în timp real a conexiunilor de rețea în raport cu listele de amenințări cunoscute.",
   "cloudNotConfigured": {
     "title": "Cloud neconfigurat",
-    "description": "Conectați dispozitivul la Kudu Cloud în Setări pentru a activa monitorizarea amenințărilor. Lista neagră de amenințări este furnizată de serviciul cloud."
+    "description": "Conectați dispozitivul la Bulwark Cloud în Setări pentru a activa monitorizarea amenințărilor. Lista neagră de amenințări este furnizată de serviciul cloud."
   },
   "loading": "Se încarcă...",
   "inactive": {

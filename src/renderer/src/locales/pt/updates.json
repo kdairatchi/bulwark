@@ -118,7 +118,7 @@
     "allUpToDateTitle": "Todos os controladores estão atualizados",
     "allUpToDateDescription": "Não há atualizações disponíveis nem pacotes obsoletos encontrados.",
     "updatesDisabledTitle": "As atualizações de controladores estão desativadas no Windows",
-    "updatesDisabledText": "O Windows está configurado para excluir controladores do Windows Update, por isso o Kudu não verificou atualizações de controladores. A limpeza de pacotes de controladores obsoletos continua a funcionar. Pode voltar a ativar as atualizações de controladores nas definições de instalação de dispositivos do Windows ou na Política de Grupo.",
+    "updatesDisabledText": "O Windows está configurado para excluir controladores do Windows Update, por isso o Bulwark não verificou atualizações de controladores. A limpeza de pacotes de controladores obsoletos continua a funcionar. Pode voltar a ativar as atualizações de controladores nas definições de instalação de dispositivos do Windows ou na Política de Grupo.",
     "updatesAvailable": "Atualizações disponíveis ({{count}})",
     "stalePackages": "Pacotes obsoletos ({{count}})",
     "selectAll": "Selecionar tudo",

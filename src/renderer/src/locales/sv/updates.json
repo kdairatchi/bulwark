@@ -118,7 +118,7 @@
     "allUpToDateTitle": "Alla drivrutiner är uppdaterade",
     "allUpToDateDescription": "Inga uppdateringar tillgängliga och inga gamla paket hittades.",
     "updatesDisabledTitle": "Drivrutinsuppdateringar är avstängda i Windows",
-    "updatesDisabledText": "Windows är inställt på att utesluta drivrutiner från Windows Update, så Kudu sökte inte efter drivrutinsuppdateringar. Rensning av gamla drivrutinspaket fungerar fortfarande. Du kan aktivera drivrutinsuppdateringar igen i Windows inställningar för enhetsinstallation eller i Grupprincip.",
+    "updatesDisabledText": "Windows är inställt på att utesluta drivrutiner från Windows Update, så Bulwark sökte inte efter drivrutinsuppdateringar. Rensning av gamla drivrutinspaket fungerar fortfarande. Du kan aktivera drivrutinsuppdateringar igen i Windows inställningar för enhetsinstallation eller i Grupprincip.",
     "updatesAvailable": "Tillgängliga uppdateringar ({{count}})",
     "stalePackages": "Gamla paket ({{count}})",
     "selectAll": "Markera alla",

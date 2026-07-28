@@ -126,7 +126,7 @@ export class PerfMonitorService {
         return {
           success: false,
           error: requiresAdmin
-            ? 'Access denied. Run Kudu as Administrator to end this process.'
+            ? 'Access denied. Run Bulwark as Administrator to end this process.'
             : `Failed to end process: ${message}`,
           requiresAdmin
         }

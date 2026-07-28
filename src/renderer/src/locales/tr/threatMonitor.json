@@ -3,7 +3,7 @@
   "pageDescription": "Ağ bağlantılarının bilinen tehdit listelerine karşı gerçek zamanlı izlenmesi.",
   "cloudNotConfigured": {
     "title": "Bulut yapılandırılmadı",
-    "description": "Tehdit izlemeyi etkinleştirmek için cihazınızı Ayarlar'dan Kudu Cloud'a bağlayın. Tehdit kara listesi bulut hizmeti tarafından sağlanır."
+    "description": "Tehdit izlemeyi etkinleştirmek için cihazınızı Ayarlar'dan Bulwark Cloud'a bağlayın. Tehdit kara listesi bulut hizmeti tarafından sağlanır."
   },
   "loading": "Yükleniyor...",
   "inactive": {

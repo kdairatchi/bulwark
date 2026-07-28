@@ -3,7 +3,7 @@
   "pageDescription": "Giám sát theo thời gian thực các kết nối mạng đối chiếu với danh sách mối đe dọa đã biết.",
   "cloudNotConfigured": {
     "title": "Cloud chưa được cấu hình",
-    "description": "Liên kết thiết bị của bạn với Kudu Cloud trong Cài đặt để bật tính năng giám sát mối đe dọa. Danh sách chặn mối đe dọa được cung cấp bởi dịch vụ đám mây."
+    "description": "Liên kết thiết bị của bạn với Bulwark Cloud trong Cài đặt để bật tính năng giám sát mối đe dọa. Danh sách chặn mối đe dọa được cung cấp bởi dịch vụ đám mây."
   },
   "loading": "Đang tải...",
   "inactive": {

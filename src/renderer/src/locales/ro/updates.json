@@ -118,7 +118,7 @@
     "allUpToDateTitle": "Toate driverele sunt actualizate",
     "allUpToDateDescription": "Nu sunt disponibile actualizări și nu au fost găsite pachete învechite.",
     "updatesDisabledTitle": "Actualizările de drivere sunt dezactivate în Windows",
-    "updatesDisabledText": "Windows este setat să excludă driverele din Windows Update, astfel încât Kudu nu a verificat actualizările de drivere. Curățarea pachetelor de drivere învechite funcționează în continuare. Puteți reactiva actualizările de drivere în setările Windows pentru instalarea dispozitivelor sau în Group Policy.",
+    "updatesDisabledText": "Windows este setat să excludă driverele din Windows Update, astfel încât Bulwark nu a verificat actualizările de drivere. Curățarea pachetelor de drivere învechite funcționează în continuare. Puteți reactiva actualizările de drivere în setările Windows pentru instalarea dispozitivelor sau în Group Policy.",
     "updatesAvailable": "Actualizări disponibile ({{count}})",
     "stalePackages": "Pachete învechite ({{count}})",
     "selectAll": "Selectează tot",

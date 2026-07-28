@@ -118,7 +118,7 @@
     "allUpToDateTitle": "Minden illesztőprogram naprakész",
     "allUpToDateDescription": "Nincs elérhető frissítés, és nem találhatók elavult csomagok.",
     "updatesDisabledTitle": "Az illesztőprogram-frissítések ki vannak kapcsolva a Windows rendszerben",
-    "updatesDisabledText": "A Windows úgy van beállítva, hogy kizárja az illesztőprogramokat a Windows Update szolgáltatásból, ezért a Kudu nem ellenőrizte az illesztőprogram-frissítéseket. Az elavult illesztőprogram-csomagok tisztítása továbbra is működik. Az illesztőprogram-frissítéseket újra engedélyezheti a Windows eszköztelepítési beállításaiban vagy a Csoportházirendben.",
+    "updatesDisabledText": "A Windows úgy van beállítva, hogy kizárja az illesztőprogramokat a Windows Update szolgáltatásból, ezért a Bulwark nem ellenőrizte az illesztőprogram-frissítéseket. Az elavult illesztőprogram-csomagok tisztítása továbbra is működik. Az illesztőprogram-frissítéseket újra engedélyezheti a Windows eszköztelepítési beállításaiban vagy a Csoportházirendben.",
     "updatesAvailable": "Elérhető frissítések ({{count}})",
     "stalePackages": "Elavult csomagok ({{count}})",
     "selectAll": "Összes kijelölése",

@@ -3,7 +3,7 @@
   "pageDescription": "Monitoraggio in tempo reale delle connessioni di rete rispetto a elenchi di minacce conosciute.",
   "cloudNotConfigured": {
     "title": "Cloud non configurato",
-    "description": "Collega il dispositivo a Kudu Cloud nelle Impostazioni per abilitare il monitoraggio delle minacce. La blacklist delle minacce è fornita dal servizio cloud."
+    "description": "Collega il dispositivo a Bulwark Cloud nelle Impostazioni per abilitare il monitoraggio delle minacce. La blacklist delle minacce è fornita dal servizio cloud."
   },
   "loading": "Caricamento...",
   "inactive": {

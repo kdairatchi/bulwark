@@ -159,7 +159,7 @@ export function CleanerPage() {
       if (createRestorePointEnabled) {
         try {
           const rpResult = await window.kudu.createRestorePoint(
-            `Kudu clean — ${new Date().toLocaleString()}`
+            `Bulwark clean — ${new Date().toLocaleString()}`
           )
           if (rpResult.success) {
             toast.success(t('toastRestorePointCreated'))

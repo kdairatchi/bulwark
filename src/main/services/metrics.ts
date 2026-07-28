@@ -18,7 +18,7 @@ export async function collectMetrics(): Promise<MetricLine[]> {
   metrics.push({
     name: 'kudu_info',
     type: 'gauge',
-    help: 'Kudu application info',
+    help: 'Bulwark application info',
     labels: { version: app.getVersion(), platform: process.platform, arch: process.arch },
     value: 1,
   })
