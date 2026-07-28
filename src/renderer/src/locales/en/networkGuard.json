@@ -1,0 +1,15 @@
+{
+  "pageTitle": "Network Guard",
+  "pageDescription": "Check whether a domain or IP is a known threat. Matching runs on-device against your indicator feed — destination metadata only, never traffic contents.",
+  "checkLabel": "Check a destination",
+  "placeholder": "e.g. suspicious-host.example or 203.0.113.7",
+  "check": "Check",
+  "checking": "Checking…",
+  "reason": "Reason",
+  "category": "Category",
+  "confidence": "Confidence",
+  "matched": "Matched indicator",
+  "recent": "Recent checks",
+  "feedTitle": "Threat indicator feed",
+  "feedHint": "JSON array of indicators (value, type: domain|ip|cidr, category). Prefilled with a labeled example set — replace with a real feed such as URLhaus, ThreatFox, or abuse.ch."
+}

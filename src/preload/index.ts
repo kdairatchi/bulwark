@@ -90,6 +90,7 @@ import type {
   ContextMenuScanResult,
 } from '../shared/types'
 import type { AppRiskReport } from '../shared/risk'
+import type { NetworkEvent, ThreatIndicator } from '../shared/network-guard'
 
 const api = {
   // Platform
@@ -427,6 +428,8 @@ const api = {
   },
   programSafetyFetch: (): Promise<StartupSafetyResult> => ipcRenderer.invoke(IPC.PROGRAM_SAFETY_FETCH),
   appRiskFetch: (): Promise<AppRiskReport> => ipcRenderer.invoke(IPC.APP_RISK_FETCH),
+  networkGuardCheck: (req: { destination: string; indicators?: ThreatIndicator[]; port?: number; protocol?: 'tcp' | 'udp' }): Promise<NetworkEvent> =>
+    ipcRenderer.invoke(IPC.NETWORK_GUARD_CHECK, req),
   onProgramSafetyUpdated: (callback: (data: StartupSafetyResult) => void) => {
     const handler = (_event: Electron.IpcRendererEvent, data: StartupSafetyResult) => callback(data)
     ipcRenderer.on(IPC.PROGRAM_SAFETY_UPDATED, handler)

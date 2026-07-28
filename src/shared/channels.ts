@@ -170,6 +170,9 @@ export const IPC = {
   // Application Risk (local, transparent risk engine)
   APP_RISK_FETCH: 'app-risk:fetch',
 
+  // Network Guard (local threat-indicator matching)
+  NETWORK_GUARD_CHECK: 'network-guard:check',
+
   // Onboarding
   ONBOARDING_GET: 'onboarding:get',
   ONBOARDING_SET: 'onboarding:set',

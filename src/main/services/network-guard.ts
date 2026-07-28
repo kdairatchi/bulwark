@@ -156,3 +156,38 @@ export function evaluateDestination(
 export function hasBlockingEvent(events: NetworkEvent[]): boolean {
   return events.some((e) => e.decision === 'block')
 }
+
+const VALID_CATEGORIES = new Set<ThreatCategory>(Object.keys(CATEGORY_POLICY) as ThreatCategory[])
+const VALID_TYPES = new Set(['domain', 'ip', 'cidr'])
+const MAX_INDICATORS = 200_000
+
+/**
+ * Coerce untrusted input (a pasted/loaded feed) into a clean ThreatIndicator[].
+ * Drops malformed entries rather than throwing, so a partly-bad feed still works.
+ */
+export function sanitizeIndicators(raw: unknown): ThreatIndicator[] {
+  if (!Array.isArray(raw)) return []
+  const out: ThreatIndicator[] = []
+  for (const item of raw) {
+    if (out.length >= MAX_INDICATORS) break
+    if (!item || typeof item !== 'object') continue
+    const o = item as Record<string, unknown>
+    const value = typeof o.value === 'string' ? o.value.trim() : ''
+    const kind = o.type
+    const category = o.category
+    if (!value || value.length > 500) continue
+    if (typeof kind !== 'string' || !VALID_TYPES.has(kind)) continue
+    if (typeof category !== 'string' || !VALID_CATEGORIES.has(category as ThreatCategory)) continue
+    const indicator: ThreatIndicator = {
+      value,
+      type: kind as ThreatIndicator['type'],
+      category: category as ThreatCategory,
+    }
+    if (typeof o.source === 'string' && o.source.length <= 200) indicator.source = o.source
+    if (typeof o.confidence === 'number' && o.confidence >= 0 && o.confidence <= 1) {
+      indicator.confidence = o.confidence
+    }
+    out.push(indicator)
+  }
+  return out
+}

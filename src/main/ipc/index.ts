@@ -39,6 +39,7 @@ import { registerBreachMonitorIpc } from './breach-monitor.ipc'
 import { registerStartupSafetyIpc } from './startup-safety.ipc'
 import { registerProgramSafetyIpc } from './program-safety.ipc'
 import { registerAppRiskIpc } from './app-risk.ipc'
+import { registerNetworkGuardIpc } from './network-guard.ipc'
 import { getSettings, setSettings, flushSettings, getOnboardingComplete, setOnboardingComplete } from '../services/settings-store'
 import { getBackupDir } from '../services/backup-dir'
 import { isAdmin } from '../services/elevation'
@@ -87,6 +88,7 @@ export function registerCleanerIpc(getWindow: WindowGetter): void {
   registerStartupSafetyIpc()
   registerProgramSafetyIpc()
   registerAppRiskIpc()
+  registerNetworkGuardIpc()
   registerFileShredderIpc(getWindow)
   registerGameModeIpc(getWindow)
 
