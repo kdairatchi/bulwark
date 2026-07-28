@@ -17,6 +17,7 @@ import {
   Filter,
   EyeOff,
   Eye,
+  Copy,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { PageHeader } from '@/components/layout/PageHeader'
@@ -37,6 +38,15 @@ const WINDOWS_MANAGER_OPTIONS: { id: WindowsPackageManager; label: string }[] = 
   { id: 'npm', label: 'npm' },
 ]
 const DEFAULT_WINDOWS_MANAGERS: WindowsPackageManager[] = ['winget', 'choco', 'scoop', 'npm']
+
+function installCommand(platform: string, manager: string | null): string | null {
+  const selected = manager ?? (platform === 'darwin' ? 'brew' : platform === 'linux' ? 'apt' : 'winget')
+  if (platform === 'darwin') return '/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"'
+  if (platform === 'win32' && selected === 'choco') return 'Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = 3072; iex ((New-Object System.Net.WebClient).DownloadString(\'https://community.chocolatey.org/install.ps1\'))'
+  if (platform === 'win32' && selected === 'winget') return 'Install App Installer from Microsoft Store, then reopen Bulwrk'
+  if (platform === 'linux') return 'Install or enable your distribution package manager (apt, dnf, or pacman), then reopen Bulwrk'
+  return null
+}
 
 const SEVERITY_STYLES_BASE = {
   major: {
@@ -102,6 +112,7 @@ export function SoftwareUpdaterPage({ embedded }: { embedded?: boolean }) {
   const { platform } = usePlatform()
   const windowsPackageManagers = useSettingsStore((s) => s.settings.windowsPackageManagers)
   const enabledManagers = windowsPackageManagers ?? DEFAULT_WINDOWS_MANAGERS
+  const missingManagerCommand = installCommand(platform, packageManagerName)
 
   const [showSortMenu, setShowSortMenu] = useState(false)
   const [showFilterMenu, setShowFilterMenu] = useState(false)
@@ -551,6 +562,16 @@ export function SoftwareUpdaterPage({ embedded }: { embedded?: boolean }) {
               </span>
             )}
           </p>
+          {missingManagerCommand && (
+            <button
+              className="ml-auto flex shrink-0 items-center gap-1.5 rounded-lg border border-zinc-700 px-2.5 py-1.5 text-[11px] text-zinc-300 hover:bg-zinc-800"
+              onClick={() => { void navigator.clipboard?.writeText(missingManagerCommand) }}
+              title={t('softwareUpdater.copyInstallCommand')}
+            >
+              <Copy className="h-3.5 w-3.5" />
+              {t('softwareUpdater.copyInstallCommand')}
+            </button>
+          )}
         </div>
       )}
 

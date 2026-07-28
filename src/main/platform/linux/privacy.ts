@@ -54,7 +54,7 @@ const LINUX_PRIVACY_SETTINGS: PrivacySettingDef[] = [
   },
   {
     id: 'gnome-recent-files',
-    category: 'services',
+    category: 'access',
     label: 'Recent Files Tracking',
     description: 'Disable tracking of recently used files',
     requiresAdmin: false,
@@ -173,6 +173,35 @@ async function sysctlApply(param: string, value: string): Promise<void> {
 
   await mkdir('/etc/sysctl.d', { recursive: true })
   await writeFile(SYSCTL_CONF, updated, 'utf8')
+}
+
+async function hasCommand(path: string, args: string[] = ['--version']): Promise<boolean> {
+  try {
+    await execFileAsync(path, args, { timeout: 5_000 })
+    return true
+  } catch { return false }
+}
+
+async function linuxFirewallState(): Promise<'ufw' | 'firewalld' | 'nftables' | null> {
+  if (await hasCommand('/usr/sbin/ufw', ['status'])) {
+    try {
+      const { stdout } = await execFileAsync('/usr/sbin/ufw', ['status'], { timeout: 5_000 })
+      if (/^Status:\s+active/im.test(stdout)) return 'ufw'
+    } catch { /* continue with other firewall providers */ }
+  }
+  if (await hasCommand('/usr/bin/firewall-cmd', ['--state'])) {
+    try {
+      const { stdout } = await execFileAsync('/usr/bin/firewall-cmd', ['--state'], { timeout: 5_000 })
+      if (stdout.trim() === 'running') return 'firewalld'
+    } catch { /* continue with nftables */ }
+  }
+  if (await hasCommand('/usr/sbin/nft', ['list', 'ruleset'])) {
+    try {
+      const { stdout } = await execFileAsync('/usr/sbin/nft', ['list', 'ruleset'], { timeout: 5_000 })
+      if (stdout.trim().length > 0) return 'nftables'
+    } catch { /* no active ruleset */ }
+  }
+  return null
 }
 
 function sysctlSetting(
@@ -304,6 +333,64 @@ async function applySshdDirective(directive: string, value: string): Promise<voi
 // ─── Access Control Settings ────────────────────────────────
 
 const ACCESS_CONTROL_SETTINGS: PrivacySettingDef[] = [
+  {
+    id: 'linux-firewall-active',
+    category: 'network',
+    label: 'Host Firewall Active',
+    description: 'Verify that UFW, firewalld, or nftables is actively filtering inbound traffic',
+    requiresAdmin: true,
+    async check() {
+      return (await linuxFirewallState()) !== null
+    },
+    async apply() {
+      if (await hasCommand('/usr/sbin/ufw', ['--version'])) {
+        await execFileAsync('/usr/sbin/ufw', ['--force', 'enable'], { timeout: 15_000 })
+        return
+      }
+      throw new Error('Install UFW or configure firewalld/nftables before enabling a host firewall')
+    },
+    async revert() {
+      if (await hasCommand('/usr/sbin/ufw', ['--version'])) {
+        await execFileAsync('/usr/sbin/ufw', ['disable'], { timeout: 15_000 })
+        return
+      }
+      throw new Error('Firewall was not managed by UFW; disable it through your firewall manager')
+    },
+  },
+  {
+    id: 'linux-security-updates',
+    category: 'access',
+    label: 'Automatic Security Updates',
+    description: 'Verify that unattended security updates or the distro automatic-update timer is enabled',
+    requiresAdmin: true,
+    async check() {
+      for (const unit of ['unattended-upgrades.service', 'dnf-automatic.timer', 'packagekit.service']) {
+        try {
+          const { stdout } = await execFileAsync('/usr/bin/systemctl', ['is-enabled', unit], { timeout: 5_000 })
+          if (/enabled|static|active/i.test(stdout)) return true
+        } catch { /* try the next provider */ }
+      }
+      return false
+    },
+    async apply() {
+      for (const unit of ['unattended-upgrades.service', 'dnf-automatic.timer']) {
+        try {
+          await execFileAsync('/usr/bin/systemctl', ['enable', '--now', unit], { timeout: 15_000 })
+          return
+        } catch { /* try the next provider */ }
+      }
+      throw new Error('Install unattended-upgrades or dnf-automatic, then enable its systemd timer')
+    },
+    async revert() {
+      for (const unit of ['unattended-upgrades.service', 'dnf-automatic.timer']) {
+        try {
+          await execFileAsync('/usr/bin/systemctl', ['disable', '--now', unit], { timeout: 15_000 })
+          return
+        } catch { /* try the next provider */ }
+      }
+      throw new Error('No supported automatic-update service was found')
+    },
+  },
   {
     id: 'core-dump-disable',
     category: 'access',

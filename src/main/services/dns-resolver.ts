@@ -28,6 +28,10 @@ import { DEFAULT_DNS_CONFIG } from '../../shared/dns'
 const UPSTREAM_TIMEOUT_MS = 5000
 const MAX_LOG = 100
 
+function isAddressInUse(err: unknown): boolean {
+  return typeof err === 'object' && err !== null && 'code' in err && (err as { code?: unknown }).code === 'EADDRINUSE'
+}
+
 export class DnsResolver {
   private udp: dgram.Socket | null = null
   private tcp: net.Server | null = null
@@ -99,29 +103,20 @@ export class DnsResolver {
     if (this.running) return this.getStats()
     this.config = { ...DEFAULT_DNS_CONFIG, ...config }
 
-    await new Promise<void>((resolve, reject) => {
-      const udp = dgram.createSocket('udp4')
-      udp.on('error', reject)
-      udp.on('message', (msg, rinfo) => this.handleUdp(udp, msg, rinfo))
-      udp.bind(this.config.port, this.config.host, () => {
-        udp.removeListener('error', reject)
-        // Resolve an OS-assigned (port 0) binding to the concrete port so TCP
-        // binds to the same one and stats report the real address.
-        this.config.port = udp.address().port
-        this.udp = udp
-        resolve()
-      })
-    })
-
-    await new Promise<void>((resolve, reject) => {
-      const tcp = net.createServer((socket) => this.handleTcp(socket))
-      tcp.on('error', reject)
-      tcp.listen(this.config.port, this.config.host, () => {
-        tcp.removeListener('error', reject)
-        this.tcp = tcp
-        resolve()
-      })
-    })
+    const requestedPort = this.config.port
+    try {
+      await this.bindSockets(requestedPort)
+    } catch (err) {
+      // 5353 is commonly occupied by mDNS/Bonjour/Avahi. Secure DNS is a
+      // loopback service, so it is safe to fall back to an OS-assigned port;
+      // the actual address is returned in the resolver status for enforcement.
+      await this.closeSockets()
+      if (requestedPort !== 0 && isAddressInUse(err)) {
+        await this.bindSockets(0)
+      } else {
+        throw err
+      }
+    }
 
     this.running = true
     this.startedAt = new Date().toISOString()
@@ -131,8 +126,50 @@ export class DnsResolver {
   async stop(): Promise<void> {
     this.running = false
     this.startedAt = null
-    if (this.udp) { this.udp.close(); this.udp = null }
-    if (this.tcp) { await new Promise<void>((r) => this.tcp!.close(() => r())); this.tcp = null }
+    await this.closeSockets()
+  }
+
+  private async bindSockets(port: number): Promise<void> {
+    const udp = dgram.createSocket('udp4')
+    let tcp: net.Server | null = null
+    udp.on('message', (msg, rinfo) => this.handleUdp(udp, msg, rinfo))
+    try {
+      await new Promise<void>((resolve, reject) => {
+        const onError = (err: Error) => reject(err)
+        udp.once('error', onError)
+        udp.bind(port, this.config.host, () => {
+          udp.removeListener('error', onError)
+          this.config.port = udp.address().port
+          resolve()
+        })
+      })
+
+      tcp = net.createServer((socket) => this.handleTcp(socket))
+      await new Promise<void>((resolve, reject) => {
+        const onError = (err: Error) => reject(err)
+        tcp.once('error', onError)
+        tcp.listen(this.config.port, this.config.host, () => {
+          tcp.removeListener('error', onError)
+          resolve()
+        })
+      })
+      this.udp = udp
+      this.tcp = tcp
+    } catch (err) {
+      try { udp.close() } catch { /* already closed */ }
+      try { tcp?.close() } catch { /* already closed */ }
+      throw err
+    }
+  }
+
+  private async closeSockets(): Promise<void> {
+    if (this.udp) { try { this.udp.close() } catch { /* already closed */ }; this.udp = null }
+    if (this.tcp) {
+      await new Promise<void>((resolve) => {
+        try { this.tcp!.close(() => resolve()) } catch { resolve() }
+      })
+      this.tcp = null
+    }
   }
 
   // ─── Request handling ────────────────────────────────────

@@ -38,6 +38,11 @@ const SERVICE_MAP: Record<string, string> = {
   'svc-diagtrack': 'DiagTrack',
 }
 
+const CROSS_PLATFORM_OPTIMIZATION_IDS = new Set([
+  'proc-kill-browsers', 'proc-kill-chat', 'proc-kill-updaters', 'proc-kill-custom',
+  'sys-prevent-sleep', 'net-flush-dns',
+])
+
 // ── Snapshot persistence ─────────────────────────────────────
 
 function getSnapshotPath(): string {
@@ -187,30 +192,22 @@ function deleteSnapshot(): void {
 
 // ── Process name lists ───────────────────────────────────────
 
-const BROWSER_PROCESSES = ['chrome.exe', 'firefox.exe', 'msedge.exe', 'opera.exe', 'brave.exe', 'vivaldi.exe']
+const BROWSER_PROCESSES = [
+  'chrome.exe', 'chrome', 'google-chrome', 'firefox.exe', 'firefox',
+  'msedge.exe', 'microsoft-edge', 'opera.exe', 'opera', 'brave.exe', 'brave',
+  'vivaldi.exe', 'vivaldi',
+]
 const CHAT_PROCESSES = [
-  'Discord.exe',
-  'Slack.exe',
-  'Teams.exe',
-  'ms-teams.exe',
-  'Telegram.exe',
-  'WhatsApp.exe',
-  'Signal.exe',
-  'Element.exe',
-  'Messenger.exe',
-  'Skype.exe',
+  'Discord.exe', 'discord', 'Slack.exe', 'slack', 'Teams.exe', 'teams',
+  'ms-teams.exe', 'Telegram.exe', 'telegram-desktop', 'WhatsApp.exe',
+  'Signal.exe', 'signal-desktop', 'Element.exe', 'element-desktop',
+  'Messenger.exe', 'Skype.exe', 'skypeforlinux',
 ]
 const UPDATER_PROCESSES = [
-  'GoogleUpdate.exe',
-  'MicrosoftEdgeUpdate.exe',
-  'AdobeARM.exe',
-  'jusched.exe',
-  'BraveUpdate.exe',
-  'OperaUpdate.exe',
-  'CCleaner.exe',
-  'CCUpdate.exe',
-  'Dropbox.Update.exe',
-  'ZoomUpdateAgent.exe',
+  'GoogleUpdate.exe', 'google-updater', 'MicrosoftEdgeUpdate.exe',
+  'microsoft-edge-update', 'AdobeARM.exe', 'jusched.exe', 'BraveUpdate.exe',
+  'brave-update', 'OperaUpdate.exe', 'CCleaner.exe', 'CCUpdate.exe',
+  'Dropbox.Update.exe', 'dropbox', 'ZoomUpdateAgent.exe',
 ]
 
 const PROTECTED_PROCESSES = new Set([
@@ -288,28 +285,38 @@ async function killProcessesByName(
   const errors: string[] = []
 
   try {
-    const { stdout } = await execFileAsync('tasklist', ['/FO', 'CSV', '/NH'], {
-      timeout: 10000,
-      windowsHide: true,
-    })
+    const isWindows = process.platform === 'win32'
+    const { stdout } = isWindows
+      ? await execFileAsync('tasklist', ['/FO', 'CSV', '/NH'], { timeout: 10000, windowsHide: true })
+      : await execFileAsync(process.platform === 'darwin' ? '/bin/ps' : '/usr/bin/ps', ['-axo', 'pid=,comm='], { timeout: 10000 })
     const lowerNames = new Set(names.map((n) => n.toLowerCase()))
     const lines = stdout.split('\n').filter(Boolean)
 
     for (const line of lines) {
-      const match = line.match(/^"([^"]+)","(\d+)"/)
-      if (!match) continue
-      const [, procName, pidStr] = match
+      let procName: string | undefined
+      let pidStr: string | undefined
+      if (isWindows) {
+        const match = line.match(/^"([^"]+)","(\d+)"/)
+        procName = match?.[1]
+        pidStr = match?.[2]
+      } else {
+        const match = line.trim().match(/^(\d+)\s+(.+)$/)
+        pidStr = match?.[1]
+        procName = match?.[2]
+      }
+      if (!procName || !pidStr) continue
       const pid = parseInt(pidStr, 10)
       if (isNaN(pid) || pid <= 4) continue
       if (PROTECTED_PROCESSES.has(procName.toLowerCase())) continue
       if (!lowerNames.has(procName.toLowerCase())) continue
 
       try {
-        process.kill(pid)
+        process.kill(pid, 'SIGTERM')
         snapshot.killedProcesses.push({ pid, name: procName })
         killed++
       } catch {
         try {
+          if (!isWindows) throw new Error('process could not be terminated')
           await execFileAsync('taskkill', ['/PID', String(pid), '/F'], {
             timeout: 5000,
             windowsHide: true,
@@ -554,7 +561,9 @@ export async function activateGameMode(
   config: GameModeConfig,
   onProgress: (p: GameModeProgress) => void,
 ): Promise<GameModeActivateResult> {
-  const enabled = config.enabledOptimizations
+  const enabled = process.platform === 'win32'
+    ? config.enabledOptimizations
+    : config.enabledOptimizations.filter((id) => CROSS_PLATFORM_OPTIMIZATION_IDS.has(id))
   const total = enabled.length
   let succeeded = 0
   const errors: GameModeActivateResult['errors'] = []
@@ -962,9 +971,6 @@ export function initGameDetector(
   sendProgress: (data: GameModeProgress) => void,
   sendAutoEvent: (event: GameAutoEvent) => void,
 ): void {
-  // Only supported on Windows
-  if (process.platform !== 'win32') return
-
   const settings = getSettings()
   if (!settings.gameMode.autoDetect) {
     stopGameDetector()

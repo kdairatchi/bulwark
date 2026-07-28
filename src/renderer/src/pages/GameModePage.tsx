@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -23,7 +23,6 @@ import { toast } from 'sonner'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { useGameModeStore } from '@/stores/game-mode-store'
 import { usePlatform } from '@/hooks/usePlatform'
-import { EmptyState } from '@/components/shared/EmptyState'
 import type { GameModeOptimizationId, GameModeCategory } from '@shared/types'
 import type { LucideIcon } from 'lucide-react'
 
@@ -179,21 +178,12 @@ function HexGrid({ active }: { active: boolean }) {
 // ── Component ────────────────────────────────────────────────
 
 export function GameModePage() {
-  const { t } = useTranslation('gameMode')
-  const { features } = usePlatform()
-  if (!features.gameMode) {
-    return (
-      <div className="animate-fade-in">
-        <PageHeader title={t('pageHeaderUnavailableTitle')} description={t('pageHeaderUnavailableDescription')} />
-        <EmptyState icon={Gamepad2} title={t('notAvailableTitle')} description={t('notAvailableDescription')} />
-      </div>
-    )
-  }
   return <GameModePageContent />
 }
 
 function GameModePageContent() {
   const { t } = useTranslation('gameMode')
+  const { platform } = usePlatform()
   const store = useGameModeStore
   const active = useGameModeStore((s) => s.active)
   const activatedAt = useGameModeStore((s) => s.activatedAt)
@@ -211,6 +201,13 @@ function GameModePageContent() {
   const [gameInput, setGameInput] = useState('')
   const [confirmDiscard, setConfirmDiscard] = useState(false)
   const progressCleanupRef = useRef<(() => void) | null>(null)
+  const visibleOptimizations = useMemo(
+    () => platform === 'win32'
+      ? OPTIMIZATIONS
+      : OPTIMIZATIONS.filter((o) => ['proc-kill-browsers', 'proc-kill-chat', 'proc-kill-updaters', 'proc-kill-custom', 'sys-prevent-sleep', 'net-flush-dns'].includes(o.id)),
+    [platform],
+  )
+  const visibleIds = useMemo(() => new Set(visibleOptimizations.map((o) => o.id)), [visibleOptimizations])
 
   // Cleanup progress listener on unmount
   useEffect(() => {
@@ -245,7 +242,8 @@ function GameModePageContent() {
   const isBusy = status !== 'idle'
 
   const handleActivate = useCallback(async () => {
-    if (config.enabledOptimizations.length === 0) {
+    const enabledForPlatform = config.enabledOptimizations.filter((id) => visibleIds.has(id))
+    if (enabledForPlatform.length === 0) {
       toast.error(t('noOptimizationsSelected'))
       return
     }
@@ -257,7 +255,10 @@ function GameModePageContent() {
     }) ?? null
 
     try {
-      const result = await window.kudu.gameModeActivate(config)
+      const result = await window.kudu.gameModeActivate({
+        ...config,
+        enabledOptimizations: enabledForPlatform,
+      })
       // Only mark as active if at least one optimization succeeded
       if (result.succeeded > 0) {
         store.getState().setActive(true, result.snapshot?.activatedAt ?? new Date().toISOString())
@@ -276,7 +277,7 @@ function GameModePageContent() {
       progressCleanupRef.current?.()
       progressCleanupRef.current = null
     }
-  }, [config, t])
+  }, [config, t, visibleIds])
 
   const handleDeactivate = useCallback(async () => {
     store.getState().setStatus('deactivating')
@@ -349,9 +350,9 @@ function GameModePageContent() {
     store.getState().setCustomGameProcesses((config.customGameProcesses ?? []).filter((n) => n !== name))
   }, [config.customGameProcesses])
 
-  const enabledSet = new Set(config.enabledOptimizations)
-  const enabledCount = config.enabledOptimizations.length
-  const serviceCount = OPTIMIZATIONS.filter((o) => o.category === 'services' && enabledSet.has(o.id)).length
+  const enabledSet = new Set(config.enabledOptimizations.filter((id) => visibleIds.has(id)))
+  const enabledCount = enabledSet.size
+  const serviceCount = visibleOptimizations.filter((o) => o.category === 'services' && enabledSet.has(o.id)).length
 
   return (
     <div className="flex h-full flex-col overflow-y-auto">
@@ -782,7 +783,7 @@ function GameModePageContent() {
 
         {/* ── Category Cards ───────��──────────────────── */}
         {CATEGORIES.map((cat, catIndex) => {
-          const catOpts = OPTIMIZATIONS.filter((o) => o.category === cat.id)
+          const catOpts = visibleOptimizations.filter((o) => o.category === cat.id)
           if (catOpts.length === 0) return null
 
           const enabledInCat = catOpts.filter((o) => enabledSet.has(o.id)).length
