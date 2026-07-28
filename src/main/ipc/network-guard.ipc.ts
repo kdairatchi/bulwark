@@ -20,6 +20,7 @@ import { evaluateRules } from '../services/policy-engine'
 import type { GeoipStatus } from '../../shared/geoip'
 import { cloudLog } from '../services/logger'
 import { getPlatform } from '../platform'
+import { devicePolicyEnforcer } from '../services/device-policy-enforcer'
 
 /** Parse the resolver's bound port from its stats address (default 5353). */
 function currentResolverPort(): number {
@@ -47,7 +48,18 @@ function resolverBlocklist(rules: NetworkRule[]): string[] {
 }
 
 function refreshResolverBlocklist(): void {
-  dnsResolver.setBlocklist(resolverBlocklist(loadRules()))
+  // Wire local lists into the policy enforcer so remote blocklists merge correctly.
+  devicePolicyEnforcer.setLocalBlocklistProvider(() => resolverBlocklist(loadRules()))
+  if (devicePolicyEnforcer.isIsolated()) {
+    // Keep allowlist isolation intact — do not overwrite with blocklist rules.
+    void devicePolicyEnforcer.reapply()
+    return
+  }
+  const domains = [
+    ...resolverBlocklist(loadRules()),
+    ...devicePolicyEnforcer.remoteBlockedDomains(),
+  ]
+  dnsResolver.setFilterMode('blocklist', domains)
   refreshResolverAnswerPolicy()
 }
 

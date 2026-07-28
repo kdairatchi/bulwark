@@ -20,6 +20,10 @@ import {
   clearDeviceIdentity,
   type DeviceIdentity,
 } from './device-identity-store'
+import {
+  devicePolicyEnforcer,
+  parseRemotePolicy,
+} from './device-policy-enforcer'
 import { cloudLog } from './logger'
 
 const DEFAULT_BASE_URL = process.env.DEVICE_API_URL || 'http://127.0.0.1:8787'
@@ -58,7 +62,7 @@ export type CommandExecutor = (
   parameters: Record<string, unknown>,
 ) => Promise<Record<string, unknown>>
 
-/** Default allowlisted stubs — real scanners wire in later. */
+/** Default allowlisted handlers — policy/DNS commands use the enforcer; scanners stay stubs. */
 export async function defaultCommandExecutor(
   type: CommandType,
   parameters: Record<string, unknown>,
@@ -81,14 +85,25 @@ export async function defaultCommandExecutor(
     case 'UPDATE_THREAT_FEEDS':
       return { ok: true, stub: true, type, updated: false, parameters }
     case 'QUARANTINE_FILE':
-    case 'BLOCK_DOMAIN':
       return { ok: true, stub: true, type, applied: false, reason: 'stub — awaiting enforcement wiring', parameters }
+    case 'BLOCK_DOMAIN': {
+      const domain = typeof parameters.domain === 'string'
+        ? parameters.domain
+        : typeof parameters.host === 'string' ? parameters.host : ''
+      return devicePolicyEnforcer.blockDomain(domain)
+    }
     case 'ISOLATE_DEVICE':
-      return { ok: true, stub: true, type, applied: true, isolated: true, parameters }
     case 'CLEAR_ISOLATION':
-      return { ok: true, stub: true, type, applied: true, isolated: false, parameters }
     case 'APPLY_POLICY':
-      return { ok: true, stub: true, type, applied: true, parameters }
+      // Prefer the agent-bound executor (pulls fresh policy). Fallback keeps stubs honest.
+      return {
+        ok: true,
+        stub: true,
+        type,
+        applied: false,
+        reason: 'policy commands require agent-bound executor',
+        parameters,
+      }
     case 'RESTART_AGENT':
       return { ok: true, stub: true, type, scheduled: false, parameters }
     default:
@@ -269,10 +284,39 @@ export class DeviceCommandAgent {
       const client = new DeviceApiClient({ baseUrl: this.identity.baseUrl, fetchImpl: this.fetchImpl })
       await client.heartbeat(this.identity.privateKeyPem, this.identity.deviceId)
       this.lastHeartbeatAt = new Date().toISOString()
+
+      // Pull latest policy each tick (parity with Android TV agent).
+      try {
+        const policy = parseRemotePolicy(
+          await client.getPolicy(this.identity.privateKeyPem, this.identity.deviceId),
+        )
+        await devicePolicyEnforcer.applyRemotePolicy(policy)
+      } catch (err) {
+        cloudLog('INFO', 'device-api policy pull failed', {
+          error: err instanceof Error ? err.message : String(err),
+        })
+      }
+
       const commands = await client.pollCommands(this.identity.privateKeyPem, this.identity.deviceId)
       this.lastPollAt = new Date().toISOString()
       for (const cmd of commands) {
         await this.handleCommand(client, cmd)
+      }
+
+      const events = devicePolicyEnforcer.drainEvents()
+      if (events.length > 0) {
+        try {
+          await client.submitNetworkEvents(
+            this.identity.privateKeyPem,
+            this.identity.deviceId,
+            events,
+          )
+        } catch (err) {
+          cloudLog('INFO', 'device-api event flush failed', {
+            error: err instanceof Error ? err.message : String(err),
+            count: events.length,
+          })
+        }
       }
       this.lastError = null
     } catch (err) {
@@ -286,13 +330,26 @@ export class DeviceCommandAgent {
 
   private async handleCommand(client: DeviceApiClient, cmd: CommandEnvelope): Promise<void> {
     if (!this.identity) return
+    const identity = this.identity
+    const execute: CommandExecutor = async (type, parameters) => {
+      if (type === 'APPLY_POLICY' || type === 'ISOLATE_DEVICE' || type === 'CLEAR_ISOLATION') {
+        const policy = parseRemotePolicy(
+          await client.getPolicy(identity.privateKeyPem, identity.deviceId),
+        )
+        return devicePolicyEnforcer.applyRemotePolicy(policy)
+      }
+      if (type === 'BLOCK_DOMAIN') {
+        return defaultCommandExecutor(type, parameters)
+      }
+      return this.execute(type, parameters)
+    }
     const processed = await processVerifiedCommand({
       serverPublicKeyPem: this.identity.serverPublicKeyPem,
       deviceId: this.identity.deviceId,
       cmd,
       seenNonces: this.seenNonces,
       now: Date.now(),
-      execute: this.execute,
+      execute,
     })
     if (!processed.accepted) {
       this.commandsRejected++

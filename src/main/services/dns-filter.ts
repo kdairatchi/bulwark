@@ -233,3 +233,22 @@ export function isBlocked(name: string, blockSet: Set<string>): boolean {
   }
   return false
 }
+
+/** True if the name or any parent is listed (used for isolation allowlists). */
+export function isDomainListed(name: string, list: Set<string>): boolean {
+  return isBlocked(name, list)
+}
+
+export type DnsFilterMode = 'blocklist' | 'allowlist'
+
+/**
+ * BLOCKLIST: listed domains are blocked.
+ * ALLOWLIST (isolation): only listed domains resolve; everything else is blocked.
+ */
+export function shouldBlockName(name: string, domains: Set<string>, mode: DnsFilterMode): boolean {
+  if (mode === 'allowlist') {
+    if (domains.size === 0) return true
+    return !isDomainListed(name, domains)
+  }
+  return isBlocked(name, domains)
+}

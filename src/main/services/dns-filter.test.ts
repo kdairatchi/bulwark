@@ -6,6 +6,7 @@ import {
   deframeTcp,
   parseHostsList,
   isBlocked,
+  shouldBlockName,
   domainAndParents,
   typeName,
   parseAnswerIps,
@@ -112,6 +113,14 @@ describe('dns-filter · filter lists', () => {
     expect(isBlocked('sub.evil.example', set)).toBe(true)
     expect(isBlocked('example.com', set)).toBe(false)
     expect(isBlocked('notdoubleclick.net', set)).toBe(false)
+  })
+
+  it('shouldBlockName supports isolation allowlist mode', () => {
+    const allow = new Set(['googleapis.com', 'cloudflare.com'])
+    expect(shouldBlockName('dns.google', allow, 'allowlist')).toBe(true)
+    expect(shouldBlockName('fonts.googleapis.com', allow, 'allowlist')).toBe(false)
+    expect(shouldBlockName('tracker.malware.test', allow, 'allowlist')).toBe(true)
+    expect(shouldBlockName('tracker.malware.test', new Set(['tracker.malware.test']), 'blocklist')).toBe(true)
   })
 
   it('empty block set blocks nothing', () => {
