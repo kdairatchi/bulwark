@@ -5,6 +5,10 @@ const handleMap = new Map<string, (...args: unknown[]) => unknown>()
 const mockOpenPath = vi.fn()
 const mockOpenExternal = vi.fn()
 const mockExistsSync = vi.fn()
+const mockShowSaveDialog = vi.fn()
+const mockShowOpenDialog = vi.fn()
+const mockWriteFileSync = vi.fn()
+const mockReadFileSync = vi.fn()
 
 vi.mock('electron', () => ({
   ipcMain: {
@@ -16,22 +20,31 @@ vi.mock('electron', () => ({
     openPath: (...args: unknown[]) => mockOpenPath(...args),
     openExternal: (...args: unknown[]) => mockOpenExternal(...args),
   },
+  dialog: {
+    showSaveDialog: (...args: unknown[]) => mockShowSaveDialog(...args),
+    showOpenDialog: (...args: unknown[]) => mockShowOpenDialog(...args),
+  },
 }))
 
 vi.mock('fs', () => ({
   existsSync: (...args: unknown[]) => mockExistsSync(...args),
+  writeFileSync: (...args: unknown[]) => mockWriteFileSync(...args),
+  readFileSync: (...args: unknown[]) => mockReadFileSync(...args),
 }))
 
-vi.mock('../services/utility-tweaks', () => ({
-  applyTweaks: vi.fn(),
-  getCatalog: vi.fn(() => []),
-  getUtilityPowerPlan: vi.fn(),
-  revertTweaks: vi.fn(),
-  scanTweaks: vi.fn(),
-  setUtilityPowerPlan: vi.fn(),
-  UTILITY_POWER_PLAN_TARGETS: ['balanced', 'high-performance'],
-  validateUtilityTweakIds: vi.fn(),
-}))
+vi.mock('../services/utility-tweaks', async () => {
+  const actual = await vi.importActual<typeof import('../services/utility-tweaks')>('../services/utility-tweaks')
+  return {
+    ...actual,
+    applyTweaks: vi.fn(),
+    getCatalog: vi.fn(() => []),
+    getUtilityPowerPlan: vi.fn(),
+    revertTweaks: vi.fn(),
+    scanTweaks: vi.fn(),
+    setUtilityPowerPlan: vi.fn(),
+    UTILITY_POWER_PLAN_TARGETS: ['balanced', 'ultimate-performance'],
+  }
+})
 
 import {
   getResolvedShutUp10Roots,
@@ -39,6 +52,8 @@ import {
   isShutUp10CandidatePathAllowed,
   registerUtilityTweaksIpc,
 } from './utility-tweaks.ipc'
+
+const getWindow = () => null
 
 function invoke(channel: string, ...args: unknown[]) {
   const handler = handleMap.get(channel)
@@ -98,7 +113,7 @@ describe('ShutUp10 path hardening', () => {
     mockExistsSync.mockReturnValue(true)
     mockOpenPath.mockResolvedValue('')
 
-    registerUtilityTweaksIpc()
+    registerUtilityTweaksIpc(getWindow)
     const result = await invoke('utility-tweaks:shutup10:launch')
 
     const expectedPath = join(resolve('/tmp/ProgramFiles'), 'O&O ShutUp10++', 'OOSU10.exe')
@@ -119,7 +134,7 @@ describe('ShutUp10 path hardening', () => {
     mockExistsSync.mockReturnValue(true)
     mockOpenExternal.mockResolvedValue(undefined)
 
-    registerUtilityTweaksIpc()
+    registerUtilityTweaksIpc(getWindow)
     const result = await invoke('utility-tweaks:shutup10:launch')
 
     expect(result).toEqual({
@@ -129,5 +144,63 @@ describe('ShutUp10 path hardening', () => {
     })
     expect(mockOpenPath).not.toHaveBeenCalled()
     expect(mockOpenExternal).toHaveBeenCalledWith('https://www.oo-software.com/en/shutup10')
+  })
+})
+
+describe('tweak preset export/import IPC', () => {
+  beforeEach(() => {
+    handleMap.clear()
+    vi.clearAllMocks()
+    registerUtilityTweaksIpc(getWindow)
+  })
+
+  it('exports a JSON preset through the save dialog', async () => {
+    mockShowSaveDialog.mockResolvedValue({ canceled: false, filePath: '/tmp/bulwrk-tweaks.json' })
+
+    const path = await invoke('utility-tweaks:export-preset', {
+      selected: ['telemetry-level', 'copilot'],
+      applied: { 'telemetry-level': true },
+    })
+
+    expect(path).toBe('/tmp/bulwrk-tweaks.json')
+    expect(mockWriteFileSync).toHaveBeenCalledTimes(1)
+    const written = String(mockWriteFileSync.mock.calls[0][1])
+    expect(written).toContain('"kind": "bulwrk-utility-tweaks"')
+    expect(written).toContain('"telemetry-level"')
+    expect(written).toContain('"copilot"')
+  })
+
+  it('returns canceled when import dialog is dismissed', async () => {
+    mockShowOpenDialog.mockResolvedValue({ canceled: true, filePaths: [] })
+    await expect(invoke('utility-tweaks:import-preset')).resolves.toEqual({
+      ok: false,
+      reason: 'canceled',
+    })
+  })
+
+  it('imports known IDs and skips unknowns', async () => {
+    mockShowOpenDialog.mockResolvedValue({ canceled: false, filePaths: ['/tmp/import.json'] })
+    mockReadFileSync.mockReturnValue(JSON.stringify({
+      version: 1,
+      kind: 'bulwrk-utility-tweaks',
+      selected: ['telemetry-level', 'not-real', 'copilot'],
+    }))
+
+    await expect(invoke('utility-tweaks:import-preset')).resolves.toEqual({
+      ok: true,
+      selected: ['telemetry-level', 'copilot'],
+      skipped: 1,
+      path: '/tmp/import.json',
+    })
+  })
+
+  it('rejects invalid preset files', async () => {
+    mockShowOpenDialog.mockResolvedValue({ canceled: false, filePaths: ['/tmp/bad.json'] })
+    mockReadFileSync.mockReturnValue('{"kind":"wrong"}')
+
+    await expect(invoke('utility-tweaks:import-preset')).resolves.toEqual({
+      ok: false,
+      reason: 'invalid',
+    })
   })
 })

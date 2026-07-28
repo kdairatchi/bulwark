@@ -41,7 +41,7 @@ describe('utility-install IPC', () => {
 
     const result = await invoke('utility-install:run', {
       action: 'install',
-      ids: ['Google.Chrome', 'Microsoft.Teams', '--source=msstore'],
+      ids: ['Google.Chrome', 'Fake.Package', '--source=msstore'],
     })
 
     expect(result).toEqual({ succeeded: 1, failed: 0, errors: [] })
@@ -55,7 +55,7 @@ describe('utility-install IPC', () => {
 
     const result = await invoke('utility-install:run', {
       action: 'uninstall',
-      ids: ['Microsoft.Teams'],
+      ids: ['Fake.Package'],
     })
 
     expect(result).toEqual({

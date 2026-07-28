@@ -65,12 +65,23 @@ import type {
   UtilityShutUpLaunchResult,
   UtilityTweakActionResult,
   UtilityTweakMetadata,
+  UtilityTweakPresetExportPayload,
+  UtilityTweakPresetImportOutcome,
   UtilityTweaksScanResult,
   UtilityConfigActionResult,
   UtilityConfigCatalogResult,
   UtilityConfigFeatureStatusResult,
+  UtilityConfigFixProgress,
   UtilityConfigOpenSshStatusResult,
   UtilityLegacyPanelLaunchResult,
+  UtilityOsUpdateCheckResult,
+  UtilityOsUpdateInstallResult,
+  UtilityUpdatesHelperId,
+  UtilityUpdatesHelperResult,
+  UtilityUpdatesPauseDays,
+  UtilityUpdatesPauseResult,
+  UtilityUpdatesResumeResult,
+  UtilityUpdatesStatus,
   FileTypeInfo,
   CloudActionEntry,
   ThreatSnapshot,
@@ -520,6 +531,10 @@ const api = {
     ipcRenderer.invoke(IPC.UTILITY_TWEAKS_POWER_PLAN_SET, target),
   utilityTweaksLaunchShutUp10: (): Promise<UtilityShutUpLaunchResult> =>
     ipcRenderer.invoke(IPC.UTILITY_TWEAKS_SHUTUP10_LAUNCH),
+  utilityTweaksExportPreset: (payload: UtilityTweakPresetExportPayload): Promise<string | null> =>
+    ipcRenderer.invoke(IPC.UTILITY_TWEAKS_EXPORT_PRESET, payload),
+  utilityTweaksImportPreset: (): Promise<UtilityTweakPresetImportOutcome> =>
+    ipcRenderer.invoke(IPC.UTILITY_TWEAKS_IMPORT_PRESET),
 
   // Utility Tabs - Config
   utilityConfigCatalog: (): Promise<UtilityConfigCatalogResult> =>
@@ -538,6 +553,25 @@ const api = {
     ipcRenderer.invoke(IPC.UTILITY_CONFIG_OPENSSH_ENABLE),
   utilityConfigFixRun: (id: string): Promise<UtilityConfigActionResult> =>
     ipcRenderer.invoke(IPC.UTILITY_CONFIG_FIX_RUN, id),
+  onUtilityConfigFixProgress: (callback: (data: UtilityConfigFixProgress) => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, data: UtilityConfigFixProgress) => callback(data)
+    ipcRenderer.on(IPC.UTILITY_CONFIG_FIX_PROGRESS, handler)
+    return () => { ipcRenderer.removeListener(IPC.UTILITY_CONFIG_FIX_PROGRESS, handler) }
+  },
+
+  // Utility Tabs — Updates
+  utilityUpdatesStatus: (): Promise<UtilityUpdatesStatus> =>
+    ipcRenderer.invoke(IPC.UTILITY_UPDATES_STATUS),
+  utilityUpdatesOsCheck: (): Promise<UtilityOsUpdateCheckResult> =>
+    ipcRenderer.invoke(IPC.UTILITY_UPDATES_OS_CHECK),
+  utilityUpdatesOsInstall: (): Promise<UtilityOsUpdateInstallResult> =>
+    ipcRenderer.invoke(IPC.UTILITY_UPDATES_OS_INSTALL),
+  utilityUpdatesPause: (days: UtilityUpdatesPauseDays): Promise<UtilityUpdatesPauseResult> =>
+    ipcRenderer.invoke(IPC.UTILITY_UPDATES_PAUSE, days),
+  utilityUpdatesResume: (): Promise<UtilityUpdatesResumeResult> =>
+    ipcRenderer.invoke(IPC.UTILITY_UPDATES_RESUME),
+  utilityUpdatesHelper: (id: UtilityUpdatesHelperId): Promise<UtilityUpdatesHelperResult> =>
+    ipcRenderer.invoke(IPC.UTILITY_UPDATES_HELPER, id),
 
   // Cloud Agent
   cloudLink: (apiKey: string): Promise<{ success: boolean; error?: string }> =>

@@ -241,6 +241,8 @@ export const IPC = {
   UTILITY_TWEAKS_POWER_PLAN_GET: 'utility-tweaks:power-plan:get',
   UTILITY_TWEAKS_POWER_PLAN_SET: 'utility-tweaks:power-plan:set',
   UTILITY_TWEAKS_SHUTUP10_LAUNCH: 'utility-tweaks:shutup10:launch',
+  UTILITY_TWEAKS_EXPORT_PRESET: 'utility-tweaks:export-preset',
+  UTILITY_TWEAKS_IMPORT_PRESET: 'utility-tweaks:import-preset',
 
   // Utility Tabs - Config (WinUtil-style Windows features, panels, OpenSSH, fixes)
   UTILITY_CONFIG_CATALOG: 'utility-config:catalog',
@@ -251,6 +253,15 @@ export const IPC = {
   UTILITY_CONFIG_OPENSSH_STATUS: 'utility-config:openssh:status',
   UTILITY_CONFIG_OPENSSH_ENABLE: 'utility-config:openssh:enable',
   UTILITY_CONFIG_FIX_RUN: 'utility-config:fix:run',
+  UTILITY_CONFIG_FIX_PROGRESS: 'utility-config:fix:progress',
+
+  // Utility Tabs — Updates (WinUtil-style OS updates / pause / helpers)
+  UTILITY_UPDATES_STATUS: 'utility-updates:status',
+  UTILITY_UPDATES_OS_CHECK: 'utility-updates:os:check',
+  UTILITY_UPDATES_OS_INSTALL: 'utility-updates:os:install',
+  UTILITY_UPDATES_PAUSE: 'utility-updates:pause',
+  UTILITY_UPDATES_RESUME: 'utility-updates:resume',
+  UTILITY_UPDATES_HELPER: 'utility-updates:helper',
 
   // Cloud Agent
   CLOUD_LINK: 'cloud:link',

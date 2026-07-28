@@ -68,21 +68,61 @@ export const UTILITY_TWEAK_CATALOG: UtilityTweakDefinition[] = [
     name: 'Disable Advertising ID',
     description: 'Turn off the per-user advertising identifier used by apps.',
   }),
+  privacyTweak('suggested-content', 'essential', false, {
+    name: 'Disable suggested content in Settings',
+    description: 'Block Microsoft app suggestions and ads in Windows Settings.',
+  }),
   privacyTweak('tips-notifications', 'essential', false, {
     name: 'Disable tips and suggestions',
     description: 'Stop Windows tips, tricks, and suggestion notifications.',
+  }),
+  privacyTweak('start-suggestions', 'essential', false, {
+    name: 'Disable Start menu suggestions',
+    description: 'Stop promoted app suggestions from appearing in the Start menu.',
   }),
   privacyTweak('bing-start-menu', 'essential', false, {
     name: 'Disable Bing in Start',
     description: 'Keep Start menu searches local instead of sending queries to Bing.',
   }),
+  privacyTweak('bing-web-search', 'essential', false, {
+    name: 'Disable Bing web results',
+    description: 'Keep Windows Search results local instead of showing Bing web results.',
+  }),
   privacyTweak('app-launch-tracking', 'essential', false, {
     name: 'Disable app launch tracking',
     description: 'Stop Windows from tracking app launches to personalize Start.',
   }),
+  privacyTweak('tailored-experiences', 'essential', false, {
+    name: 'Disable tailored experiences',
+    description: 'Stop Windows from using diagnostic data for personalized tips and ads.',
+  }),
+  privacyTweak('feedback-frequency', 'essential', false, {
+    name: 'Disable feedback prompts',
+    description: 'Stop Windows from asking for feedback on a recurring schedule.',
+  }),
+  privacyTweak('cortana', 'essential', true, {
+    name: 'Disable Cortana',
+    description: 'Apply the Windows Search policy that turns Cortana off.',
+  }),
+  privacyTweak('lock-screen-spotlight', 'essential', false, {
+    name: 'Disable lock screen Spotlight',
+    description: 'Stop rotating Microsoft Spotlight imagery and ads on the lock screen.',
+  }),
+  privacyTweak('silently-installed-apps', 'essential', false, {
+    name: 'Disable silent app installs',
+    description: 'Block Windows from silently installing suggested Store apps.',
+  }),
   privacyTweak('clipboard-sync', 'advanced', true, {
     name: 'Disable cloud clipboard sync',
     description: 'Prevent clipboard data from syncing through Microsoft cloud services.',
+  }),
+  privacyTweak('clipboard-history', 'advanced', false, {
+    name: 'Disable clipboard history',
+    description: 'Stop Windows from storing copied text and images in clipboard history.',
+  }),
+  privacyTweak('settings-sync', 'advanced', true, {
+    name: 'Disable Settings sync',
+    description: 'Prevent Windows settings from syncing through a Microsoft account.',
   }),
   privacyTweak('copilot', 'advanced', true, {
     name: 'Disable Microsoft Copilot',
@@ -92,13 +132,29 @@ export const UTILITY_TWEAK_CATALOG: UtilityTweakDefinition[] = [
     name: 'Disable Windows Recall',
     description: 'Apply the Windows policy that disables Recall AI data analysis.',
   }),
+  privacyTweak('edge-ai-features', 'advanced', true, {
+    name: 'Disable Edge AI compose features',
+    description: 'Turn off Microsoft Edge inline AI compose policy features.',
+  }),
   privacyTweak('service-diagtrack', 'advanced', true, {
     name: 'Disable DiagTrack service',
     description: 'Disable the Connected User Experiences and Telemetry service.',
   }),
+  privacyTweak('service-delivery-optimization', 'advanced', true, {
+    name: 'Disable Delivery Optimization sharing',
+    description: 'Stop Windows Update from peer-to-peer sharing update data.',
+  }),
   privacyTweak('task-compatibility-appraiser', 'advanced', true, {
     name: 'Disable Compatibility Appraiser task',
     description: 'Disable the scheduled task that collects app compatibility telemetry.',
+  }),
+  privacyTweak('task-ceip-consolidator', 'advanced', true, {
+    name: 'Disable CEIP Consolidator task',
+    description: 'Disable the Customer Experience Improvement Program consolidator task.',
+  }),
+  privacyTweak('task-usb-ceip', 'advanced', true, {
+    name: 'Disable USB CEIP task',
+    description: 'Disable the scheduled task that collects USB CEIP telemetry.',
   }),
 ]
 

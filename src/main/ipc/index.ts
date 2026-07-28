@@ -29,6 +29,7 @@ import { registerSoftwareUpdaterIpc } from './software-updater.ipc'
 import { registerUtilityInstallIpc } from './utility-install.ipc'
 import { registerUtilityTweaksIpc } from './utility-tweaks.ipc'
 import { registerUtilityConfigIpc } from './utility-config.ipc'
+import { registerUtilityUpdatesIpc } from './utility-updates.ipc'
 import { registerShortcutCleanerIpc } from './shortcut-cleaner.ipc'
 import { registerEnvironmentCleanerIpc } from './environment-cleaner.ipc'
 import { registerDatabaseOptimizerIpc } from './database-optimizer.ipc'
@@ -87,8 +88,9 @@ export function registerCleanerIpc(getWindow: WindowGetter): void {
   registerFirewallAuditIpc(getWindow)
   registerSoftwareUpdaterIpc(getWindow)
   registerUtilityInstallIpc(getWindow)
-  registerUtilityTweaksIpc()
-  registerUtilityConfigIpc()
+  registerUtilityTweaksIpc(getWindow)
+  registerUtilityConfigIpc(getWindow)
+  registerUtilityUpdatesIpc()
   registerCloudAgentIpc()
   registerDeviceApiIpc()
   registerCveScannerIpc()

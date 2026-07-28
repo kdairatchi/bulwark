@@ -1,18 +1,50 @@
-import { describe, expect, it } from 'vitest'
-import {
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+
+const execFileMock = vi.hoisted(() => vi.fn())
+const isAdminMock = vi.hoisted(() => vi.fn(() => true))
+
+vi.mock('child_process', () => ({
+  execFile: execFileMock,
+}))
+
+vi.mock('util', () => ({
+  promisify: () => execFileMock,
+}))
+
+vi.mock('./elevation', () => ({
+  isAdmin: isAdminMock,
+}))
+
+  const {
   getDailyRegistryBackupCreateCommand,
   getLegacyPanelCommand,
+  getOptionalFeatureDisableCommand,
   getOptionalFeatureEnableCommand,
   getOptionalFeatureStatusCommand,
   getUtilityFixCommandSequence,
+  revertUtilityConfigFeature,
+  runUtilityConfigFix,
   validateUtilityConfigFeatureId,
   validateUtilityConfigFixId,
   validateUtilityLegacyPanelId,
-} from './utility-config'
+} = await import('./utility-config')
 
 const SHELL_FILES = new Set(['sh', 'bash', 'cmd', 'cmd.exe'])
 
 describe('utility-config helpers', () => {
+  const originalPlatform = process.platform
+
+  beforeEach(() => {
+    execFileMock.mockReset()
+    execFileMock.mockResolvedValue({ stdout: '', stderr: '' })
+    isAdminMock.mockReset()
+    isAdminMock.mockReturnValue(true)
+  })
+
+  afterEach(() => {
+    Object.defineProperty(process, 'platform', { value: originalPlatform, configurable: true })
+  })
+
   it('validates IDs strictly against allowlists', () => {
     expect(validateUtilityConfigFeatureId('wsl')).toBe('wsl')
     expect(validateUtilityConfigFeatureId('not-a-feature')).toBeNull()
@@ -42,13 +74,18 @@ describe('utility-config helpers', () => {
   it('builds optional feature commands through PowerShell execFile specs', () => {
     const status = getOptionalFeatureStatusCommand('wsl')
     const enable = getOptionalFeatureEnableCommand('wsl')
+    const disable = getOptionalFeatureDisableCommand('wsl')
 
     expect(status?.file).toBe('powershell.exe')
     expect(enable?.file).toBe('powershell.exe')
+    expect(disable?.file).toBe('powershell.exe')
     expect(status?.args).toContain('-Command')
     expect(enable?.args.join(' ')).toContain('Enable-WindowsOptionalFeature')
     expect(enable?.args.join(' ')).toContain('Microsoft-Windows-Subsystem-Linux')
     expect(enable?.args.join(' ')).toContain('VirtualMachinePlatform')
+    expect(disable?.args.join(' ')).toContain('Disable-WindowsOptionalFeature')
+    expect(disable?.args.join(' ')).toContain('Microsoft-Windows-Subsystem-Linux')
+    expect(disable?.args.join(' ')).toContain('-NoRestart')
   })
 
   it('builds fixed command sequences for fixes without shell executables', () => {
@@ -81,5 +118,55 @@ describe('utility-config helpers', () => {
     expect(command.args).toContain('SYSTEM')
     expect(command.args.join(' ')).toContain('RegistryBackup')
     expect(command.args.join(' ')).toContain('reg.exe export HKLM')
+  })
+
+  it('invokes config fix progress callback before each command', async () => {
+    Object.defineProperty(process, 'platform', { value: 'win32', configurable: true })
+    const onProgress = vi.fn()
+
+    const result = await runUtilityConfigFix('system-corruption-scan', onProgress)
+
+    expect(result.success).toBe(true)
+    expect(execFileMock).toHaveBeenCalledTimes(2)
+    expect(execFileMock.mock.calls[0][0]).toBe('sfc.exe')
+    expect(execFileMock.mock.calls[1][0]).toBe('DISM.exe')
+    expect(onProgress).toHaveBeenCalledTimes(4)
+    expect(onProgress.mock.calls.map(([progress]) => progress.phase)).toEqual([
+      'starting',
+      'command',
+      'command',
+      'done',
+    ])
+    expect(onProgress.mock.calls[1][0]).toMatchObject({
+      fixId: 'system-corruption-scan',
+      phase: 'command',
+      message: 'Running SFC system file scan...',
+      current: 1,
+      total: 2,
+    })
+    expect(onProgress.mock.calls[2][0]).toMatchObject({
+      fixId: 'system-corruption-scan',
+      phase: 'command',
+      message: 'Running DISM component store repair...',
+      current: 2,
+      total: 2,
+    })
+  })
+
+  it('reverts optional features through Disable-WindowsOptionalFeature', async () => {
+    Object.defineProperty(process, 'platform', { value: 'win32', configurable: true })
+    execFileMock.mockResolvedValue({
+      stdout: 'OK|TelnetClient|Disabled\n',
+      stderr: '',
+    })
+
+    const result = await revertUtilityConfigFeature('telnet-client')
+
+    expect(result.success).toBe(true)
+    expect(result.requiresReboot).toBe(true)
+    expect(execFileMock).toHaveBeenCalledTimes(1)
+    expect(execFileMock.mock.calls[0][0]).toBe('powershell.exe')
+    expect(execFileMock.mock.calls[0][1].join(' ')).toContain('Disable-WindowsOptionalFeature')
+    expect(execFileMock.mock.calls[0][1].join(' ')).toContain('TelnetClient')
   })
 })

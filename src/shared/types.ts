@@ -1096,6 +1096,32 @@ export interface UtilityTweakActionResult {
   restorePoint?: RestorePointResult
 }
 
+export const UTILITY_TWEAK_PRESET_KIND = 'bulwrk-utility-tweaks' as const
+export const UTILITY_TWEAK_PRESET_VERSION = 1 as const
+
+export interface UtilityTweakPresetFile {
+  version: typeof UTILITY_TWEAK_PRESET_VERSION
+  kind: typeof UTILITY_TWEAK_PRESET_KIND
+  selected: string[]
+  applied?: Record<string, boolean>
+}
+
+export interface UtilityTweakPresetExportPayload {
+  selected: string[]
+  applied?: Record<string, boolean>
+}
+
+export interface UtilityTweakPresetImportResult {
+  ok: true
+  selected: string[]
+  skipped: number
+  path: string
+}
+
+export type UtilityTweakPresetImportOutcome =
+  | UtilityTweakPresetImportResult
+  | { ok: false; reason: 'canceled' | 'invalid' }
+
 export type UtilityConfigFeatureKind = 'optional-feature' | 'boot' | 'scheduled-task'
 export type UtilityConfigFeatureStatus = 'enabled' | 'disabled' | 'partial' | 'unavailable' | 'unknown'
 
@@ -1158,6 +1184,14 @@ export interface UtilityConfigActionResult {
   error?: string
 }
 
+export interface UtilityConfigFixProgress {
+  fixId: string
+  phase: 'starting' | 'command' | 'done'
+  message: string
+  current: number
+  total: number
+}
+
 export interface UtilityLegacyPanelLaunchResult {
   id: string
   launched: boolean
@@ -1170,6 +1204,67 @@ export interface UtilityConfigOpenSshStatusResult {
   serviceRunning: boolean
   startupType: string | null
   details: string
+}
+
+/** Allowed Windows Update pause durations (days). */
+export type UtilityUpdatesPauseDays = 1 | 7 | 14 | 35
+
+export type UtilityUpdatesHelperId = 'open-wu-settings' | 'reset-wu-services' | 'winget-repair'
+
+export interface UtilityUpdatesStatus {
+  available: boolean
+  isAdmin: boolean
+  paused: boolean
+  pauseExpiresAt: string | null
+  details: string
+}
+
+export interface UtilityOsUpdateInfo {
+  title: string
+  kb: string
+  severity: string
+  sizeBytes: number
+  downloaded: boolean
+}
+
+export interface UtilityOsUpdateCheckResult {
+  available: boolean
+  updates: UtilityOsUpdateInfo[]
+  error?: string
+}
+
+export interface UtilityOsUpdateInstallResult {
+  success: boolean
+  installed: number
+  needsReboot: boolean
+  resultCode: number
+  needsAdmin: boolean
+  error?: string
+}
+
+export interface UtilityUpdatesPauseResult {
+  success: boolean
+  status?: UtilityUpdatesStatus
+  needsAdmin: boolean
+  error?: string
+}
+
+export interface UtilityUpdatesResumeResult {
+  success: boolean
+  status?: UtilityUpdatesStatus
+  needsAdmin: boolean
+  error?: string
+}
+
+/** Same shape as UtilityConfigActionResult for helper actions. */
+export interface UtilityUpdatesHelperResult {
+  id: string
+  success: boolean
+  summary: string
+  needsAdmin: boolean
+  requiresReboot: boolean
+  log?: string
+  error?: string
 }
 
 export interface UpdateCheckResult {
