@@ -1,8 +1,10 @@
 package com.bulwark.tv
 
-import android.content.pm.ApplicationInfo
+import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
+import com.bulwark.deviceapi.AppPosture
+import com.bulwark.deviceapi.AppRecord
 import com.bulwark.deviceapi.CommandExecutor
 import com.bulwark.deviceapi.DeviceApiClient
 import com.bulwark.deviceapi.DeviceCrypto
@@ -12,8 +14,10 @@ import com.bulwark.deviceapi.DeviceIdentity
  * Enrollment + one agent tick (heartbeat, poll/verify/execute, inventory sync).
  */
 class DeviceAgentService(
-    private val store: IdentityStore,
-    private val packageManager: PackageManager,
+    private val context: Context,
+    private val store: IdentityStore = IdentityStore(context),
+    private val packageManager: PackageManager = context.packageManager,
+    private val blocklistStore: BlocklistStore = BlocklistStore(context),
 ) {
     private val seenNonces = linkedSetOf<String>()
 
@@ -66,10 +70,20 @@ class DeviceAgentService(
                     deviceId = identity.deviceId,
                     cmd = cmd,
                     seenNonces = seenNonces,
+                    execute = ::executeCommand,
                 )
                 if (ok) {
                     if (cmd.type == "REQUEST_INVENTORY") {
-                        client.submitInventory(identity, collectInventory())
+                        val inventory = collectInventory()
+                        client.submitInventory(identity, inventory)
+                        @Suppress("UNCHECKED_CAST")
+                        val findings = inventory["_findings"] as? List<Map<String, Any?>> ?: emptyList()
+                        if (findings.isNotEmpty()) client.submitFindings(identity, findings)
+                    }
+                    if (cmd.type == "RUN_HEALTH_ASSESSMENT") {
+                        @Suppress("UNCHECKED_CAST")
+                        val findings = result["findings"] as? List<Map<String, Any?>>
+                        if (!findings.isNullOrEmpty()) client.submitFindings(identity, findings)
                     }
                     processed++
                     lastType = cmd.type
@@ -78,72 +92,102 @@ class DeviceAgentService(
                 }
                 client.postCommandResult(identity, cmd.commandId, result)
             }
-            // Periodic inventory even without a command.
             if (commands.isEmpty()) {
-                client.submitInventory(identity, collectInventory())
+                val inventory = collectInventory()
+                client.submitInventory(identity, inventory)
+                @Suppress("UNCHECKED_CAST")
+                val findings = inventory["_findings"] as? List<Map<String, Any?>> ?: emptyList()
+                if (findings.isNotEmpty()) client.submitFindings(identity, findings)
             }
             TickReport(processed = processed, rejected = rejected, lastType = lastType)
         }
     }
 
-    fun collectInventory(): Map<String, Any?> {
-        val apps = mutableListOf<Map<String, Any?>>()
+    fun executeCommand(type: String, parameters: Map<String, Any?>): Map<String, Any?> {
+        return when (type) {
+            "REQUEST_INVENTORY" -> {
+                val inventory = collectInventory()
+                mapOf(
+                    "ok" to true,
+                    "type" to type,
+                    "count" to inventory["count"],
+                    "sideloadedCount" to inventory["sideloadedCount"],
+                    "findingCount" to (inventory["_findings"] as? List<*>)?.size,
+                )
+            }
+            "RUN_HEALTH_ASSESSMENT" -> AppPosture.healthAssessment(collectAppRecords())
+            "BLOCK_DOMAIN" -> {
+                val domain = parameters["domain"] as? String
+                    ?: parameters["host"] as? String
+                    ?: return mapOf("ok" to false, "error" to "domain required", "type" to type)
+                val added = blocklistStore.add(domain)
+                mapOf(
+                    "ok" to true,
+                    "type" to type,
+                    "applied" to added,
+                    "domain" to domain,
+                    "blocklistSize" to blocklistStore.size(),
+                    "dnsGuardRunning" to DnsGuardVpnService.isRunning,
+                )
+            }
+            "UPDATE_THREAT_FEEDS" -> {
+                @Suppress("UNCHECKED_CAST")
+                val domains = (parameters["domains"] as? List<*>)?.mapNotNull { it as? String }
+                    ?: BlocklistStore.STARTER
+                val added = if (parameters["replace"] == true) {
+                    blocklistStore.replaceAll(domains)
+                    domains.size
+                } else {
+                    blocklistStore.addAll(domains)
+                }
+                mapOf(
+                    "ok" to true,
+                    "type" to type,
+                    "updated" to true,
+                    "added" to added,
+                    "blocklistSize" to blocklistStore.size(),
+                )
+            }
+            "RUN_MALWARE_SCAN", "RUN_VULNERABILITY_SCAN" -> {
+                val findings = AppPosture.analyze(collectAppRecords())
+                mapOf(
+                    "ok" to true,
+                    "type" to type,
+                    "threatsFound" to findings.count { it.level != "potential_match" },
+                    "findings" to findings.size,
+                    "details" to findings.take(25).map { it.toMap() },
+                )
+            }
+            else -> CommandExecutor.defaultExecute(type, parameters)
+        }
+    }
+
+    fun collectAppRecords(): List<AppRecord> {
         val packages = packageManager.getInstalledApplications(PackageManager.GET_META_DATA)
-        for (app in packages) {
-            val installer = installerFor(app.packageName)
-            val sideloaded = isSideloaded(installer, app)
-            apps += mapOf(
-                "packageName" to app.packageName,
-                "label" to (app.loadLabel(packageManager)?.toString() ?: app.packageName),
-                "installer" to (installer ?: "unknown"),
-                "sideloaded" to sideloaded,
-                "system" to ((app.flags and ApplicationInfo.FLAG_SYSTEM) != 0),
-            )
-        }
-        val findings = apps.filter { it["sideloaded"] == true }.map {
-            mapOf(
-                "level" to "likely_affected",
-                "subjectName" to (it["packageName"] as String),
-                "reason" to "Sideloaded app (installer=${it["installer"]})",
-            )
-        }
+        return packages.map { PackageInspector.inspect(packageManager, it) }
+    }
+
+    fun collectInventory(): Map<String, Any?> {
+        val records = collectAppRecords()
+        val apps = records.map { PackageInspector.toInventoryMap(it) }
+        val findings = AppPosture.analyze(records).map { it.toMap() }
+        val health = AppPosture.healthAssessment(records)
         return mapOf(
             "apps" to apps,
             "count" to apps.size,
-            "sideloadedCount" to findings.size,
+            "sideloadedCount" to records.count { it.sideloaded && !it.system },
             "device" to mapOf(
                 "manufacturer" to Build.MANUFACTURER,
                 "model" to Build.MODEL,
                 "release" to Build.VERSION.RELEASE,
                 "sdk" to Build.VERSION.SDK_INT,
             ),
-            // Findings are submitted separately by the worker when present.
+            "postureScore" to health["score"],
+            "dnsGuard" to DnsGuardVpnService.trafficSummary() + mapOf(
+                "blocklistSize" to blocklistStore.size(),
+            ),
             "_findings" to findings,
         )
-    }
-
-    private fun installerFor(packageName: String): String? {
-        return try {
-            if (Build.VERSION.SDK_INT >= 30) {
-                packageManager.getInstallSourceInfo(packageName).installingPackageName
-            } else {
-                @Suppress("DEPRECATION")
-                packageManager.getInstallerPackageName(packageName)
-            }
-        } catch (_: Exception) {
-            null
-        }
-    }
-
-    private fun isSideloaded(installer: String?, app: ApplicationInfo): Boolean {
-        if ((app.flags and ApplicationInfo.FLAG_SYSTEM) != 0) return false
-        val trusted = setOf(
-            "com.android.vending",
-            "com.google.android.packageinstaller",
-            "com.amazon.venezia",
-            "com.sec.android.app.samsungapps",
-        )
-        return installer == null || installer !in trusted
     }
 
     companion object {

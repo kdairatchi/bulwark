@@ -49,7 +49,8 @@ sync, emergency isolation.
 
 **Landed in `apps/android-tv/`:** Gradle multi-module project (`:core` JVM protocol
 library + `:app` Leanback/Compose TV UI), pairing enroll, WorkManager command poller,
-PackageManager inventory + sideload heuristics, JVM demo (`:core:runAgentDemo`).
+PackageManager inventory with APK/cert hashes + permission risk, posture findings,
+DnsGuard `VpnService` + local blocklist, JVM demo (`:core:runAgentDemo`).
 
 ## Phase 5 — Vulnerability intelligence
 

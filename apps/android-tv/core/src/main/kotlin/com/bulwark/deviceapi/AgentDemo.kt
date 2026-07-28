@@ -103,5 +103,20 @@ fun main(args: Array<String>) {
         ),
     )
     println("9. inventory + findings submitted")
+
+    // Posture + DNS blocklist (core library — same logic the TV app uses)
+    val apps = listOf(
+        AppRecord(
+            packageName = "com.example.sideload",
+            sideloaded = true,
+            permissions = listOf("android.permission.RECORD_AUDIO", "android.permission.REQUEST_INSTALL_PACKAGES"),
+            apkSha256 = "deadbeef",
+            certSha256 = "cafebabe",
+        ),
+    )
+    val health = AppPosture.healthAssessment(apps)
+    println("10. posture score=${health["score"]} findings=${health["findingCount"]}")
+    val bl = DnsBlocklist(listOf("tracker.malware.test"))
+    println("11. dns blocklist blocks tracker.malware.test=${bl.isBlocked("sub.tracker.malware.test")}")
     println("DONE")
 }

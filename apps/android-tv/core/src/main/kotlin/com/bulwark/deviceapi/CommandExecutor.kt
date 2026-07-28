@@ -1,11 +1,11 @@
 package com.bulwark.deviceapi
 
 /**
- * Shared command execution stubs used by the JVM demo and the Android TV agent.
- * Real scanners / VpnService wiring replace these later.
+ * Shared command execution used by the JVM demo and the Android TV agent.
+ * Pass [execute] to override stubs with real inventory / DNS / posture handlers.
  */
 object CommandExecutor {
-    fun execute(type: String, parameters: Map<String, Any?>): Map<String, Any?> {
+    fun defaultExecute(type: String, parameters: Map<String, Any?>): Map<String, Any?> {
         return when (type) {
             "REQUEST_INVENTORY" -> mapOf(
                 "ok" to true,
@@ -40,6 +40,7 @@ object CommandExecutor {
         cmd: CommandEnvelope,
         seenNonces: MutableSet<String>,
         nowMs: Long = System.currentTimeMillis(),
+        execute: (String, Map<String, Any?>) -> Map<String, Any?> = ::defaultExecute,
     ): Pair<Boolean, Map<String, Any?>> {
         when (val v = verifyCommandEnvelope(serverPublicKeyPem, cmd, nowMs, deviceId, seenNonces)) {
             is CommandVerifyResult.Rejected ->

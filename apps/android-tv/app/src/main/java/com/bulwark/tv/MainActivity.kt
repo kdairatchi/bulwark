@@ -1,9 +1,13 @@
 package com.bulwark.tv
 
+import android.app.Activity
+import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -21,7 +25,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
@@ -57,16 +60,28 @@ private val Text = Color(0xFFF8FAFC)
 @Composable
 fun BulwarkTvApp() {
     val context = LocalContext.current
-    val store = remember { IdentityStore(context) }
-    val agent = remember { DeviceAgentService(store, context.packageManager) }
+    val agent = remember { DeviceAgentService(context) }
+    val blocklist = remember { BlocklistStore(context) }
     val scope = rememberCoroutineScope()
 
-    var identity by remember { mutableStateOf(store.load()) }
+    var identity by remember { mutableStateOf(IdentityStore(context).load()) }
     var baseUrl by remember { mutableStateOf(identity?.baseUrl ?: "http://10.0.2.2:8787") }
     var pairingCode by remember { mutableStateOf("") }
     var statusMessage by remember { mutableStateOf("") }
     var busy by remember { mutableStateOf(false) }
-    var inventorySummary by remember { mutableStateOf("") }
+    var dnsRunning by remember { mutableStateOf(DnsGuardVpnService.isRunning) }
+
+    val vpnPermission = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult(),
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            DnsGuardVpnService.start(context)
+            dnsRunning = true
+            statusMessage = "DNS Guard started (${blocklist.size()} blocked domains)"
+        } else {
+            statusMessage = "DNS Guard permission denied"
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -131,6 +146,9 @@ fun BulwarkTvApp() {
                 baseUrl = identity!!.baseUrl,
                 model = "${Build.MANUFACTURER} ${Build.MODEL}",
                 enrolledAt = identity!!.enrolledAt,
+                dnsRunning = dnsRunning,
+                blocklistSize = blocklist.size(),
+                dnsStats = DnsGuardVpnService.trafficSummary(),
             )
             Spacer(Modifier.height(20.dp))
             Row {
@@ -155,10 +173,26 @@ fun BulwarkTvApp() {
                     scope.launch {
                         val inv = withContext(Dispatchers.IO) { agent.collectInventory() }
                         busy = false
-                        val count = inv["count"]
-                        val side = inv["sideloadedCount"]
-                        inventorySummary = "Installed apps: $count · Sideloaded: $side"
-                        statusMessage = inventorySummary
+                        statusMessage =
+                            "Apps ${inv["count"]} · sideloaded ${inv["sideloadedCount"]} · posture ${inv["postureScore"]} · findings ${(inv["_findings"] as? List<*>)?.size ?: 0}"
+                    }
+                }
+                Spacer(Modifier.width(16.dp))
+                FocusButton(if (dnsRunning) "Stop DNS Guard" else "Start DNS Guard", enabled = !busy) {
+                    if (dnsRunning) {
+                        DnsGuardVpnService.stop(context)
+                        dnsRunning = false
+                        statusMessage = "DNS Guard stopped"
+                    } else {
+                        if (blocklist.size() == 0) blocklist.addAll(BlocklistStore.STARTER)
+                        val prepare = DnsGuardVpnService.prepareIntent(context)
+                        if (prepare != null) {
+                            vpnPermission.launch(prepare)
+                        } else {
+                            DnsGuardVpnService.start(context)
+                            dnsRunning = true
+                            statusMessage = "DNS Guard started (${blocklist.size()} domains)"
+                        }
                     }
                 }
                 Spacer(Modifier.width(16.dp))
@@ -197,7 +231,15 @@ private fun LabeledField(label: String, value: String, onChange: (String) -> Uni
 }
 
 @Composable
-private fun StatusCard(deviceId: String, baseUrl: String, model: String, enrolledAt: String) {
+private fun StatusCard(
+    deviceId: String,
+    baseUrl: String,
+    model: String,
+    enrolledAt: String,
+    dnsRunning: Boolean,
+    blocklistSize: Int,
+    dnsStats: Map<String, Any?>,
+) {
     Column(
         modifier = Modifier
             .fillMaxWidth(0.85f)
@@ -208,6 +250,15 @@ private fun StatusCard(deviceId: String, baseUrl: String, model: String, enrolle
         Text(text = "Control plane: $baseUrl", color = Muted, fontSize = 16.sp)
         Text(text = "Hardware: $model", color = Muted, fontSize = 16.sp)
         Text(text = "Enrolled: $enrolledAt", color = Muted, fontSize = 16.sp)
+        Text(
+            text = "DNS Guard: ${if (dnsRunning) "ON" else "OFF"} · blocklist $blocklistSize · queries ${dnsStats["queries"]} · blocks ${dnsStats["blocks"]}",
+            color = if (dnsRunning) Accent else Muted,
+            fontSize = 16.sp,
+        )
+        val last = dnsStats["lastBlockedHost"] as? String
+        if (!last.isNullOrBlank()) {
+            Text(text = "Last blocked: $last", color = Accent, fontSize = 14.sp)
+        }
     }
 }
 
