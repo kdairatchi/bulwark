@@ -15,6 +15,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "validate:rules": "npx tsx src/main/rules/validate.ts",
+    "validate:beta-report": "npx tsx scripts/validate-beta-report.ts",
     "cloud:dev": "npx tsx src/cloud/device-api/index.ts",
     "new-rule": "node scripts/new-rule.js",
     "find-cache": "node scripts/find-cache.js",
