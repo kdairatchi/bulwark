@@ -3,6 +3,12 @@
 This is the Phase 6 evidence plan for the first public beta. It is a release
 checklist, not a claim that the targets have already been measured.
 
+Reports use the versioned `BetaReport` shape and can be checked with:
+
+```sh
+npm run validate:beta-report -- path/to/report.json
+```
+
 ## Scope
 
 - Windows first, with macOS/Linux smoke coverage from the existing CI matrix.
@@ -47,4 +53,3 @@ checklist, not a claim that the targets have already been measured.
 - [ ] No open release-blocking security or data-loss defect.
 - [ ] Rollback and support instructions tested by someone other than the author.
 - [ ] Release notes describe known limitations and telemetry retention.
-
