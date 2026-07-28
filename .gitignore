@@ -6,7 +6,8 @@ test-results/
 .DS_Store
 Thumbs.db
 .claude/
-cloud/
+# Root-level scratch only — do NOT use a bare `cloud/` pattern (it would ignore src/cloud/).
+/cloud/
 CLOUD-COMMANDS.md
 manifests/
 resources/yara-rules/
