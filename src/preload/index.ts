@@ -65,6 +65,8 @@ import type {
   UtilityShutUpLaunchResult,
   UtilityTweakActionResult,
   UtilityTweakMetadata,
+  UtilityTweakPresetExportPayload,
+  UtilityTweakPresetImportOutcome,
   UtilityTweaksScanResult,
   UtilityConfigActionResult,
   UtilityConfigCatalogResult,
@@ -521,6 +523,10 @@ const api = {
     ipcRenderer.invoke(IPC.UTILITY_TWEAKS_POWER_PLAN_SET, target),
   utilityTweaksLaunchShutUp10: (): Promise<UtilityShutUpLaunchResult> =>
     ipcRenderer.invoke(IPC.UTILITY_TWEAKS_SHUTUP10_LAUNCH),
+  utilityTweaksExportPreset: (payload: UtilityTweakPresetExportPayload): Promise<string | null> =>
+    ipcRenderer.invoke(IPC.UTILITY_TWEAKS_EXPORT_PRESET, payload),
+  utilityTweaksImportPreset: (): Promise<UtilityTweakPresetImportOutcome> =>
+    ipcRenderer.invoke(IPC.UTILITY_TWEAKS_IMPORT_PRESET),
 
   // Utility Tabs - Config
   utilityConfigCatalog: (): Promise<UtilityConfigCatalogResult> =>

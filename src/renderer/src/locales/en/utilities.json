@@ -72,6 +72,13 @@
       "advanced": "Advanced",
       "clear": "Clear"
     },
+    "exportSelection": "Export Selection",
+    "importSelection": "Import Selection",
+    "toastExported": "Tweak selection exported",
+    "toastExportFailed": "Failed to export tweak selection",
+    "toastImported": "Imported {{count}} tweaks",
+    "toastImportSkipped": "{{skipped}} unknown IDs were skipped",
+    "toastImportInvalid": "Invalid or empty tweak selection file",
     "powerPlansTitle": "Performance Plans",
     "powerPlansDescription": "Switch between Windows Balanced mode and Ultimate Performance.",
     "powerPlans": {

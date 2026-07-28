@@ -87,7 +87,7 @@ export function registerCleanerIpc(getWindow: WindowGetter): void {
   registerFirewallAuditIpc(getWindow)
   registerSoftwareUpdaterIpc(getWindow)
   registerUtilityInstallIpc(getWindow)
-  registerUtilityTweaksIpc()
+  registerUtilityTweaksIpc(getWindow)
   registerUtilityConfigIpc(getWindow)
   registerCloudAgentIpc()
   registerDeviceApiIpc()

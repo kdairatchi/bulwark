@@ -1096,6 +1096,32 @@ export interface UtilityTweakActionResult {
   restorePoint?: RestorePointResult
 }
 
+export const UTILITY_TWEAK_PRESET_KIND = 'bulwrk-utility-tweaks' as const
+export const UTILITY_TWEAK_PRESET_VERSION = 1 as const
+
+export interface UtilityTweakPresetFile {
+  version: typeof UTILITY_TWEAK_PRESET_VERSION
+  kind: typeof UTILITY_TWEAK_PRESET_KIND
+  selected: string[]
+  applied?: Record<string, boolean>
+}
+
+export interface UtilityTweakPresetExportPayload {
+  selected: string[]
+  applied?: Record<string, boolean>
+}
+
+export interface UtilityTweakPresetImportResult {
+  ok: true
+  selected: string[]
+  skipped: number
+  path: string
+}
+
+export type UtilityTweakPresetImportOutcome =
+  | UtilityTweakPresetImportResult
+  | { ok: false; reason: 'canceled' | 'invalid' }
+
 export type UtilityConfigFeatureKind = 'optional-feature' | 'boot' | 'scheduled-task'
 export type UtilityConfigFeatureStatus = 'enabled' | 'disabled' | 'partial' | 'unavailable' | 'unknown'
 

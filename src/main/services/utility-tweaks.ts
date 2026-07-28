@@ -11,7 +11,12 @@ import type {
   UtilityPowerPlanTarget,
   UtilityTweakActionResult,
   UtilityTweakMetadata,
+  UtilityTweakPresetFile,
   UtilityTweaksScanResult,
+} from '../../shared/types'
+import {
+  UTILITY_TWEAK_PRESET_KIND,
+  UTILITY_TWEAK_PRESET_VERSION,
 } from '../../shared/types'
 
 const execFileAsync = promisify(execFile)
@@ -85,6 +90,57 @@ export function validateUtilityTweakIds(ids: unknown, maxItems = 100): string[] 
     }
   }
   return unique
+}
+
+/** Soft filter for preset import — keeps known IDs and reports how many were skipped. */
+export function filterKnownUtilityTweakIds(ids: unknown, maxItems = 100): { selected: string[]; skipped: number } | null {
+  if (!Array.isArray(ids) || ids.length > maxItems) return null
+  const known = new Set(UTILITY_TWEAK_CATALOG.map((t) => t.id))
+  const unique: string[] = []
+  const seen = new Set<string>()
+  let skipped = 0
+  for (const id of ids) {
+    if (typeof id !== 'string' || !known.has(id)) {
+      skipped += 1
+      continue
+    }
+    if (!seen.has(id)) {
+      seen.add(id)
+      unique.push(id)
+    }
+  }
+  return { selected: unique, skipped }
+}
+
+export function buildUtilityTweakPreset(
+  selected: string[],
+  applied?: Record<string, boolean>,
+): UtilityTweakPresetFile {
+  const payload: UtilityTweakPresetFile = {
+    version: UTILITY_TWEAK_PRESET_VERSION,
+    kind: UTILITY_TWEAK_PRESET_KIND,
+    selected: [...selected],
+  }
+  if (applied && Object.keys(applied).length > 0) {
+    const known = new Set(selected)
+    const snapshot: Record<string, boolean> = {}
+    for (const [id, value] of Object.entries(applied)) {
+      if (known.has(id) && typeof value === 'boolean') snapshot[id] = value
+    }
+    if (Object.keys(snapshot).length > 0) payload.applied = snapshot
+  }
+  return payload
+}
+
+export function parseUtilityTweakPreset(raw: unknown): {
+  selected: string[]
+  skipped: number
+} | null {
+  if (!raw || typeof raw !== 'object') return null
+  const obj = raw as Record<string, unknown>
+  if (obj.kind !== UTILITY_TWEAK_PRESET_KIND) return null
+  if (obj.version !== UTILITY_TWEAK_PRESET_VERSION) return null
+  return filterKnownUtilityTweakIds(obj.selected)
 }
 
 export async function scanTweaks(): Promise<UtilityTweaksScanResult> {

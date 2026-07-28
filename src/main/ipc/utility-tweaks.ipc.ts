@@ -1,5 +1,5 @@
-import { ipcMain, shell } from 'electron'
-import { existsSync } from 'fs'
+import { dialog, ipcMain, shell } from 'electron'
+import { existsSync, readFileSync, writeFileSync } from 'fs'
 import { isAbsolute, relative, resolve } from 'path'
 import { IPC } from '../../shared/channels'
 import type {
@@ -9,24 +9,46 @@ import type {
   UtilityShutUpLaunchResult,
   UtilityTweakActionResult,
   UtilityTweakMetadata,
+  UtilityTweakPresetExportPayload,
+  UtilityTweakPresetImportOutcome,
   UtilityTweaksScanResult,
 } from '../../shared/types'
 import {
   applyTweaks,
+  buildUtilityTweakPreset,
   getCatalog,
   getUtilityPowerPlan,
+  parseUtilityTweakPreset,
   revertTweaks,
   scanTweaks,
   setUtilityPowerPlan,
   UTILITY_POWER_PLAN_TARGETS,
   validateUtilityTweakIds,
 } from '../services/utility-tweaks'
+import type { WindowGetter } from './index'
 
 function validatePowerPlanTarget(input: unknown): UtilityPowerPlanTarget | null {
   if (typeof input !== 'string') return null
   return UTILITY_POWER_PLAN_TARGETS.includes(input as UtilityPowerPlanTarget)
     ? input as UtilityPowerPlanTarget
     : null
+}
+
+function parseExportPayload(input: unknown): UtilityTweakPresetExportPayload | null {
+  if (!input || typeof input !== 'object') return null
+  const obj = input as Record<string, unknown>
+  const selected = validateUtilityTweakIds(obj.selected)
+  if (!selected || selected.length === 0) return null
+
+  let applied: Record<string, boolean> | undefined
+  if (obj.applied && typeof obj.applied === 'object' && !Array.isArray(obj.applied)) {
+    applied = {}
+    for (const [id, value] of Object.entries(obj.applied as Record<string, unknown>)) {
+      if (typeof value === 'boolean') applied[id] = value
+    }
+  }
+
+  return { selected, applied }
 }
 
 const SHUTUP10_DOWNLOAD_URL = 'https://www.oo-software.com/en/shutup10'
@@ -94,7 +116,7 @@ async function launchShutUp10(): Promise<UtilityShutUpLaunchResult> {
   return { opened: true, fallback: true, path: SHUTUP10_DOWNLOAD_URL }
 }
 
-export function registerUtilityTweaksIpc(): void {
+export function registerUtilityTweaksIpc(getWindow: WindowGetter): void {
   ipcMain.handle(IPC.UTILITY_TWEAKS_CATALOG, async (): Promise<UtilityTweakMetadata[]> => {
     if (process.platform !== 'win32') return []
     return getCatalog()
@@ -143,5 +165,68 @@ export function registerUtilityTweaksIpc(): void {
   ipcMain.handle(
     IPC.UTILITY_TWEAKS_SHUTUP10_LAUNCH,
     async (): Promise<UtilityShutUpLaunchResult> => launchShutUp10(),
+  )
+
+  ipcMain.handle(
+    IPC.UTILITY_TWEAKS_EXPORT_PRESET,
+    async (_event, payload: unknown): Promise<string | null> => {
+      const parsed = parseExportPayload(payload)
+      if (!parsed) return null
+
+      const win = getWindow()
+      const opts: Electron.SaveDialogOptions = {
+        title: 'Export tweak selection',
+        defaultPath: 'bulwrk-tweaks.json',
+        filters: [{ name: 'JSON', extensions: ['json'] }],
+      }
+      const result = process.platform === 'darwin' || !win
+        ? await dialog.showSaveDialog(opts)
+        : await dialog.showSaveDialog(win, opts)
+      if (result.canceled || !result.filePath) return null
+
+      try {
+        const file = buildUtilityTweakPreset(parsed.selected, parsed.applied)
+        writeFileSync(result.filePath, `${JSON.stringify(file, null, 2)}\n`, 'utf-8')
+        return result.filePath
+      } catch {
+        return null
+      }
+    },
+  )
+
+  ipcMain.handle(
+    IPC.UTILITY_TWEAKS_IMPORT_PRESET,
+    async (): Promise<UtilityTweakPresetImportOutcome> => {
+      const win = getWindow()
+      const opts: Electron.OpenDialogOptions = {
+        title: 'Import tweak selection',
+        properties: ['openFile'],
+        filters: [{ name: 'JSON', extensions: ['json'] }],
+      }
+      const result = process.platform === 'darwin' || !win
+        ? await dialog.showOpenDialog(opts)
+        : await dialog.showOpenDialog(win, opts)
+      if (result.canceled || result.filePaths.length === 0) {
+        return { ok: false, reason: 'canceled' }
+      }
+
+      const filePath = result.filePaths[0]
+      try {
+        const rawText = readFileSync(filePath, 'utf-8')
+        const parsedJson = JSON.parse(rawText) as unknown
+        const parsed = parseUtilityTweakPreset(parsedJson)
+        if (!parsed || parsed.selected.length === 0) {
+          return { ok: false, reason: 'invalid' }
+        }
+        return {
+          ok: true,
+          selected: parsed.selected,
+          skipped: parsed.skipped,
+          path: filePath,
+        }
+      } catch {
+        return { ok: false, reason: 'invalid' }
+      }
+    },
   )
 }

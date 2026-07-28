@@ -241,6 +241,8 @@ export const IPC = {
   UTILITY_TWEAKS_POWER_PLAN_GET: 'utility-tweaks:power-plan:get',
   UTILITY_TWEAKS_POWER_PLAN_SET: 'utility-tweaks:power-plan:set',
   UTILITY_TWEAKS_SHUTUP10_LAUNCH: 'utility-tweaks:shutup10:launch',
+  UTILITY_TWEAKS_EXPORT_PRESET: 'utility-tweaks:export-preset',
+  UTILITY_TWEAKS_IMPORT_PRESET: 'utility-tweaks:import-preset',
 
   // Utility Tabs - Config (WinUtil-style Windows features, panels, OpenSSH, fixes)
   UTILITY_CONFIG_CATALOG: 'utility-config:catalog',

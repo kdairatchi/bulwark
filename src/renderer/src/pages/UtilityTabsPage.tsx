@@ -22,6 +22,8 @@ import {
   Server,
   Wrench,
   XCircle,
+  FileDown,
+  FileUp,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { PageHeader } from '@/components/layout/PageHeader'
@@ -588,6 +590,41 @@ function TweaksTab() {
     selectIds(tweaks.map((tweak) => tweak.id))
   }
 
+  const exportSelection = async () => {
+    if (selected.size === 0) {
+      toast.error(t('tweaks.toastNothingSelected'))
+      return
+    }
+    try {
+      const path = await window.kudu.utilityTweaksExportPreset({
+        selected: [...selected],
+        applied,
+      })
+      if (!path) return
+      toast.success(t('tweaks.toastExported'), { description: path })
+    } catch {
+      toast.error(t('tweaks.toastExportFailed'))
+    }
+  }
+
+  const importSelection = async () => {
+    try {
+      const result = await window.kudu.utilityTweaksImportPreset()
+      if (!result.ok) {
+        if (result.reason === 'invalid') toast.error(t('tweaks.toastImportInvalid'))
+        return
+      }
+      selectIds(result.selected)
+      toast.success(t('tweaks.toastImported', { count: result.selected.length }), {
+        description: result.skipped > 0
+          ? t('tweaks.toastImportSkipped', { skipped: result.skipped })
+          : result.path,
+      })
+    } catch {
+      toast.error(t('tweaks.toastImportInvalid'))
+    }
+  }
+
   const scanInstalled = async () => {
     setScanning(true)
     try {
@@ -757,6 +794,26 @@ function TweaksTab() {
             {t(`tweaks.presets.${preset}`)}
           </button>
         ))}
+        <button
+          type="button"
+          disabled={running || scanning || selected.size === 0}
+          onClick={() => void exportSelection()}
+          className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-[12px] font-medium disabled:opacity-40"
+          style={{ background: 'var(--bg-subtle)', color: 'var(--text-secondary)', border: '1px solid var(--border-default)' }}
+        >
+          <FileDown className="h-3.5 w-3.5" />
+          {t('tweaks.exportSelection')}
+        </button>
+        <button
+          type="button"
+          disabled={running || scanning}
+          onClick={() => void importSelection()}
+          className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-[12px] font-medium disabled:opacity-40"
+          style={{ background: 'var(--bg-subtle)', color: 'var(--text-secondary)', border: '1px solid var(--border-default)' }}
+        >
+          <FileUp className="h-3.5 w-3.5" />
+          {t('tweaks.importSelection')}
+        </button>
       </div>
 
       <div className="flex flex-wrap gap-2">
