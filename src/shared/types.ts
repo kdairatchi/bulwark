@@ -131,6 +131,13 @@ export interface CleanResult {
   filesSkipped: number
   errors: CleanError[]
   needsElevation: boolean
+  /** True when this result came from a dry-run (nothing was deleted). */
+  dryRun?: boolean
+}
+
+export interface CleanOptions {
+  /** Enumerate would-delete paths without removing anything. */
+  dryRun?: boolean
 }
 
 export interface CleanError {
@@ -668,6 +675,12 @@ export interface KuduSettings {
     secureDelete: boolean
     closeBrowsersBeforeClean: boolean
     createRestorePoint: boolean
+    /**
+     * When true on Windows, refuse destructive cleans if a System Restore point
+     * cannot be created (except the OS 24h frequency throttle, which is treated
+     * as an existing recent checkpoint). No-op on Linux/macOS.
+     */
+    requireRestorePoint: boolean
     protectRecycleBin: boolean
     /**
      * Record every deleted path to the deletion log so past cleans can be

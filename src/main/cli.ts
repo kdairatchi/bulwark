@@ -39,6 +39,8 @@ export interface ParsedCliArgs {
   version: boolean
   hasLegacyFlags: boolean
   hasCleanFlag: boolean
+  hasDryRunFlag: boolean
+  hasForceFlag: boolean
 }
 
 // ─── Output helpers ──────────────────────────────────────────
@@ -136,8 +138,10 @@ export function parseCliArgs(argv: string[]): ParsedCliArgs {
   const legacyCats = ['system', 'browser', 'app', 'gaming', 'recycle-bin']
   const hasLegacyFlags = legacyCats.some(c => cliArgs.includes(`--${c}`)) || cliArgs.includes('--all')
   const hasCleanFlag = cliArgs.includes('--clean')
+  const hasDryRunFlag = cliArgs.includes('--dry-run')
+  const hasForceFlag = cliArgs.includes('--force')
 
-  return { command, commandArgs, ctx, help, version, hasLegacyFlags, hasCleanFlag }
+  return { command, commandArgs, ctx, help, version, hasLegacyFlags, hasCleanFlag, hasDryRunFlag, hasForceFlag }
 }
 
 // ─── Legacy scan implementations (file-based cleaners) ───────
@@ -553,6 +557,9 @@ Global Options:
   --verbose       Show detailed progress, timing, and debug info
   -q, --quiet     Suppress all output except errors and final result
   --all           Select all items for action commands
+  --clean         Delete items found by a scan (combine with --dry-run to preview)
+  --dry-run       With --clean: report what would be deleted without removing files
+  --force         Bypass require-restore-point gate (Windows)
   -h, --help      Show this help
   -v, --version   Show version
 
@@ -568,6 +575,7 @@ Exit Codes:
 
 Examples:
   kudu --cli scan --all --clean        Scan & clean all file categories
+  kudu --cli scan --all --clean --dry-run   Preview deletes without removing files
   kudu --cli registry scan --json      Scan registry, JSON output
   kudu --cli debloat scan              List removable bloatware
   kudu --cli startup list              Show startup items
@@ -1146,9 +1154,27 @@ async function handleLeftovers(args: string[], ctx: CliContext): Promise<number 
     }
     if (sub === 'clean') {
       if (totalItems === 0) { cliOut(ctx, ctx.json ? { message: 'No leftovers found' } : 'No leftovers found.'); return ExitCode.NOTHING_FOUND }
-      cliLog(ctx, `Cleaning ${totalItems} items (${formatBytes(totalSize)})...`)
+      const dryRun = args.includes('--dry-run')
+      const force = args.includes('--force')
+      const { getSettings } = await import('./services/settings-store')
+      const { assertDestructiveAllowed } = await import('./services/destructive-action-gate')
+      const gate = await assertDestructiveAllowed({
+        description: `Bulwark leftovers clean — ${new Date().toISOString()}`,
+        dryRun,
+        requireRestorePoint: getSettings().cleaner.requireRestorePoint === true,
+        force,
+      })
+      if (!gate.allowed) {
+        cliOut(ctx, ctx.json
+          ? { error: 'restore_point_required', message: gate.error, gate }
+          : `Clean blocked: ${gate.error || 'Restore point required'}`)
+        return ExitCode.GENERAL_ERROR
+      }
+      cliLog(ctx, dryRun
+        ? `Dry-run: would clean ${totalItems} items (${formatBytes(totalSize)})...`
+        : `Cleaning ${totalItems} items (${formatBytes(totalSize)})...`)
       const itemIds = results.flatMap(r => r.items.map(i => i.id))
-      const cleanResult = await cleanItems(itemIds, undefined, 'cli')
+      const cleanResult = await cleanItems(itemIds, undefined, 'cli', { dryRun })
       cliOut(ctx, cleanResult)
     }
   } else {
@@ -1552,7 +1578,13 @@ async function handleMetricsServer(args: string[], ctx: CliContext): Promise<voi
 
 // ─── Legacy file cleaner (backward compatible) ───────────────
 
-async function runLegacyScanClean(categories: string[], doClean: boolean, ctx: CliContext): Promise<number> {
+async function runLegacyScanClean(
+  categories: string[],
+  doClean: boolean,
+  ctx: CliContext,
+  opts: { dryRun?: boolean; force?: boolean } = {},
+): Promise<number> {
+  const dryRun = opts.dryRun === true
   const scannerMap: Record<string, () => Promise<ScanResult[]>> = {
     system: scanSystem,
     browser: scanBrowserCli,
@@ -1595,7 +1627,30 @@ async function runLegacyScanClean(categories: string[], doClean: boolean, ctx: C
 
   let cleanResult: CleanResult | null = null
   if (doClean && totalItems > 0) {
-    cliLog(ctx, `Cleaning ${totalItems} items (${formatBytes(totalSize)})...`)
+    const { getSettings } = await import('./services/settings-store')
+    const { assertDestructiveAllowed } = await import('./services/destructive-action-gate')
+    const gate = await assertDestructiveAllowed({
+      description: `Bulwark CLI clean — ${new Date().toISOString()}`,
+      dryRun,
+      requireRestorePoint: getSettings().cleaner.requireRestorePoint === true,
+      force: opts.force === true,
+    })
+    if (!gate.allowed) {
+      const msg = gate.error || 'Restore point required before clean.'
+      if (ctx.json) {
+        cliOut(ctx, { error: 'restore_point_required', message: msg, gate })
+      } else {
+        cliLog(ctx, `Clean blocked: ${msg}`)
+        cliLog(ctx, 'Enable a successful System Restore point, or pass --force / --dry-run.')
+      }
+      return ExitCode.GENERAL_ERROR
+    }
+    if (gate.restoreSucceeded) cliLog(ctx, 'System restore point created.')
+    else if (gate.skipReason === 'restore_throttled') cliLog(ctx, 'Restore point recently created (Windows throttle) — continuing.')
+
+    cliLog(ctx, dryRun
+      ? `Dry-run: would clean ${totalItems} items (${formatBytes(totalSize)})...`
+      : `Cleaning ${totalItems} items (${formatBytes(totalSize)})...`)
     const hasTrashPath = getPlatform().paths.trashPath() !== null
     // On macOS/Linux, trash items are real files scanned via scanDirectory — clean them with cleanItems
     // On Windows, recycle bin items are virtual (COM-based) and need special handling
@@ -1610,21 +1665,42 @@ async function runLegacyScanClean(categories: string[], doClean: boolean, ctx: C
     let fileCleaned: CleanResult = { totalCleaned: 0, filesDeleted: 0, filesSkipped: 0, errors: [], needsElevation: false }
     let recycleCleaned: CleanResult = { totalCleaned: 0, filesDeleted: 0, filesSkipped: 0, errors: [], needsElevation: false }
     let dbCleaned: CleanResult = { totalCleaned: 0, filesDeleted: 0, filesSkipped: 0, errors: [], needsElevation: false }
-    if (fileItemIds.length > 0) fileCleaned = await cleanItems(fileItemIds, undefined, 'cli')
-    if (hasRecycleBin) {
+    if (fileItemIds.length > 0) fileCleaned = await cleanItems(fileItemIds, undefined, 'cli', { dryRun })
+    if (hasRecycleBin && !dryRun) {
       const rbSize = allResults.find(r => r.category === CleanerType.RecycleBin)?.totalSize || 0
       recycleCleaned = await cleanRecycleBin(rbSize)
+    } else if (hasRecycleBin && dryRun) {
+      const rb = allResults.find(r => r.category === CleanerType.RecycleBin)
+      recycleCleaned = {
+        totalCleaned: rb?.totalSize || 0,
+        filesDeleted: rb?.itemCount || 0,
+        filesSkipped: 0,
+        errors: [],
+        needsElevation: false,
+        dryRun: true,
+      }
     }
-    if (dbItemIds.length > 0) dbCleaned = await cleanDatabasesCli(dbItemIds)
+    if (dbItemIds.length > 0 && !dryRun) dbCleaned = await cleanDatabasesCli(dbItemIds)
+    else if (dbItemIds.length > 0 && dryRun) {
+      dbCleaned = {
+        totalCleaned: allResults.filter(r => r.category === CleanerType.Database).reduce((s, r) => s + r.totalSize, 0),
+        filesDeleted: dbItemIds.length,
+        filesSkipped: 0,
+        errors: [],
+        needsElevation: false,
+        dryRun: true,
+      }
+    }
     cleanResult = {
       totalCleaned: fileCleaned.totalCleaned + recycleCleaned.totalCleaned + dbCleaned.totalCleaned,
       filesDeleted: fileCleaned.filesDeleted + recycleCleaned.filesDeleted + dbCleaned.filesDeleted,
       filesSkipped: fileCleaned.filesSkipped + recycleCleaned.filesSkipped + dbCleaned.filesSkipped,
       errors: [...fileCleaned.errors, ...recycleCleaned.errors, ...dbCleaned.errors],
       needsElevation: fileCleaned.needsElevation || recycleCleaned.needsElevation || dbCleaned.needsElevation,
+      dryRun: dryRun || undefined,
     }
     if (showProgress(ctx)) {
-      log(`  Deleted: ${cleanResult.filesDeleted} items (${formatBytes(cleanResult.totalCleaned)})`)
+      log(`  ${dryRun ? 'Would delete' : 'Deleted'}: ${cleanResult.filesDeleted} items (${formatBytes(cleanResult.totalCleaned)})`)
       if (cleanResult.filesSkipped > 0) log(`  Skipped: ${cleanResult.filesSkipped} items`)
       if (cleanResult.errors.length > 0) {
         log(`  Errors: ${cleanResult.errors.length}`)
@@ -1653,7 +1729,7 @@ async function runLegacyScanClean(categories: string[], doClean: boolean, ctx: C
   } else {
     cliLog(ctx, '─'.repeat(50))
     cliLog(ctx, `Total: ${totalItems} items, ${formatBytes(totalSize)}`)
-    if (cleanResult) cliLog(ctx, `Cleaned: ${formatBytes(cleanResult.totalCleaned)}`)
+    if (cleanResult) cliLog(ctx, `${cleanResult.dryRun ? 'Would clean' : 'Cleaned'}: ${formatBytes(cleanResult.totalCleaned)}`)
     else if (totalItems > 0) cliLog(ctx, 'Run with --clean to delete these items.')
   }
 
@@ -1697,7 +1773,10 @@ export async function runCli(): Promise<void> {
       if (categories.length === 0) categories = [...legacyCats]
     }
     const doClean = parsed.hasCleanFlag || parsed.command === 'clean'
-    const exitCode = await runLegacyScanClean(categories, doClean, ctx)
+    const exitCode = await runLegacyScanClean(categories, doClean, ctx, {
+      dryRun: parsed.hasDryRunFlag,
+      force: parsed.hasForceFlag,
+    })
     app.exit(exitCode)
     return
   }

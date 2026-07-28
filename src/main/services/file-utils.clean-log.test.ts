@@ -96,6 +96,19 @@ describe('cleanItems deletion logging', () => {
     expect(state.batches).toBe(0)
   })
 
+  it('dry-run counts would-delete without removing files or logging', async () => {
+    state.keepDeletionLog = true
+    const items = seedItems(2)
+    const result = await cleanItems(['id-0', 'id-1'], undefined, 'local', { dryRun: true })
+
+    expect(result.dryRun).toBe(true)
+    expect(result.filesDeleted).toBe(2)
+    expect(result.totalCleaned).toBe(20)
+    expect(existsSync(items[0].path)).toBe(true)
+    expect(existsSync(items[1].path)).toBe(true)
+    expect(state.recorded).toHaveLength(0)
+  })
+
   it('records one entry per deleted file when the setting is on', async () => {
     state.keepDeletionLog = true
     const items = seedItems(3)
