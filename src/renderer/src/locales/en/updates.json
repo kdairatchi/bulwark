@@ -54,6 +54,7 @@
       "noWindowsManager": "No package manager found",
       "windowsManagerHint": "Install winget (App Installer), Chocolatey, Scoop, or npm to check for and install software updates."
     },
+    "copyInstallCommand": "Copy install guidance",
     "statOutdatedApps": "Outdated Apps",
     "statMajorUpdates": "Major Updates",
     "statMinorUpdates": "Minor Updates",

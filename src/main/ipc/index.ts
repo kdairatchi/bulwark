@@ -111,7 +111,9 @@ export function registerCleanerIpc(getWindow: WindowGetter): void {
       drivers: isWin,
       restorePoint: isWin,
       bootTrace: isWin,
-      gameMode: isWin,
+      // Game Mode has a cross-platform core (process cleanup, prevent-sleep,
+      // and DNS flush); Windows adds service/registry/power-plan controls.
+      gameMode: true,
       firewallAudit: isWin,
       contextMenu: isWin,
     },

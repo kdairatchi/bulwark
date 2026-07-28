@@ -76,14 +76,14 @@ let suppressedGame: string | null = null
 
 async function getRunningProcessNames(): Promise<Set<string>> {
   try {
-    const { stdout } = await execFileAsync('tasklist', ['/FO', 'CSV', '/NH'], {
-      timeout: 10_000,
-      windowsHide: true,
-    })
+    const isWindows = process.platform === 'win32'
+    const { stdout } = isWindows
+      ? await execFileAsync('tasklist', ['/FO', 'CSV', '/NH'], { timeout: 10_000, windowsHide: true })
+      : await execFileAsync(process.platform === 'darwin' ? '/bin/ps' : '/usr/bin/ps', ['-axo', 'comm='], { timeout: 10_000 })
     const names = new Set<string>()
     for (const line of stdout.split('\n')) {
-      const match = line.match(/^"([^"]+)"/)
-      if (match) names.add(match[1].toLowerCase())
+      const match = isWindows ? line.match(/^"([^"]+)"/) : line.trim().match(/^(.+)$/)
+      if (match?.[1]) names.add(match[1].toLowerCase())
     }
     return names
   } catch {
@@ -93,7 +93,7 @@ async function getRunningProcessNames(): Promise<Set<string>> {
 
 function findGame(running: Set<string>, customGameProcesses: string[]): string | null {
   for (const proc of running) {
-    if (KNOWN_GAME_PROCESSES.has(proc)) return proc
+    if (KNOWN_GAME_PROCESSES.has(proc) || KNOWN_GAME_PROCESSES.has(`${proc}.exe`)) return proc
   }
   for (const custom of customGameProcesses) {
     if (running.has(custom.toLowerCase())) return custom.toLowerCase()
