@@ -60,6 +60,17 @@ class DeviceAgentService(
         return runCatching {
             val client = DeviceApiClient(identity.baseUrl)
             client.heartbeat(identity)
+            // Pull remote policy every tick (versioned); apply before executing commands.
+            runCatching {
+                val policy = client.getPolicy(identity)
+                blocklistStore.applyPolicy(policy)
+                if (policy.dnsGuardRequired || policy.isolated) {
+                    // Best-effort: UI/user may still need to approve VPN permission.
+                    if (!DnsGuardVpnService.isRunning) {
+                        DnsGuardVpnService.start(context)
+                    }
+                }
+            }
             val commands = client.pollCommands(identity)
             var processed = 0
             var rejected = 0
@@ -148,6 +159,62 @@ class DeviceAgentService(
                     "blocklistSize" to blocklistStore.size(),
                 )
             }
+            "ISOLATE_DEVICE" -> {
+                val policy = (blocklistStore.loadPolicy() ?: com.bulwark.deviceapi.DevicePolicy()).copy(
+                    isolated = true,
+                    dnsGuardRequired = true,
+                    version = (blocklistStore.loadPolicy()?.version ?: 0) + 1,
+                )
+                blocklistStore.applyPolicy(policy)
+                if (!DnsGuardVpnService.isRunning) DnsGuardVpnService.start(context)
+                mapOf(
+                    "ok" to true,
+                    "type" to type,
+                    "applied" to true,
+                    "isolated" to true,
+                    "mode" to blocklistStore.mode().name,
+                    "allowlistSize" to blocklistStore.size(),
+                    "reason" to (parameters["reason"] ?: "command"),
+                )
+            }
+            "CLEAR_ISOLATION" -> {
+                val prev = blocklistStore.loadPolicy()
+                val policy = (prev ?: com.bulwark.deviceapi.DevicePolicy()).copy(
+                    isolated = false,
+                    version = (prev?.version ?: 0) + 1,
+                )
+                blocklistStore.applyPolicy(policy)
+                if (policy.blockedDomains.isEmpty()) {
+                    blocklistStore.replaceAll(BlocklistStore.STARTER)
+                }
+                mapOf(
+                    "ok" to true,
+                    "type" to type,
+                    "applied" to true,
+                    "isolated" to false,
+                    "mode" to blocklistStore.mode().name,
+                )
+            }
+            "APPLY_POLICY" -> {
+                val identity = store.load()
+                if (identity == null) {
+                    mapOf("ok" to false, "error" to "not enrolled", "type" to type)
+                } else {
+                    val policy = DeviceApiClient(identity.baseUrl).getPolicy(identity)
+                    blocklistStore.applyPolicy(policy)
+                    if (policy.dnsGuardRequired || policy.isolated) {
+                        if (!DnsGuardVpnService.isRunning) DnsGuardVpnService.start(context)
+                    }
+                    mapOf(
+                        "ok" to true,
+                        "type" to type,
+                        "applied" to true,
+                        "version" to policy.version,
+                        "isolated" to policy.isolated,
+                        "mode" to blocklistStore.mode().name,
+                    )
+                }
+            }
             "RUN_MALWARE_SCAN", "RUN_VULNERABILITY_SCAN" -> {
                 val findings = AppPosture.analyze(collectAppRecords())
                 mapOf(
@@ -185,6 +252,9 @@ class DeviceAgentService(
             "postureScore" to health["score"],
             "dnsGuard" to DnsGuardVpnService.trafficSummary() + mapOf(
                 "blocklistSize" to blocklistStore.size(),
+                "mode" to blocklistStore.mode().name,
+                "isolated" to blocklistStore.isIsolated(),
+                "policyVersion" to blocklistStore.loadPolicy()?.version,
             ),
             "_findings" to findings,
         )

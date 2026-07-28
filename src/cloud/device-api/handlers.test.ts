@@ -3,7 +3,8 @@ import { DeviceStore } from './store'
 import {
   createPairingCode, enrollDevice, listDevices, getDevice, listFindings,
   authenticateDevice, heartbeat, submitInventory, submitFindings,
-  getServerKey, issueCommand, pollCommands, commandResult, type SignedRequest,
+  getServerKey, issueCommand, pollCommands, commandResult,
+  getPolicy, putPolicy, isolateDevice, clearIsolation, type SignedRequest,
 } from './handlers'
 import { generateDeviceKeyPair, signMessage, canonicalRequest, sha256Hex } from './crypto'
 
@@ -158,5 +159,40 @@ describe('device-api commands', () => {
   it('exposes the server public key for signature verification', () => {
     const store = freshStore()
     expect((getServerKey(store).body as { publicKeyPem: string }).publicKeyPem).toContain('BEGIN PUBLIC KEY')
+  })
+})
+
+describe('device-api policy + emergency isolate', () => {
+  it('returns a default policy and updates it via putPolicy', () => {
+    const store = freshStore()
+    const { deviceId } = enrolledDevice(store)
+    const initial = getPolicy(store, deviceId)
+    expect(initial.status).toBe(200)
+    expect((initial.body as { policy: { isolated: boolean; version: number } }).policy.isolated).toBe(false)
+
+    const updated = putPolicy(store, deviceId, {
+      blockedDomains: ['tracker.malware.test'],
+      dnsGuardRequired: true,
+    })
+    expect(updated.status).toBe(200)
+    const body = updated.body as { policy: { version: number; blockedDomains: string[] }; command: { type: string } }
+    expect(body.policy.version).toBe(2)
+    expect(body.policy.blockedDomains).toEqual(['tracker.malware.test'])
+    expect(body.command.type).toBe('APPLY_POLICY')
+  })
+
+  it('isolates a device and enqueues ISOLATE_DEVICE', () => {
+    const store = freshStore()
+    const { deviceId } = enrolledDevice(store)
+    const res = isolateDevice(store, deviceId, { reason: 'ransomware suspected' })
+    expect(res.status).toBe(202)
+    const body = res.body as { policy: { isolated: boolean }; command: { type: string } }
+    expect(body.policy.isolated).toBe(true)
+    expect(body.command.type).toBe('ISOLATE_DEVICE')
+    expect((pollCommands(store, deviceId).body as { commands: unknown[] }).commands.length).toBeGreaterThanOrEqual(1)
+
+    const cleared = clearIsolation(store, deviceId)
+    expect(cleared.status).toBe(202)
+    expect((cleared.body as { policy: { isolated: boolean } }).policy.isolated).toBe(false)
   })
 })

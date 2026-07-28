@@ -148,6 +148,8 @@ fun BulwarkTvApp() {
                 enrolledAt = identity!!.enrolledAt,
                 dnsRunning = dnsRunning,
                 blocklistSize = blocklist.size(),
+                isolated = blocklist.isIsolated(),
+                filterMode = blocklist.mode().name,
                 dnsStats = DnsGuardVpnService.trafficSummary(),
             )
             Spacer(Modifier.height(20.dp))
@@ -238,6 +240,8 @@ private fun StatusCard(
     enrolledAt: String,
     dnsRunning: Boolean,
     blocklistSize: Int,
+    isolated: Boolean,
+    filterMode: String,
     dnsStats: Map<String, Any?>,
 ) {
     Column(
@@ -251,8 +255,8 @@ private fun StatusCard(
         Text(text = "Hardware: $model", color = Muted, fontSize = 16.sp)
         Text(text = "Enrolled: $enrolledAt", color = Muted, fontSize = 16.sp)
         Text(
-            text = "DNS Guard: ${if (dnsRunning) "ON" else "OFF"} · blocklist $blocklistSize · queries ${dnsStats["queries"]} · blocks ${dnsStats["blocks"]}",
-            color = if (dnsRunning) Accent else Muted,
+            text = "DNS Guard: ${if (dnsRunning) "ON" else "OFF"} · ${if (isolated) "ISOLATED" else filterMode} · list $blocklistSize · queries ${dnsStats["queries"]} · blocks ${dnsStats["blocks"]}",
+            color = if (isolated) Color(0xFFEF4444) else if (dnsRunning) Accent else Muted,
             fontSize = 16.sp,
         )
         val last = dnsStats["lastBlockedHost"] as? String

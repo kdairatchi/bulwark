@@ -47,6 +47,34 @@ class DnsBlocklistTest {
         assertTrue(bl.add("new.bad.invalid"))
         assertEquals(3, bl.size())
     }
+
+    @Test
+    fun isolationAllowlistBlocksEverythingElse() {
+        val bl = DnsBlocklist(listOf("googleapis.com", "android.com"), mode = DnsFilterMode.ALLOWLIST)
+        assertFalse(bl.isBlocked("googleapis.com"))
+        assertFalse(bl.isBlocked("foo.googleapis.com"))
+        assertTrue(bl.isBlocked("tracker.malware.test"))
+        assertTrue(bl.isBlocked("netflix.com"))
+    }
+
+    @Test
+    fun applyPolicySwitchesModes() {
+        val bl = DnsBlocklist(listOf("ads.example.invalid"))
+        applyPolicyToBlocklist(
+            DevicePolicy(isolated = true, isolationAllowlist = listOf("android.com")),
+            bl,
+        )
+        assertEquals(DnsFilterMode.ALLOWLIST, bl.mode)
+        assertTrue(bl.isBlocked("evil.test"))
+        assertFalse(bl.isBlocked("android.com"))
+        applyPolicyToBlocklist(
+            DevicePolicy(isolated = false, blockedDomains = listOf("tracker.malware.test")),
+            bl,
+        )
+        assertEquals(DnsFilterMode.BLOCKLIST, bl.mode)
+        assertTrue(bl.isBlocked("tracker.malware.test"))
+        assertFalse(bl.isBlocked("android.com"))
+    }
 }
 
 class DnsPacketTest {

@@ -142,3 +142,43 @@ export function submitFindings(store: DeviceStore, deviceId: string, input: unkn
   const accepted = store.addFindings(deviceId, findings)
   return { status: 202, body: { accepted } }
 }
+
+export function getPolicy(store: DeviceStore, deviceId: string): HandlerResult {
+  const policy = store.getPolicy(deviceId)
+  if (!policy) return { status: 404, body: { error: 'device not found' } }
+  return { status: 200, body: { policy } }
+}
+
+/** Dashboard: replace/merge policy fields (does not auto-enqueue APPLY_POLICY). */
+export function putPolicy(store: DeviceStore, deviceId: string, input: unknown): HandlerResult {
+  if (!store.getDevice(deviceId)) return { status: 404, body: { error: 'device not found' } }
+  const o = (input ?? {}) as Record<string, unknown>
+  const patch: Record<string, unknown> = {}
+  if (typeof o.isolated === 'boolean') patch.isolated = o.isolated
+  if (typeof o.dnsGuardRequired === 'boolean') patch.dnsGuardRequired = o.dnsGuardRequired
+  if (typeof o.allowInstallUnknown === 'boolean') patch.allowInstallUnknown = o.allowInstallUnknown
+  if (Array.isArray(o.blockedDomains)) {
+    patch.blockedDomains = o.blockedDomains.filter((d): d is string => typeof d === 'string')
+  }
+  if (Array.isArray(o.isolationAllowlist)) {
+    patch.isolationAllowlist = o.isolationAllowlist.filter((d): d is string => typeof d === 'string')
+  }
+  const policy = store.updatePolicy(deviceId, patch as Parameters<DeviceStore['updatePolicy']>[1])
+  // Also enqueue APPLY_POLICY so online agents pick it up quickly.
+  const command = store.issueCommand(deviceId, 'APPLY_POLICY', { version: policy!.version })
+  return { status: 200, body: { policy, command } }
+}
+
+export function isolateDevice(store: DeviceStore, deviceId: string, input: unknown): HandlerResult {
+  const o = (input ?? {}) as Record<string, unknown>
+  const reason = typeof o.reason === 'string' ? o.reason : undefined
+  const result = store.isolateDevice(deviceId, reason)
+  if (!result) return { status: 404, body: { error: 'device not found' } }
+  return { status: 202, body: result }
+}
+
+export function clearIsolation(store: DeviceStore, deviceId: string): HandlerResult {
+  const result = store.clearIsolation(deviceId)
+  if (!result) return { status: 404, body: { error: 'device not found' } }
+  return { status: 202, body: result }
+}

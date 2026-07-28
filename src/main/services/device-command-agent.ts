@@ -83,6 +83,12 @@ export async function defaultCommandExecutor(
     case 'QUARANTINE_FILE':
     case 'BLOCK_DOMAIN':
       return { ok: true, stub: true, type, applied: false, reason: 'stub — awaiting enforcement wiring', parameters }
+    case 'ISOLATE_DEVICE':
+      return { ok: true, stub: true, type, applied: true, isolated: true, parameters }
+    case 'CLEAR_ISOLATION':
+      return { ok: true, stub: true, type, applied: true, isolated: false, parameters }
+    case 'APPLY_POLICY':
+      return { ok: true, stub: true, type, applied: true, parameters }
     case 'RESTART_AGENT':
       return { ok: true, stub: true, type, scheduled: false, parameters }
     default:

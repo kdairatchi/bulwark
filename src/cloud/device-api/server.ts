@@ -7,6 +7,7 @@ import {
   createPairingCode, enrollDevice, listDevices, getDevice, listFindings,
   authenticateDevice, heartbeat, submitInventory, submitFindings,
   getServerKey, issueCommand, pollCommands, commandResult,
+  getPolicy, putPolicy, isolateDevice, clearIsolation,
   type HandlerResult, type SignedRequest,
 } from './handlers'
 
@@ -41,9 +42,9 @@ export function createDeviceApiServer(store: DeviceStore): Server {
       const method = req.method ?? 'GET'
       const url = new URL(req.url ?? '/', 'http://localhost')
       const path = url.pathname
-      const rawBody = method === 'GET' ? '' : await readBody(req)
+      const rawBody = method === 'GET' || method === 'DELETE' ? '' : await readBody(req)
 
-      // ── Public routes ──
+      // ── Public / dashboard routes ──
       if (method === 'POST' && path === '/v1/pairing-codes') return send(res, createPairingCode(store))
       if (method === 'POST' && path === '/v1/devices/enroll') {
         const body = parseJson(rawBody)
@@ -58,7 +59,7 @@ export function createDeviceApiServer(store: DeviceStore): Server {
       if (method === 'GET' && path === '/v1/server-key') return send(res, getServerKey(store))
       const deviceDetail = path.match(/^\/v1\/devices\/([^/]+)$/)
       if (method === 'GET' && deviceDetail) return send(res, getDevice(store, deviceDetail[1]))
-      // Dashboard enqueues a signed command for a device.
+
       const enqueue = path.match(/^\/v1\/devices\/([^/]+)\/commands$/)
       if (method === 'POST' && enqueue) {
         const body = parseJson(rawBody)
@@ -66,14 +67,34 @@ export function createDeviceApiServer(store: DeviceStore): Server {
         return send(res, issueCommand(store, enqueue[1], body))
       }
 
-      // ── Device-authenticated routes (all require a valid device signature) ──
+      // Dashboard policy write + emergency isolate (unsigned in this reference service;
+      // production would require dashboard auth).
+      const policyPath = path.match(/^\/v1\/devices\/([^/]+)\/policy$/)
+      if (method === 'PUT' && policyPath) {
+        const body = parseJson(rawBody)
+        if (body === null) return send(res, { status: 400, body: { error: 'invalid JSON' } })
+        return send(res, putPolicy(store, policyPath[1], body))
+      }
+      const isolatePath = path.match(/^\/v1\/devices\/([^/]+)\/isolate$/)
+      if (method === 'POST' && isolatePath) {
+        const body = parseJson(rawBody)
+        if (body === null) return send(res, { status: 400, body: { error: 'invalid JSON' } })
+        return send(res, isolateDevice(store, isolatePath[1], body))
+      }
+      if (method === 'DELETE' && isolatePath) {
+        return send(res, clearIsolation(store, isolatePath[1]))
+      }
+
+      // ── Device-authenticated routes ──
       const telemetry = path.match(/^\/v1\/devices\/([^/]+)\/(heartbeat|inventory|findings)$/)
       const pollCmds = path.match(/^\/v1\/devices\/([^/]+)\/commands$/)
       const cmdResult = path.match(/^\/v1\/devices\/([^/]+)\/commands\/([^/]+)\/result$/)
+      const getPol = path.match(/^\/v1\/devices\/([^/]+)\/policy$/)
       const authMatch =
         (method === 'POST' && telemetry) ||
         (method === 'GET' && pollCmds) ||
-        (method === 'POST' && cmdResult)
+        (method === 'POST' && cmdResult) ||
+        (method === 'GET' && getPol)
       if (authMatch) {
         const pathDeviceId = authMatch[1]
         const signed: SignedRequest = {
@@ -91,6 +112,7 @@ export function createDeviceApiServer(store: DeviceStore): Server {
           return send(res, { status: 403, body: { error: 'device id mismatch' } })
         }
         if (method === 'GET' && pollCmds) return send(res, pollCommands(store, auth.deviceId))
+        if (method === 'GET' && getPol) return send(res, getPolicy(store, auth.deviceId))
         const body = parseJson(rawBody)
         if (body === null) return send(res, { status: 400, body: { error: 'invalid JSON' } })
         if (cmdResult) return send(res, commandResult(store, auth.deviceId, cmdResult[2], body))

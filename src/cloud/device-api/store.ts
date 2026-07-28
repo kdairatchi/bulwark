@@ -66,12 +66,44 @@ export interface CommandRecord {
   completedAt?: string
 }
 
+/** Remote policy pushed to agents (TV/desktop). */
+export interface DevicePolicy {
+  version: number
+  updatedAt: string
+  isolated: boolean
+  dnsGuardRequired: boolean
+  blockedDomains: string[]
+  /** When isolated, only these domains (and their parents) may resolve. */
+  isolationAllowlist: string[]
+  allowInstallUnknown: boolean
+}
+
+function defaultPolicy(now: number): DevicePolicy {
+  return {
+    version: 1,
+    updatedAt: new Date(now).toISOString(),
+    isolated: false,
+    dnsGuardRequired: false,
+    blockedDomains: [],
+    isolationAllowlist: [
+      'googleapis.com',
+      'gvt1.com',
+      'android.com',
+      'google.com',
+      'cloudflare.com',
+      '1.1.1.1',
+    ],
+    allowInstallUnknown: false,
+  }
+}
+
 export class DeviceStore {
   private pairing = new Map<string, PairingCode>()
   private devices = new Map<string, Device>()
   private findings: StoredFinding[] = []
   private audit: AuditEvent[] = []
   private commands = new Map<string, CommandRecord>()
+  private policies = new Map<string, DevicePolicy>()
   private deps: StoreDeps
   private serverKeys = generateDeviceKeyPair()
 
@@ -207,5 +239,52 @@ export class DeviceStore {
 
   listFindings(deviceId?: string): StoredFinding[] {
     return deviceId ? this.findings.filter((f) => f.deviceId === deviceId) : [...this.findings]
+  }
+
+  getPolicy(deviceId: string): DevicePolicy | null {
+    if (!this.devices.has(deviceId)) return null
+    return this.policies.get(deviceId) ?? defaultPolicy(this.deps.now())
+  }
+
+  /** Merge patch into device policy; bumps version. */
+  updatePolicy(deviceId: string, patch: Partial<DevicePolicy>): DevicePolicy | null {
+    if (!this.devices.has(deviceId)) return null
+    const current = this.getPolicy(deviceId)!
+    const next: DevicePolicy = {
+      ...current,
+      ...patch,
+      blockedDomains: patch.blockedDomains ?? current.blockedDomains,
+      isolationAllowlist: patch.isolationAllowlist ?? current.isolationAllowlist,
+      version: current.version + 1,
+      updatedAt: new Date(this.deps.now()).toISOString(),
+    }
+    this.policies.set(deviceId, next)
+    this.log('policy_updated', `${deviceId} v${next.version}`)
+    return next
+  }
+
+  /**
+   * Dashboard emergency isolate: flip policy.isolated and enqueue a signed
+   * ISOLATE_DEVICE command so the agent acts immediately.
+   */
+  isolateDevice(deviceId: string, reason?: string): { policy: DevicePolicy; command: CommandEnvelope } | null {
+    if (!this.devices.has(deviceId)) return null
+    const policy = this.updatePolicy(deviceId, {
+      isolated: true,
+      dnsGuardRequired: true,
+    })!
+    const command = this.issueCommand(deviceId, 'ISOLATE_DEVICE', { reason: reason ?? 'dashboard' })
+    if (!command) return null
+    this.log('device_isolated', `${deviceId} ${reason ?? ''}`.trim())
+    return { policy, command }
+  }
+
+  clearIsolation(deviceId: string): { policy: DevicePolicy; command: CommandEnvelope } | null {
+    if (!this.devices.has(deviceId)) return null
+    const policy = this.updatePolicy(deviceId, { isolated: false })!
+    const command = this.issueCommand(deviceId, 'CLEAR_ISOLATION', {})
+    if (!command) return null
+    this.log('device_isolation_cleared', deviceId)
+    return { policy, command }
   }
 }

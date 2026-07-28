@@ -89,6 +89,14 @@ class DeviceApiClient(
         signed(identity, "POST", "/v1/devices/${identity.deviceId}/findings", payload)
     }
 
+    fun getPolicy(identity: DeviceIdentity): DevicePolicy {
+        val body = signed(identity, "GET", "/v1/devices/${identity.deviceId}/policy")
+        val obj = JsonLite.parseObject(body)
+        @Suppress("UNCHECKED_CAST")
+        val policy = obj["policy"] as? Map<String, Any?> ?: emptyMap()
+        return DevicePolicy.fromMap(policy)
+    }
+
     private fun parseCommand(raw: Any?): CommandEnvelope? {
         val o = raw as? Map<*, *> ?: return null
         fun str(key: String): String? = o[key] as? String

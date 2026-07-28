@@ -29,6 +29,12 @@ object CommandExecutor {
                 "applied" to false,
                 "reason" to "stub — awaiting enforcement wiring",
             )
+            "ISOLATE_DEVICE", "CLEAR_ISOLATION", "APPLY_POLICY" -> mapOf(
+                "ok" to true,
+                "stub" to true,
+                "type" to type,
+                "applied" to false,
+            )
             "RESTART_AGENT" -> mapOf("ok" to true, "stub" to true, "type" to type, "scheduled" to false)
             else -> mapOf("ok" to false, "error" to "unhandled command type", "type" to type)
         }

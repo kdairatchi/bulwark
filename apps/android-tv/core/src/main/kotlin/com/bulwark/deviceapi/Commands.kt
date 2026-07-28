@@ -14,6 +14,9 @@ val ALLOWED_COMMANDS = setOf(
     "QUARANTINE_FILE",
     "BLOCK_DOMAIN",
     "RESTART_AGENT",
+    "ISOLATE_DEVICE",
+    "CLEAR_ISOLATION",
+    "APPLY_POLICY",
 )
 
 data class CommandEnvelope(

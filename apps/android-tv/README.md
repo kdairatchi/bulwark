@@ -54,12 +54,15 @@ Matches `docs/api/device-and-dashboard-api.md` and
 
 ## Not in this slice (later Phase 4)
 
-Emergency isolation · remote policy sync · Play distribution / signing pipeline ·
-full APK deep static analysis.
+Play distribution / signing pipeline · full APK deep static analysis ·
+packet-level firewall beyond DNS.
 
 ## This slice also includes
 
 - APK SHA-256 + signing-cert SHA-256 + permission risk in inventory
 - Posture score / findings (`AppPosture`)
 - Local DNS blocklist + `DnsGuardVpnService` (NXDOMAIN for blocked names)
-- Commands: `BLOCK_DOMAIN`, `UPDATE_THREAT_FEEDS`, real `RUN_HEALTH_ASSESSMENT`
+- Remote **policy sync** (`GET/PUT …/policy`) and **emergency isolate**
+  (`POST/DELETE …/isolate` → allowlist DNS mode)
+- Commands: `BLOCK_DOMAIN`, `UPDATE_THREAT_FEEDS`, `ISOLATE_DEVICE`,
+  `CLEAR_ISOLATION`, `APPLY_POLICY`, real `RUN_HEALTH_ASSESSMENT`
