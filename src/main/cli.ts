@@ -47,6 +47,17 @@ function log(msg: string): void {
   process.stdout.write(msg + '\n')
 }
 
+/** Await stdout backpressure before Electron exits after a large JSON response. */
+async function writeJsonOutput(data: unknown): Promise<void> {
+  const output = JSON.stringify(data, null, 2) + '\n'
+  await new Promise<void>((resolve, reject) => {
+    process.stdout.write(output, (error?: Error | null) => {
+      if (error) reject(error)
+      else resolve()
+    })
+  })
+}
+
 function formatBytes(bytes: number): string {
   if (!Number.isFinite(bytes) || bytes <= 0) return '0 B'
   const units = ['B', 'KB', 'MB', 'GB', 'TB']
@@ -1649,7 +1660,7 @@ async function runLegacyScanClean(categories: string[], doClean: boolean, ctx: C
       },
     }
     if (cleanResult) output.clean = cleanResult
-    log(JSON.stringify(output, null, 2))
+    await writeJsonOutput(output)
   } else {
     cliLog(ctx, '─'.repeat(50))
     cliLog(ctx, `Total: ${totalItems} items, ${formatBytes(totalSize)}`)
