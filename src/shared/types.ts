@@ -133,11 +133,15 @@ export interface CleanResult {
   needsElevation: boolean
   /** True when this result came from a dry-run (nothing was deleted). */
   dryRun?: boolean
+  /** True when requireRestorePoint blocked the clean. */
+  blockedByRestoreGate?: boolean
 }
 
 export interface CleanOptions {
   /** Enumerate would-delete paths without removing anything. */
   dryRun?: boolean
+  /** Bypass require-restore-point (CLI --force). */
+  force?: boolean
 }
 
 export interface CleanError {

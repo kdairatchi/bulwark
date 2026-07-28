@@ -9,8 +9,8 @@ import { homedir } from 'os'
 import { IPC } from '../../shared/channels'
 import { CleanerType } from '../../shared/enums'
 import { cacheItems } from '../services/scan-cache'
-import { cleanItems } from '../services/file-utils'
-import { validateStringArray } from '../services/ipc-validation'
+import { gatedCleanItems } from '../services/gated-clean'
+import { validateStringArray, parseCleanOptions } from '../services/ipc-validation'
 import type { ScanItem, ScanResult, CleanResult } from '../../shared/types'
 import type { WindowGetter } from './index'
 import { psUtf8 } from '../services/exec-utf8'
@@ -274,10 +274,11 @@ export function registerShortcutCleanerIpc(getWindow: WindowGetter): void {
     return results
   })
 
-  ipcMain.handle(IPC.SHORTCUT_CLEAN, async (_event, itemIds: string[]): Promise<CleanResult> => {
+  ipcMain.handle(IPC.SHORTCUT_CLEAN, async (_event, itemIds: string[], options?: unknown): Promise<CleanResult> => {
     const valid = validateStringArray(itemIds)
     if (!valid) return { totalCleaned: 0, filesDeleted: 0, filesSkipped: 0, errors: [], needsElevation: false }
-    return cleanItems(valid, (processed, total, currentPath, cleanedSize) => {
+    const opts = parseCleanOptions(options)
+    return gatedCleanItems(valid, (processed, total, currentPath, cleanedSize) => {
       const win = getWindow()
       if (win && !win.isDestroyed()) win.webContents.send(IPC.SCAN_PROGRESS, {
         phase: 'cleaning',
@@ -287,6 +288,6 @@ export function registerShortcutCleanerIpc(getWindow: WindowGetter): void {
         itemsFound: total,
         sizeFound: cleanedSize,
       })
-    })
+    }, 'local', opts)
   })
 }

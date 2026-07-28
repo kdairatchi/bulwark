@@ -7,12 +7,14 @@ import { CleanerType } from '../../shared/enums'
 import type { ScanResult, CleanResult } from '../../shared/types'
 import { randomUUID } from 'crypto'
 import { getPlatform } from '../platform'
-import { scanDirectory, cleanItems } from '../services/file-utils'
+import { scanDirectory } from '../services/file-utils'
+import { gatedCleanItems, assertCleanAllowed, blockedCleanResult } from '../services/gated-clean'
 import { cacheItems } from '../services/scan-cache'
 import { psUtf8 } from '../services/exec-utf8'
 import {
   isDeletionLoggingEnabled, listRecycleBinContents, recordEmptiedRecycleBin
 } from '../services/recycle-bin-log'
+import { parseCleanOptions } from '../services/ipc-validation'
 
 const execFileAsync = promisify(execFile)
 
@@ -79,14 +81,15 @@ export function registerRecycleBinIpc(): void {
     }
   })
 
-  ipcMain.handle(IPC.RECYCLE_BIN_CLEAN, async (): Promise<CleanResult> => {
+  ipcMain.handle(IPC.RECYCLE_BIN_CLEAN, async (_event, options?: unknown): Promise<CleanResult> => {
+    const opts = parseCleanOptions(options)
     const trashPath = getPlatform().paths.trashPath()
 
     if (trashPath) {
       // macOS / Linux: delete cached trash items via standard file-utils flow
       try {
-        const result = await cleanItems(lastScannedItemIds)
-        lastScannedItemIds = []
+        const result = await gatedCleanItems(lastScannedItemIds, undefined, 'local', opts)
+        if (!result.blockedByRestoreGate) lastScannedItemIds = []
         return result
       } catch (err: any) {
         return { totalCleaned: 0, filesDeleted: 0, filesSkipped: 0, errors: [{ path: 'Trash', reason: err.message }], needsElevation: false }
@@ -94,7 +97,21 @@ export function registerRecycleBinIpc(): void {
     }
 
     // Windows: SHEmptyRecycleBin Win32 API
+    const gate = await assertCleanAllowed({ dryRun: opts.dryRun })
+    if (!gate.allowed) return blockedCleanResult(gate)
+
     const sizeBeforeClean = lastScannedSize
+    if (opts.dryRun) {
+      return {
+        totalCleaned: sizeBeforeClean,
+        filesDeleted: sizeBeforeClean > 0 ? 1 : 0,
+        filesSkipped: 0,
+        errors: [],
+        needsElevation: false,
+        dryRun: true,
+      }
+    }
+
     // Capture the contents first — after the bin is emptied there is nothing
     // left to enumerate.
     const logDeletions = isDeletionLoggingEnabled()

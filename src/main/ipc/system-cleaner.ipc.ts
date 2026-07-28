@@ -1,13 +1,14 @@
 import { ipcMain } from 'electron'
 import { IPC } from '../../shared/channels'
 import { getPlatform } from '../platform'
-import { scanDirectory, scanFile, scanMultipleDirectories, resolveChildSubdirs, cleanItems } from '../services/file-utils'
+import { scanDirectory, scanFile, scanMultipleDirectories, resolveChildSubdirs } from '../services/file-utils'
+import { gatedCleanItems } from '../services/gated-clean'
 import { cacheItems } from '../services/scan-cache'
 import { isAdmin } from '../services/elevation'
 import type { ScanResult, CleanResult } from '../../shared/types'
 import { CleanerType } from '../../shared/enums'
 import type { WindowGetter } from './index'
-import { validateStringArray } from '../services/ipc-validation'
+import { validateStringArray, parseCleanOptions } from '../services/ipc-validation'
 
 export function registerSystemCleanerIpc(getWindow: WindowGetter): void {
   ipcMain.handle(IPC.SYSTEM_SCAN, async (): Promise<ScanResult[]> => {
@@ -102,10 +103,11 @@ export function registerSystemCleanerIpc(getWindow: WindowGetter): void {
     return results
   })
 
-  ipcMain.handle(IPC.SYSTEM_CLEAN, async (_event, itemIds: string[]): Promise<CleanResult> => {
+  ipcMain.handle(IPC.SYSTEM_CLEAN, async (_event, itemIds: string[], options?: unknown): Promise<CleanResult> => {
     const valid = validateStringArray(itemIds)
     if (!valid) return { totalCleaned: 0, filesDeleted: 0, filesSkipped: 0, errors: [], needsElevation: false }
-    return cleanItems(valid, (processed, total, currentPath, cleanedSize) => {
+    const opts = parseCleanOptions(options)
+    return gatedCleanItems(valid, (processed, total, currentPath, cleanedSize) => {
       const win = getWindow()
       if (win && !win.isDestroyed()) win.webContents.send(IPC.SCAN_PROGRESS, {
         phase: 'cleaning',
@@ -115,6 +117,6 @@ export function registerSystemCleanerIpc(getWindow: WindowGetter): void {
         itemsFound: total,
         sizeFound: cleanedSize,
       })
-    })
+    }, 'local', opts)
   })
 }

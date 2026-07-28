@@ -16,7 +16,8 @@ const Pusher = ((PusherImport as unknown as { Pusher?: typeof PusherImport }).Pu
   ?? PusherImport) as typeof PusherImport
 type Pusher = PusherImport
 import { getSettings, setSettings, getMachineId } from './settings-store'
-import { scanDirectory, scanMultipleDirectories, scanDirectoriesAsItems, resolveChildSubdirs, cleanItems } from './file-utils'
+import { scanDirectory, scanMultipleDirectories, scanDirectoriesAsItems, resolveChildSubdirs } from './file-utils'
+import { gatedCleanItems } from './gated-clean'
 import { cacheItems } from './scan-cache'
 import { BROWSER_CACHE_RECENCY, chromiumBrowsers, chromiumCacheTargets } from './chromium-cache'
 import { psUtf8 } from './exec-utf8'
@@ -2298,8 +2299,16 @@ class CloudAgentService {
     }
 
     // Tagged 'cloud' so a remote clean overlapping a manual one can't have its
-    // deletions attributed to that run's Scan History entry.
-    const fileResult = fileIds.length > 0 ? await cleanItems(fileIds, undefined, 'cloud') : { totalCleaned: 0, filesDeleted: 0, filesSkipped: 0, errors: [] as { path: string; reason: string }[], needsElevation: false }
+    // deletions attributed to that run's Scan History entry. Goes through the
+    // Phase 1 restore gate so requireRestorePoint cannot be bypassed remotely.
+    const fileResult = fileIds.length > 0
+      ? await gatedCleanItems(fileIds, undefined, 'cloud')
+      : { totalCleaned: 0, filesDeleted: 0, filesSkipped: 0, errors: [] as { path: string; reason: string }[], needsElevation: false }
+
+    if (fileResult.blockedByRestoreGate) {
+      await this.postCommandResult(requestId, false, undefined, fileResult.errors[0]?.reason || 'restore_point_required')
+      return
+    }
 
     let dbResult = { totalCleaned: 0, filesDeleted: 0, filesSkipped: 0, errors: [] as { path: string; reason: string }[], needsElevation: false }
     if (dbIds.length > 0) {

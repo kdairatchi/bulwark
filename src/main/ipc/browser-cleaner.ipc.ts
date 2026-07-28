@@ -4,13 +4,14 @@ import { readdir } from 'fs/promises'
 import { join } from 'path'
 import { IPC } from '../../shared/channels'
 import { getPlatform } from '../platform'
-import { scanDirectory, cleanItems } from '../services/file-utils'
+import { scanDirectory } from '../services/file-utils'
+import { gatedCleanItems } from '../services/gated-clean'
 import { cacheItems } from '../services/scan-cache'
 import { getSettings } from '../services/settings-store'
 import { CleanerType } from '../../shared/enums'
 import type { ScanResult, CleanResult } from '../../shared/types'
 import type { WindowGetter } from './index'
-import { validateStringArray } from '../services/ipc-validation'
+import { validateStringArray, parseCleanOptions } from '../services/ipc-validation'
 import { BROWSER_CACHE_RECENCY, chromiumBrowsers, chromiumCacheTargets } from '../services/chromium-cache'
 
 export function registerBrowserCleanerIpc(getWindow: WindowGetter): void {
@@ -89,14 +90,15 @@ export function registerBrowserCleanerIpc(getWindow: WindowGetter): void {
     return results
   })
 
-  ipcMain.handle(IPC.BROWSER_CLEAN, async (_event, itemIds: string[]): Promise<CleanResult> => {
+  ipcMain.handle(IPC.BROWSER_CLEAN, async (_event, itemIds: string[], options?: unknown): Promise<CleanResult> => {
     const valid = validateStringArray(itemIds)
     if (!valid) return { totalCleaned: 0, filesDeleted: 0, filesSkipped: 0, errors: [], needsElevation: false }
+    const opts = parseCleanOptions(options)
     const settings = getSettings()
-    if (settings.cleaner.closeBrowsersBeforeClean) {
+    if (settings.cleaner.closeBrowsersBeforeClean && !opts.dryRun) {
       await getPlatform().browser.closeBrowsers()
     }
-    return cleanItems(valid, (processed, total, currentPath, cleanedSize) => {
+    return gatedCleanItems(valid, (processed, total, currentPath, cleanedSize) => {
       const win = getWindow()
       if (win && !win.isDestroyed()) win.webContents.send(IPC.SCAN_PROGRESS, {
         phase: 'cleaning',
@@ -106,6 +108,6 @@ export function registerBrowserCleanerIpc(getWindow: WindowGetter): void {
         itemsFound: total,
         sizeFound: cleanedSize,
       })
-    })
+    }, 'local', opts)
   })
 }

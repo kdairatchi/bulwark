@@ -2,7 +2,8 @@ import { app } from 'electron'
 import { existsSync } from 'fs'
 import { readdir } from 'fs/promises'
 import { join } from 'path'
-import { scanDirectory, scanFile, scanMultipleDirectories, scanDirectoriesAsItems, resolveChildSubdirs, cleanItems, getDirectorySize } from './services/file-utils'
+import { scanDirectory, scanFile, scanMultipleDirectories, scanDirectoriesAsItems, resolveChildSubdirs, getDirectorySize } from './services/file-utils'
+import { gatedCleanItems } from './services/gated-clean'
 import { cacheItems } from './services/scan-cache'
 import { BROWSER_CACHE_RECENCY, chromiumBrowsers, chromiumCacheTargets } from './services/chromium-cache'
 import { CleanerType } from '../shared/enums'
@@ -1156,25 +1157,17 @@ async function handleLeftovers(args: string[], ctx: CliContext): Promise<number 
       if (totalItems === 0) { cliOut(ctx, ctx.json ? { message: 'No leftovers found' } : 'No leftovers found.'); return ExitCode.NOTHING_FOUND }
       const dryRun = args.includes('--dry-run')
       const force = args.includes('--force')
-      const { getSettings } = await import('./services/settings-store')
-      const { assertDestructiveAllowed } = await import('./services/destructive-action-gate')
-      const gate = await assertDestructiveAllowed({
-        description: `Bulwark leftovers clean — ${new Date().toISOString()}`,
-        dryRun,
-        requireRestorePoint: getSettings().cleaner.requireRestorePoint === true,
-        force,
-      })
-      if (!gate.allowed) {
-        cliOut(ctx, ctx.json
-          ? { error: 'restore_point_required', message: gate.error, gate }
-          : `Clean blocked: ${gate.error || 'Restore point required'}`)
-        return ExitCode.GENERAL_ERROR
-      }
       cliLog(ctx, dryRun
         ? `Dry-run: would clean ${totalItems} items (${formatBytes(totalSize)})...`
         : `Cleaning ${totalItems} items (${formatBytes(totalSize)})...`)
       const itemIds = results.flatMap(r => r.items.map(i => i.id))
-      const cleanResult = await cleanItems(itemIds, undefined, 'cli', { dryRun })
+      const cleanResult = await gatedCleanItems(itemIds, undefined, 'cli', { dryRun, force })
+      if (cleanResult.blockedByRestoreGate) {
+        cliOut(ctx, ctx.json
+          ? { error: 'restore_point_required', message: cleanResult.errors[0]?.reason, result: cleanResult }
+          : `Clean blocked: ${cleanResult.errors[0]?.reason || 'Restore point required'}`)
+        return ExitCode.GENERAL_ERROR
+      }
       cliOut(ctx, cleanResult)
     }
   } else {
@@ -1627,27 +1620,6 @@ async function runLegacyScanClean(
 
   let cleanResult: CleanResult | null = null
   if (doClean && totalItems > 0) {
-    const { getSettings } = await import('./services/settings-store')
-    const { assertDestructiveAllowed } = await import('./services/destructive-action-gate')
-    const gate = await assertDestructiveAllowed({
-      description: `Bulwark CLI clean — ${new Date().toISOString()}`,
-      dryRun,
-      requireRestorePoint: getSettings().cleaner.requireRestorePoint === true,
-      force: opts.force === true,
-    })
-    if (!gate.allowed) {
-      const msg = gate.error || 'Restore point required before clean.'
-      if (ctx.json) {
-        cliOut(ctx, { error: 'restore_point_required', message: msg, gate })
-      } else {
-        cliLog(ctx, `Clean blocked: ${msg}`)
-        cliLog(ctx, 'Enable a successful System Restore point, or pass --force / --dry-run.')
-      }
-      return ExitCode.GENERAL_ERROR
-    }
-    if (gate.restoreSucceeded) cliLog(ctx, 'System restore point created.')
-    else if (gate.skipReason === 'restore_throttled') cliLog(ctx, 'Restore point recently created (Windows throttle) — continuing.')
-
     cliLog(ctx, dryRun
       ? `Dry-run: would clean ${totalItems} items (${formatBytes(totalSize)})...`
       : `Cleaning ${totalItems} items (${formatBytes(totalSize)})...`)
@@ -1665,7 +1637,19 @@ async function runLegacyScanClean(
     let fileCleaned: CleanResult = { totalCleaned: 0, filesDeleted: 0, filesSkipped: 0, errors: [], needsElevation: false }
     let recycleCleaned: CleanResult = { totalCleaned: 0, filesDeleted: 0, filesSkipped: 0, errors: [], needsElevation: false }
     let dbCleaned: CleanResult = { totalCleaned: 0, filesDeleted: 0, filesSkipped: 0, errors: [], needsElevation: false }
-    if (fileItemIds.length > 0) fileCleaned = await cleanItems(fileItemIds, undefined, 'cli', { dryRun })
+    if (fileItemIds.length > 0) {
+      fileCleaned = await gatedCleanItems(fileItemIds, undefined, 'cli', { dryRun, force: opts.force === true })
+      if (fileCleaned.blockedByRestoreGate) {
+        const msg = fileCleaned.errors[0]?.reason || 'Restore point required before clean.'
+        if (ctx.json) {
+          cliOut(ctx, { error: 'restore_point_required', message: msg, result: fileCleaned })
+        } else {
+          cliLog(ctx, `Clean blocked: ${msg}`)
+          cliLog(ctx, 'Enable a successful System Restore point, or pass --force / --dry-run.')
+        }
+        return ExitCode.GENERAL_ERROR
+      }
+    }
     if (hasRecycleBin && !dryRun) {
       const rbSize = allResults.find(r => r.category === CleanerType.RecycleBin)?.totalSize || 0
       recycleCleaned = await cleanRecycleBin(rbSize)
