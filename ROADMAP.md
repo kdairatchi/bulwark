@@ -42,15 +42,18 @@ requires an explicit migration plan and backward-compatibility tests.
 
 Completed: dry-run cleanup paths, restore-point gates for destructive actions,
 structured findings, elevated-command and IPC hardening, updater safeguards, and
-desktop/remote scan smoke coverage. Cross-platform release builds remain a CI
-responsibility and are tracked under Phase 6 validation.
+desktop/remote scan smoke coverage. Recent completion work also includes Network
+Guard topology/inspection, cross-platform Game Mode, Secure DNS occupied-port
+fallback, Linux firewall/automatic-update hardening, and actionable administrator
+relaunch behavior. Cross-platform release builds remain a CI responsibility and
+are tracked under Phase 6 validation.
 
-## Phase 2 — Extract the security core
+## Phase 2 — Extract the security core  *(planned)*
 
 Split the reusable security engine (inventory, risk engine, policy engine) into
 `packages/security-core` etc., ahead of the monorepo migration.
 
-## Phase 3 — Cloud foundation
+## Phase 3 — Cloud foundation  *(mostly landed; production hardening remains)*
 
 Auth, device registration/enrollment (pairing codes + per-device keys), device list,
 security score, findings, alerts, scan requests, email breach checks, basic reports.
@@ -59,7 +62,7 @@ security score, findings, alerts, scan requests, email breach checks, basic repo
 review/score, remote commands, policy/isolate, network events, **email breach
 monitors** (HIBP stub/live — `GET|POST /v1/breach-monitors`, ack, refresh).
 
-## Phase 4 — Android TV agent (first unique feature)  *(scaffold in progress)*
+## Phase 4 — Android TV agent (first unique feature)  *(scaffold landed; beta validation remains)*
 
 Compose TV UI (ten-foot design), device enrollment, app inventory, device legitimacy
 check, sideloaded-app detection, permission risk analysis, APK certificate/hash
@@ -72,7 +75,11 @@ PackageManager inventory with APK/cert hashes + static surface (exported/debugga
 targetSdk), posture findings, DnsGuard `VpnService` + local blocklist, remote policy
 sync + emergency isolation, network-event batching, JVM demo (`:core:runAgentDemo`).
 
-## Phase 5 — Vulnerability intelligence  *(in progress)*
+## Phase 5 — Vulnerability intelligence  *(complete)*
+
+The planned intelligence pipeline is implemented. Remaining intelligence work is
+operational tuning during the public beta: feed freshness, false-positive review,
+and coverage improvements based on real device inventories.
 
 - [x] Software inventory normalization and deterministic risk findings.
 - [x] CISA KEV sync, matching, deduplication, and fix recommendations.
@@ -85,7 +92,7 @@ sync + emergency isolation, network-event batching, JVM demo (`:core:runAgentDem
       (curated offline catalog + matcher on `RUN_VULNERABILITY_SCAN`; live USN/MSRC sync later).
 - [x] Consolidate finding confidence, deduplication, and remediation evidence.
 
-## Phase 6 — Public beta
+## Phase 6 — Public beta  *(next)*
 
 20–50 testers, Windows first, 5+ Android TV boxes, multiple manufacturers. Measure:
 false-positive rate, scan duration, CPU/memory/battery, blocked-legitimate rate,
