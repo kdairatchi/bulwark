@@ -1,14 +1,14 @@
 {
-  "pageTitle": "Kudu Cloud",
-  "pageDescription": "Unlock powerful security features by connecting to Kudu Cloud",
+  "pageTitle": "Bulwark Cloud",
+  "pageDescription": "Unlock powerful security features by connecting to Bulwark Cloud",
   "pageDescriptionLinked": "Manage your cloud connection and device settings",
 
   "heroTitle": "Supercharge your system security",
   "heroSubtitle": "From $5/month · Cancel anytime",
-  "heroDescription": "Link this device to Kudu Cloud for real-time threat monitoring, AI-powered safety analysis, vulnerability scanning, and a single dashboard to manage every device from anywhere. Plans start at just $5/month — cancel anytime, no commitment.",
+  "heroDescription": "Link this device to Bulwark Cloud for real-time threat monitoring, AI-powered safety analysis, vulnerability scanning, and a single dashboard to manage every device from anywhere. Plans start at just $5/month — cancel anytime, no commitment.",
 
   "localFeaturesTitle": "Unlocked locally on this device",
-  "localFeaturesSubtitle": "These features activate directly in your Kudu app once linked",
+  "localFeaturesSubtitle": "These features activate directly in your Bulwark app once linked",
 
   "featureThreatMonitorTitle": "Threat Monitoring",
   "featureThreatMonitorDesc": "Tracks and alerts you if your computer communicates with ransomware command servers, criminal infrastructure, botnets, or other known-malicious endpoints in real time.",
@@ -17,7 +17,7 @@
   "featureAiSafetyTitle": "AI Safety Scores",
   "featureAiSafetyDesc": "AI analyzes every startup program and installed application, rating each on a 1-10 safety scale with detailed explanations. Know exactly what's running on your system.",
   "featureBreachMonitorTitle": "Email Breach Monitoring",
-  "featureBreachMonitorDesc": "Add the email addresses you care about and Kudu checks them against known data breaches — showing which sites leaked, what data was exposed, and how many accounts were affected. Get alerted the moment your details appear in a new breach, and mark each one reviewed.",
+  "featureBreachMonitorDesc": "Add the email addresses you care about and Bulwark checks them against known data breaches — showing which sites leaked, what data was exposed, and how many accounts were affected. Get alerted the moment your details appear in a new breach, and mark each one reviewed.",
   "featureHealthReportsTitle": "Security Health Reports",
   "featureHealthReportsDesc": "Automated posture checks covering antivirus, firewall, encryption, Windows Update, password policy, and more — sent to the dashboard every 30 minutes.",
 

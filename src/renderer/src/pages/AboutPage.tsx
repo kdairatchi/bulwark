@@ -97,8 +97,8 @@ export function AboutPage() {
         </div>
 
         <div className="mt-6 flex items-center gap-2.5">
-          <LinkButton icon={Github} label={t('github')} href="https://github.com/kdairatchi/kudu" />
-          <LinkButton icon={Bug} label={t('reportBug')} href="https://github.com/kdairatchi/kudu/issues" />
+          <LinkButton icon={Github} label={t('github')} href="https://github.com/kdairatchi/bulwark" />
+          <LinkButton icon={Bug} label={t('reportBug')} href="https://github.com/kdairatchi/bulwark/issues" />
         </div>
       </div>
     </div>

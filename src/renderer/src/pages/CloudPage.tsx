@@ -254,7 +254,7 @@ export function CloudPage() {
             {t('heroDescription')}
           </p>
           <button
-            onClick={() => window.open('https://cloud.usekudu.com', '_blank')}
+            onClick={() => window.open('https://cloud.invalid', '_blank')}
             className="flex items-center gap-2 rounded-xl px-5 py-2.5 text-[13px] font-medium transition-all"
             style={{ background: 'var(--accent)', color: 'var(--text-on-accent)' }}
           >
@@ -400,7 +400,7 @@ export function CloudPage() {
 
         <div className="flex gap-3 mb-4">
           <button
-            onClick={() => window.open('https://cloud.usekudu.com', '_blank')}
+            onClick={() => window.open('https://cloud.invalid', '_blank')}
             className="flex items-center gap-2 rounded-xl px-5 py-3 text-[13px] font-medium transition-all"
             style={{ background: 'var(--accent)', color: 'var(--text-on-accent)' }}
           >

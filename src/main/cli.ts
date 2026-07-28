@@ -1369,7 +1369,7 @@ async function handleService(args: string[], ctx: CliContext): Promise<number | 
 
   const unitContent = `[Unit]
 Description=Bulwark Device Security Daemon
-Documentation=https://github.com/kdairatchi/kudu
+Documentation=https://github.com/kdairatchi/bulwark
 After=network-online.target
 Wants=network-online.target
 
