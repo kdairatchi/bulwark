@@ -29,10 +29,12 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { PageHeader } from '@/components/layout/PageHeader'
+import { ActivityEventCard } from '@/components/activity/ActivityEventCard'
 import { cn } from '@/lib/utils'
 import { useSettingsStore } from '@/stores/settings-store'
 import { usePlatform } from '@/hooks/usePlatform'
 import type { KuduSettings } from '@shared/types'
+import { alertToBulwarkEvent } from '@shared/activity-adapters'
 
 export function CloudPage() {
   const { t } = useTranslation('cloud')
@@ -1085,31 +1087,19 @@ function ParentControlPanel({
         {alerts.length === 0 ? (
           <p className="text-[12px]" style={{ color: 'var(--text-dim)' }}>{t('parentAlertsEmpty')}</p>
         ) : (
-          <div className="max-h-40 overflow-y-auto space-y-1.5">
-            {alerts.slice(0, 25).map((a) => (
-              <div
-                key={a.id}
-                className="rounded-lg px-3 py-2 text-[11px] font-mono"
-                style={{ background: 'var(--bg-subtle)', border: '1px solid var(--border-medium)', color: 'var(--text-secondary)' }}
-              >
-                <span style={{
-                  color: a.severity === 'critical' || a.severity === 'high' ? '#f87171'
-                    : a.severity === 'medium' ? '#fbbf24' : 'var(--text-muted)',
-                }}
-                >
-                  {a.severity}
-                </span>
-                {' · '}
-                <span style={{ color: '#93c5fd' }}>{a.type}</span>
-                {' · '}
-                {a.subject}
-                {a.detail && (
-                  <span style={{ color: 'var(--text-dim)' }}> · {a.detail}</span>
-                )}
-                {' · '}
-                <span style={{ color: 'var(--text-dim)' }}>{new Date(a.at).toLocaleString()}</span>
-              </div>
-            ))}
+          <div className="max-h-80 overflow-y-auto space-y-2">
+            {alerts.slice(0, 25).map((a) => {
+              const deviceName = a.deviceId
+                ? devices.find((d) => d.id === a.deviceId)?.name
+                : undefined
+              return (
+                <ActivityEventCard
+                  key={a.id}
+                  event={alertToBulwarkEvent(a, { deviceName })}
+                  compact
+                />
+              )
+            })}
           </div>
         )}
       </div>

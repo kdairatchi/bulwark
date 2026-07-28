@@ -25,6 +25,7 @@ phased plan. See [`docs/product/vision.md`](docs/product/vision.md) and
 - [ ] Choose a final, trademark-cleared brand and only then lock signing identities.
 
 ## Phase 1 — Stabilize the desktop agent  *(in progress)*
+## Phase 1 — Stabilize the desktop agent  *(deferred to end of current stack)*
 
 Run all tests; build on Windows/Linux/macOS; review elevated commands, IPC, and the
 updater; add a dry-run mode everywhere; require restore points before destructive
@@ -32,6 +33,8 @@ actions; introduce a structured findings model.
 
 > **Priority note:** Activity & Logs UX polish is deferred to the end of the current
 > stack. Phase 1 safety (dry-run / restore-point gate) is the active focus.
+> **Priority note:** Phase 1 safety (dry-run / restore points) is intentionally
+> deferred until after Activity & Logs, Win/mac DNS depth, and Phase 5 NVD work.
 
 ## Phase 2 — Extract the security core
 
