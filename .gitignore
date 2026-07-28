@@ -11,3 +11,8 @@ Thumbs.db
 CLOUD-COMMANDS.md
 manifests/
 resources/yara-rules/
+
+# Android local SDK path (machine-specific)
+apps/android-tv/local.properties
+apps/android-tv/.gradle/
+apps/android-tv/**/build/

@@ -9,7 +9,7 @@ and tracked in [`ROADMAP.md`](../../ROADMAP.md).
 | Component | Status | Stack |
 |-----------|--------|-------|
 | Desktop agent | **Exists** (this repo) | Electron, React 19, TypeScript, SQLite, YARA-X, systeminformation |
-| Android agent | Planned | Kotlin, Jetpack Compose, Room, WorkManager, `VpnService`, `PackageManager` |
+| Android agent | **Scaffold** (`apps/android-tv`) | Kotlin, Jetpack Compose for TV, WorkManager, PackageManager; VpnService planned |
 | Network sensor | Planned | Local DNS/connection inspection, blocklists, IP/domain reputation |
 | Cloud control plane | Planned | Next.js dashboard, Go device/telemetry APIs, PostgreSQL, Redis, S3-compatible storage |
 

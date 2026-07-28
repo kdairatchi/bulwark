@@ -13,9 +13,11 @@
 > - Device telemetry: `node scripts/device-client-demo.mjs`
 > - Remote commands: `node scripts/command-demo.mjs`
 > - Desktop agent flow (enroll → poll → verify → result): `node scripts/device-agent-demo.mjs`
+> - Android TV agent core (JVM): `cd apps/android-tv && ./gradlew :core:runAgentDemo`
 >
 > The Electron app exposes pairing enroll / poll / status on the Cloud page
 > (`deviceCommandAgent` in `src/main/services/device-command-agent.ts`).
+> The Android TV agent lives in `apps/android-tv/` (Compose TV UI + WorkManager).
 > Implemented endpoints:
 > - `POST /v1/pairing-codes`, `POST /v1/devices/enroll`
 > - `POST /v1/devices/{id}/heartbeat|inventory|findings` (device-signed)
