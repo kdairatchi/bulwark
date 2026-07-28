@@ -75,7 +75,7 @@ export function linuxEnvironmentNote(input: {
         ? `Matching ${where} against Bulwrk’s Linux YARA ruleset (known malware families & techniques).`
         : 'Matching files against Bulwrk’s Linux YARA ruleset — only published patterns, no guessing.'
     case 'heuristics':
-      return 'Checking for disguise tricks (double extensions, odd shapes) without reading private document contents.'
+      return 'Checking for disguise tricks (odd shapes, suspicious names outside system paths) without reading private document contents.'
     case 'scripts':
       return where
         ? `Reading script text in ${where} for download-and-execute and obfuscation patterns.`
