@@ -309,6 +309,8 @@ export interface MalwareCategoryProgress {
   threatsFound: number
   itemsScanned: number
   totalItems: number
+  /** Why this category was skipped (e.g. ClamAV not installed). */
+  skipReason?: string
 }
 
 export interface MalwareScanProgress {
@@ -338,6 +340,10 @@ export interface MalwareScanResult {
   filesScanned: number
   duration: number
   engines: string[]
+  /** Human-readable steps completed during the pass (Linux narration trail). */
+  completedSteps?: string[]
+  /** Final environment note from the scan (Linux). */
+  environmentNote?: string
 }
 
 export interface MalwareActionResult {

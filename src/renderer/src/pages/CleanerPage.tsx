@@ -293,9 +293,15 @@ export function CleanerPage() {
     ? visibleCategories.find((c) => c.type === scanningCategory)
     : null
   const activeCategoryLabel = activeCategoryDef ? t(activeCategoryDef.labelKey) : (store.progress?.category || '')
-  const progressDetail = isScanning
-    ? t('scanningDetail', { category: activeCategoryLabel || '…' })
-    : t('cleaningDetail', { category: store.progress?.category || activeCategoryLabel || '…' })
+  // Plain-language detail/focus chips are Linux-oriented narration; keep other platforms quieter.
+  const progressDetail = platform === 'linux'
+    ? (isScanning
+      ? t('scanningDetail', { category: activeCategoryLabel || '…' })
+      : t('cleaningDetail', { category: store.progress?.category || activeCategoryLabel || '…' }))
+    : undefined
+  const progressFocus = platform === 'linux'
+    ? (activeCategoryLabel || store.progress?.category || undefined)
+    : undefined
 
   return (
     <div className="animate-fade-in">
@@ -395,7 +401,7 @@ export function CleanerPage() {
               itemsFound={store.progress.itemsFound}
               sizeFound={store.progress.sizeFound}
               detail={progressDetail}
-              focus={activeCategoryLabel || store.progress.category || undefined}
+              focus={progressFocus}
               className="mb-5"
             />
           )}
