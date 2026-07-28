@@ -20,6 +20,7 @@ import type {
   UtilityConfigCatalogResult,
   UtilityConfigFeatureStatusResult,
   UtilityConfigFixMetadata,
+  UtilityConfigFixProgress,
   UtilityConfigOpenSshStatusResult,
   UtilityLegacyPanelLaunchResult,
 } from '../../shared/types'
@@ -30,6 +31,8 @@ export interface UtilityCommandSpec {
   file: string
   args: string[]
 }
+
+export type UtilityConfigFixProgressCallback = (progress: UtilityConfigFixProgress) => void
 
 const COMMAND_OPTS = {
   timeout: 5 * 60 * 1000,
@@ -320,6 +323,7 @@ export async function enableOpenSshServer(): Promise<UtilityConfigActionResult> 
 
 export async function runUtilityConfigFix(
   id: UtilityConfigFixId,
+  onProgress?: UtilityConfigFixProgressCallback,
 ): Promise<UtilityConfigActionResult> {
   const fix = findFix(id)
   if (!fix) return actionError(String(id), 'Unknown fix ID')
@@ -327,6 +331,15 @@ export async function runUtilityConfigFix(
   if (fix.requiresAdmin && !isAdmin()) return needsAdminResult(id)
 
   try {
+    const commands = getUtilityFixCommandSequence(id)
+    onProgress?.({
+      fixId: id,
+      phase: 'starting',
+      message: `Starting ${fix.name}...`,
+      current: 0,
+      total: commands.length,
+    })
+
     if (id === 'winget-repair') {
       try {
         await runCommand({ file: 'winget.exe', args: ['--version'] }, { timeout: 15_000, maxBuffer: 1024 * 1024, windowsHide: true })
@@ -337,10 +350,25 @@ export async function runUtilityConfigFix(
 
     const logs: string[] = []
     const opts = id === 'system-corruption-scan' ? LONG_COMMAND_OPTS : COMMAND_OPTS
-    for (const command of getUtilityFixCommandSequence(id)) {
+    for (const [i, command] of commands.entries()) {
+      onProgress?.({
+        fixId: id,
+        phase: 'command',
+        message: fixCommandProgressMessage(id, command),
+        current: i + 1,
+        total: commands.length,
+      })
       const result = await runCommand(command, opts)
       logs.push(`> ${command.file} ${command.args.join(' ')}\n${result.stdout}${result.stderr}`)
     }
+
+    onProgress?.({
+      fixId: id,
+      phase: 'done',
+      message: fixSummary(fix),
+      current: commands.length,
+      total: commands.length,
+    })
 
     return {
       id,
@@ -629,6 +657,14 @@ function fixSummary(fix: UtilityConfigFixDefinition): string {
     return 'SFC and DISM system repair commands completed.'
   }
   return `${fix.name} completed.`
+}
+
+function fixCommandProgressMessage(id: UtilityConfigFixId, command: UtilityCommandSpec): string {
+  if (id === 'system-corruption-scan') {
+    if (command.file.toLowerCase() === 'sfc.exe') return 'Running SFC system file scan...'
+    if (command.file.toLowerCase() === 'dism.exe') return 'Running DISM component store repair...'
+  }
+  return `Running ${command.file} ${command.args.join(' ')}`
 }
 
 function unavailableFeatureStatus(id: string, details: string): UtilityConfigFeatureStatusResult {

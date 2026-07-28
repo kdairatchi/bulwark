@@ -251,6 +251,7 @@ export const IPC = {
   UTILITY_CONFIG_OPENSSH_STATUS: 'utility-config:openssh:status',
   UTILITY_CONFIG_OPENSSH_ENABLE: 'utility-config:openssh:enable',
   UTILITY_CONFIG_FIX_RUN: 'utility-config:fix:run',
+  UTILITY_CONFIG_FIX_PROGRESS: 'utility-config:fix:progress',
 
   // Cloud Agent
   CLOUD_LINK: 'cloud:link',

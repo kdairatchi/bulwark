@@ -69,6 +69,7 @@ import type {
   UtilityConfigActionResult,
   UtilityConfigCatalogResult,
   UtilityConfigFeatureStatusResult,
+  UtilityConfigFixProgress,
   UtilityConfigOpenSshStatusResult,
   UtilityLegacyPanelLaunchResult,
   FileTypeInfo,
@@ -538,6 +539,11 @@ const api = {
     ipcRenderer.invoke(IPC.UTILITY_CONFIG_OPENSSH_ENABLE),
   utilityConfigFixRun: (id: string): Promise<UtilityConfigActionResult> =>
     ipcRenderer.invoke(IPC.UTILITY_CONFIG_FIX_RUN, id),
+  onUtilityConfigFixProgress: (callback: (data: UtilityConfigFixProgress) => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, data: UtilityConfigFixProgress) => callback(data)
+    ipcRenderer.on(IPC.UTILITY_CONFIG_FIX_PROGRESS, handler)
+    return () => { ipcRenderer.removeListener(IPC.UTILITY_CONFIG_FIX_PROGRESS, handler) }
+  },
 
   // Cloud Agent
   cloudLink: (apiKey: string): Promise<{ success: boolean; error?: string }> =>

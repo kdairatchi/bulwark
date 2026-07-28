@@ -4,9 +4,11 @@ import type {
   UtilityConfigActionResult,
   UtilityConfigCatalogResult,
   UtilityConfigFeatureStatusResult,
+  UtilityConfigFixProgress,
   UtilityConfigOpenSshStatusResult,
   UtilityLegacyPanelLaunchResult,
 } from '../../shared/types'
+import type { WindowGetter } from './index'
 import {
   enableOpenSshServer,
   enableUtilityConfigFeature,
@@ -21,7 +23,12 @@ import {
   validateUtilityLegacyPanelId,
 } from '../services/utility-config'
 
-export function registerUtilityConfigIpc(): void {
+export function registerUtilityConfigIpc(getWindow: WindowGetter): void {
+  const sendProgress = (data: UtilityConfigFixProgress): void => {
+    const win = getWindow()
+    if (win && !win.isDestroyed()) win.webContents.send(IPC.UTILITY_CONFIG_FIX_PROGRESS, data)
+  }
+
   ipcMain.handle(IPC.UTILITY_CONFIG_CATALOG, async (): Promise<UtilityConfigCatalogResult> => {
     return getUtilityConfigCatalog()
   })
@@ -89,7 +96,7 @@ export function registerUtilityConfigIpc(): void {
     async (_event, id: unknown): Promise<UtilityConfigActionResult> => {
       const validId = validateUtilityConfigFixId(id)
       if (!validId) return invalidActionResult(typeof id === 'string' ? id : '*', 'Invalid fix ID')
-      return runUtilityConfigFix(validId)
+      return runUtilityConfigFix(validId, sendProgress)
     },
   )
 }

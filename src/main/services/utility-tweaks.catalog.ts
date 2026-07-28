@@ -68,13 +68,25 @@ export const UTILITY_TWEAK_CATALOG: UtilityTweakDefinition[] = [
     name: 'Disable Advertising ID',
     description: 'Turn off the per-user advertising identifier used by apps.',
   }),
+  privacyTweak('suggested-content', 'essential', false, {
+    name: 'Disable suggested content in Settings',
+    description: 'Block Microsoft app suggestions and ads in Windows Settings.',
+  }),
   privacyTweak('tips-notifications', 'essential', false, {
     name: 'Disable tips and suggestions',
     description: 'Stop Windows tips, tricks, and suggestion notifications.',
   }),
+  privacyTweak('start-suggestions', 'essential', false, {
+    name: 'Disable Start menu suggestions',
+    description: 'Stop promoted app suggestions from appearing in the Start menu.',
+  }),
   privacyTweak('bing-start-menu', 'essential', false, {
     name: 'Disable Bing in Start',
     description: 'Keep Start menu searches local instead of sending queries to Bing.',
+  }),
+  privacyTweak('bing-web-search', 'essential', false, {
+    name: 'Disable Bing web results',
+    description: 'Keep Windows Search results local instead of showing Bing web results.',
   }),
   privacyTweak('app-launch-tracking', 'essential', false, {
     name: 'Disable app launch tracking',
@@ -83,6 +95,10 @@ export const UTILITY_TWEAK_CATALOG: UtilityTweakDefinition[] = [
   privacyTweak('clipboard-sync', 'advanced', true, {
     name: 'Disable cloud clipboard sync',
     description: 'Prevent clipboard data from syncing through Microsoft cloud services.',
+  }),
+  privacyTweak('clipboard-history', 'advanced', false, {
+    name: 'Disable clipboard history',
+    description: 'Stop Windows from storing copied text and images in clipboard history.',
   }),
   privacyTweak('copilot', 'advanced', true, {
     name: 'Disable Microsoft Copilot',
@@ -95,6 +111,10 @@ export const UTILITY_TWEAK_CATALOG: UtilityTweakDefinition[] = [
   privacyTweak('service-diagtrack', 'advanced', true, {
     name: 'Disable DiagTrack service',
     description: 'Disable the Connected User Experiences and Telemetry service.',
+  }),
+  privacyTweak('service-delivery-optimization', 'advanced', true, {
+    name: 'Disable Delivery Optimization sharing',
+    description: 'Stop Windows Update from peer-to-peer sharing update data.',
   }),
   privacyTweak('task-compatibility-appraiser', 'advanced', true, {
     name: 'Disable Compatibility Appraiser task',

@@ -796,6 +796,7 @@ function ConfigTab() {
   const [featureStatus, setFeatureStatus] = useState<Record<string, UtilityConfigFeatureStatusResult>>({})
   const [openSshStatus, setOpenSshStatus] = useState<UtilityConfigOpenSshStatusResult | null>(null)
   const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [progressMsg, setProgressMsg] = useState('')
 
   const busy = runningId !== null
 
@@ -864,6 +865,13 @@ function ConfigTab() {
   useEffect(() => {
     void load()
   }, [load])
+
+  useEffect(() => {
+    const off = window.kudu.onUtilityConfigFixProgress?.((p) => {
+      setProgressMsg(p.message)
+    })
+    return () => { off?.() }
+  }, [])
 
   const toggleFeature = (id: string) => {
     setSelected((prev) => {
@@ -950,6 +958,7 @@ function ConfigTab() {
       return
     }
     setRunningId(`fix:${fix.id}`)
+    setProgressMsg('')
     try {
       const result = await window.kudu.utilityConfigFixRun(fix.id)
       reportConfigActionResult(t, result)
@@ -957,6 +966,7 @@ function ConfigTab() {
       toast.error(t('config.toastActionFailed'))
     } finally {
       setRunningId(null)
+      setProgressMsg('')
     }
   }
 
@@ -1049,7 +1059,7 @@ function ConfigTab() {
             {(busy || statusLoading) && (
               <span className="flex items-center gap-1.5 text-amber-400">
                 <Loader2 className="h-3 w-3 animate-spin" />
-                {statusLoading ? t('config.scanning') : t('config.running')}
+                {statusLoading ? t('config.scanning') : progressMsg || t('config.running')}
               </span>
             )}
           </div>

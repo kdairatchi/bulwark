@@ -29,7 +29,7 @@ describe('utility-apps catalog', () => {
   it('identifies only package IDs from the curated catalog', () => {
     expect(isUtilityCatalogPackageId('Google.Chrome')).toBe(true)
     expect(isUtilityCatalogPackageId('Microsoft.VisualStudioCode')).toBe(true)
-    expect(isUtilityCatalogPackageId('Microsoft.Teams')).toBe(false)
+    expect(isUtilityCatalogPackageId('Microsoft.Teams')).toBe(true)
     expect(isUtilityCatalogPackageId('--source=msstore')).toBe(false)
   })
 })

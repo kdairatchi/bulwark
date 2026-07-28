@@ -1158,6 +1158,14 @@ export interface UtilityConfigActionResult {
   error?: string
 }
 
+export interface UtilityConfigFixProgress {
+  fixId: string
+  phase: 'starting' | 'command' | 'done'
+  message: string
+  current: number
+  total: number
+}
+
 export interface UtilityLegacyPanelLaunchResult {
   id: string
   launched: boolean
