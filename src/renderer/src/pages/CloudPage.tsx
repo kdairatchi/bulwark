@@ -30,6 +30,7 @@ import { openPublicCloudDashboard } from '@/lib/cloud-dashboard-url'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { FindingExplainPanel, FindingExpand } from '@/components/shared/FindingExplainPanel'
 import { FamilyPairingWizard } from '@/components/cloud/FamilyPairingWizard'
+import { EmergencyIsolateWizard } from '@/components/cloud/EmergencyIsolateWizard'
 import { explainFinding, familyStatusLabel } from '@/lib/finding-explain'
 import { cn } from '@/lib/utils'
 import { useSettingsStore } from '@/stores/settings-store'
@@ -561,6 +562,10 @@ function ParentControlPanel({
   const [dnsGuard, setDnsGuard] = useState(false)
   const [busy, setBusy] = useState(false)
   const [dashboardToken, setDashboardToken] = useState('')
+  const [isolateWizard, setIsolateWizard] = useState<{ open: boolean; mode: 'isolate' | 'clear' }>({
+    open: false,
+    mode: 'isolate',
+  })
 
   const selected = devices.find((d) => d.id === selectedId) ?? null
 
@@ -1077,7 +1082,7 @@ function ParentControlPanel({
                 <div className="flex flex-wrap gap-2">
                   {selected.isolated ? (
                     <button
-                      onClick={handleClear}
+                      onClick={() => setIsolateWizard({ open: true, mode: 'clear' })}
                       disabled={busy}
                       className="flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-[13px] font-medium disabled:opacity-40"
                       style={{ background: 'var(--bg-subtle)', border: '1px solid var(--border-medium)', color: 'var(--text-secondary)' }}
@@ -1087,7 +1092,7 @@ function ParentControlPanel({
                     </button>
                   ) : (
                     <button
-                      onClick={handleIsolate}
+                      onClick={() => setIsolateWizard({ open: true, mode: 'isolate' })}
                       disabled={busy}
                       className="flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-[13px] font-medium disabled:opacity-40"
                       style={{ background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.35)', color: '#f87171' }}
@@ -1390,6 +1395,19 @@ function ParentControlPanel({
           </div>
         )}
       </div>
+
+      <EmergencyIsolateWizard
+        open={isolateWizard.open}
+        mode={isolateWizard.mode}
+        deviceName={selected?.name || selected?.id || t('isolateWizardUnknownDevice')}
+        busy={busy}
+        t={t}
+        onClose={() => setIsolateWizard((w) => ({ ...w, open: false }))}
+        onConfirm={async () => {
+          if (isolateWizard.mode === 'isolate') await handleIsolate()
+          else await handleClear()
+        }}
+      />
     </div>
   )
 }
