@@ -6,7 +6,7 @@ vi.mock('os', () => ({ homedir: () => 'C:\\Users\\TestUser', tmpdir: () => 'C:\\
 // Set deterministic env vars before import
 process.env.LOCALAPPDATA = 'C:\\Users\\TestUser\\AppData\\Local'
 process.env.APPDATA = 'C:\\Users\\TestUser\\AppData\\Roaming'
-process.env.WINDIR = 'C:\\Windows'
+process.env.WINDIR = 'D:\\Windows'
 process.env.ProgramData = 'C:\\ProgramData'
 process.env['ProgramFiles(x86)'] = 'C:\\Program Files (x86)'
 process.env.ProgramFiles = 'C:\\Program Files'
@@ -33,7 +33,7 @@ describe('win32 paths', () => {
     it('includes system temp files under WINDIR\\Temp', () => {
       const sysTemp = targets.find((t) => t.subcategory === 'System Temp Files')
       expect(sysTemp).toBeDefined()
-      expect(sysTemp!.path).toBe('C:\\Windows\\Temp')
+      expect(sysTemp!.path).toBe('D:\\Windows\\Temp')
     })
 
     it('marks system-level targets as needsAdmin', () => {
@@ -58,7 +58,7 @@ describe('win32 paths', () => {
     it('includes Previous Windows Installation (Windows.old)', () => {
       const old = targets.find((t) => t.subcategory === 'Previous Windows Installation')
       expect(old).toBeDefined()
-      expect(old!.path).toBe('C:\\Windows.old')
+      expect(old!.path).toBe('D:\\Windows.old')
       expect(old!.needsAdmin).toBe(true)
     })
 
