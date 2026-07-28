@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   ShieldCheck,
@@ -171,6 +171,11 @@ export function PrivacyShieldPage({ embedded }: { embedded?: boolean }) {
   const expandedCategories = usePrivacyStore(s => s.expandedCategories)
   const progress = usePrivacyStore(s => s.progress)
   const progressCleanupRef = useRef<(() => void) | null>(null)
+  const [isElevated, setIsElevated] = useState(true)
+
+  useEffect(() => {
+    window.kudu.elevationCheck().then(setIsElevated).catch(() => setIsElevated(false))
+  }, [])
 
   useEffect(() => {
     return () => { progressCleanupRef.current?.() }
@@ -567,6 +572,21 @@ export function PrivacyShieldPage({ embedded }: { embedded?: boolean }) {
               ))}
             </div>
           )}
+          {applyResult.failed > 0 && !isElevated && (
+            <div className="mt-4 ml-8 flex flex-wrap items-center gap-3 rounded-xl px-3 py-2.5"
+              style={{ background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.15)' }}>
+              <p className="flex-1 text-[11px]" style={{ color: 'var(--text-muted)' }}>
+                {t('privacy.adminWarning')}
+              </p>
+              <button
+                onClick={() => { void window.kudu.elevationRelaunch() }}
+                className="shrink-0 rounded-lg px-3 py-1.5 text-[11px] font-medium text-amber-300 transition-colors hover:bg-amber-500/15"
+                style={{ border: '1px solid rgba(245,158,11,0.25)' }}
+              >
+                {t('privacy.relaunchAsAdmin')}
+              </button>
+            </div>
+          )}
         </div>
       )}
 
@@ -725,9 +745,20 @@ export function PrivacyShieldPage({ embedded }: { embedded?: boolean }) {
         <div className="mt-4 flex items-start gap-3 rounded-2xl px-5 py-3"
           style={{ background: 'rgba(245,158,11,0.04)', border: '1px solid var(--accent-muted-bg)' }}>
           <AlertTriangle className="h-4 w-4 shrink-0 text-amber-500 mt-0.5" strokeWidth={1.8} />
-          <p className="text-[11px]" style={{ color: 'var(--text-muted)' }}>
-            {t('privacy.adminWarning')}
-          </p>
+          <div className="flex flex-1 flex-wrap items-center gap-3">
+            <p className="flex-1 text-[11px]" style={{ color: 'var(--text-muted)' }}>
+              {t('privacy.adminWarning')}
+            </p>
+            {!isElevated && state.settings.some(s => !s.enabled && s.requiresAdmin) && (
+              <button
+                onClick={() => { void window.kudu.elevationRelaunch() }}
+                className="shrink-0 rounded-lg px-3 py-1.5 text-[11px] font-medium text-amber-300 transition-colors hover:bg-amber-500/15"
+                style={{ border: '1px solid rgba(245,158,11,0.25)' }}
+              >
+                {t('privacy.relaunchAsAdmin')}
+              </button>
+            )}
+          </div>
         </div>
       )}
     </div>

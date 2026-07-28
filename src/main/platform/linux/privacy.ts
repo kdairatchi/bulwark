@@ -158,7 +158,15 @@ async function sysctlGet(param: string): Promise<string> {
 async function sysctlApply(param: string, value: string): Promise<void> {
   // Apply live first — if the kernel rejects the parameter we fail fast
   // WITHOUT writing it to the persistent config.
-  await execFileAsync('/usr/sbin/sysctl', ['-w', `${param}=${value}`], { timeout: 5_000 })
+  try {
+    await execFileAsync('/usr/sbin/sysctl', ['-w', `${param}=${value}`], { timeout: 5_000 })
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    if (/permission denied|operation not permitted|eacces|eperm/i.test(message)) {
+      throw new Error('Administrator privileges are required to change Linux kernel settings. Relaunch Bulwrk as administrator and try again.')
+    }
+    throw err
+  }
 
   // Live apply succeeded — now persist to the drop-in config file
   let existing = ''
@@ -319,9 +327,18 @@ const SYSCTL_NETWORK_SETTINGS: PrivacySettingDef[] = [
  * This avoids the bug where a later uncommented line shadows our change.
  */
 async function applySshdDirective(directive: string, value: string): Promise<void> {
-  const content = await readFile('/etc/ssh/sshd_config', 'utf8')
-  const updated = updateSshdConfig(content, directive, value)
-  await writeFile('/etc/ssh/sshd_config', updated, 'utf8')
+  let content: string
+  try {
+    content = await readFile('/etc/ssh/sshd_config', 'utf8')
+    const updated = updateSshdConfig(content, directive, value)
+    await writeFile('/etc/ssh/sshd_config', updated, 'utf8')
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    if (/permission denied|operation not permitted|eacces|eperm/i.test(message)) {
+      throw new Error('Administrator privileges are required to change SSH settings. Relaunch Bulwrk as administrator and try again.')
+    }
+    throw err
+  }
   // Reload sshd — service name varies by distro
   try {
     await execFileAsync('/usr/bin/systemctl', ['reload', 'sshd'], { timeout: 10_000 })
