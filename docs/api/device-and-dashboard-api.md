@@ -63,7 +63,7 @@ PUT  /v1/devices/{id}/policy                  # implemented (merge policy + APPL
 POST /v1/devices/{id}/isolate                 # implemented (emergency isolate + ISOLATE_DEVICE)
 DELETE /v1/devices/{id}/isolate               # implemented (clear + CLEAR_ISOLATION)
 POST /v1/findings/{id}/review                 # planned
-POST /v1/devices/{id}/scan                    # planned (maps to RUN_*_SCAN command)
+POST /v1/devices/{id}/scan                    # implemented (Bearer; kind=health|malware|vulnerability → RUN_*)
 GET  /v1/reports                              # planned
 POST /v1/breach-monitors                      # planned
 GET  /v1/audit-events                         # planned

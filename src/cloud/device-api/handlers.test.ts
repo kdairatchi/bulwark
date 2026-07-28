@@ -3,7 +3,7 @@ import { DeviceStore } from './store'
 import {
   createPairingCode, enrollDevice, listDevices, getDevice, listFindings,
   authenticateDevice, heartbeat, submitInventory, submitFindings,
-  getServerKey, issueCommand, pollCommands, commandResult,
+  getServerKey, issueCommand, requestScan, pollCommands, commandResult,
   getPolicy, putPolicy, isolateDevice, clearIsolation,
   submitNetworkEvents, listNetworkEvents, type SignedRequest,
 } from './handlers'
@@ -147,6 +147,20 @@ describe('device-api commands', () => {
     const store = freshStore()
     const { deviceId } = enrolledDevice(store)
     expect(issueCommand(store, deviceId, { type: 'RUN_SHELL', parameters: {} }).status).toBe(400)
+  })
+
+  it('requestScan maps kind to RUN_* commands', () => {
+    const store = freshStore()
+    const { deviceId } = enrolledDevice(store)
+    const health = requestScan(store, deviceId, { kind: 'health' })
+    expect(health.status).toBe(201)
+    expect((health.body as { command: { type: string } }).command.type).toBe('RUN_HEALTH_ASSESSMENT')
+    const malware = requestScan(store, deviceId, { kind: 'malware' })
+    expect((malware.body as { command: { type: string; parameters: { scope: string } } }).command.type).toBe('RUN_MALWARE_SCAN')
+    expect((malware.body as { command: { parameters: { scope: string } } }).command.parameters.scope).toBe('quick')
+    const vuln = requestScan(store, deviceId, { kind: 'vulnerability' })
+    expect((vuln.body as { command: { type: string } }).command.type).toBe('RUN_VULNERABILITY_SCAN')
+    expect(requestScan(store, deviceId, { kind: 'nope' }).status).toBe(400)
   })
 
   it('rejects a command for an unknown device', () => {

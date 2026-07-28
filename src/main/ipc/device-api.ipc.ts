@@ -163,4 +163,21 @@ export function registerDeviceApiIpc(): void {
       return httpErr(err)
     }
   })
+
+  ipcMain.handle(IPC.DASHBOARD_REQUEST_SCAN, async (_event, payload: unknown) => {
+    const o = asRecord(payload)
+    const deviceId = typeof o.deviceId === 'string' ? o.deviceId : ''
+    const kind = typeof o.kind === 'string' ? o.kind : ''
+    if (!deviceId) return { success: false, error: 'deviceId is required' }
+    if (kind !== 'health' && kind !== 'malware' && kind !== 'vulnerability') {
+      return { success: false, error: 'kind must be health, malware, or vulnerability' }
+    }
+    const scope = typeof o.scope === 'string' ? o.scope : undefined
+    try {
+      const result = await clientFromPayload(payload).requestScan(deviceId, kind, { scope })
+      return { success: true as const, ...result }
+    } catch (err) {
+      return httpErr(err)
+    }
+  })
 }

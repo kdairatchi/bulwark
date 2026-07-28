@@ -167,6 +167,48 @@ export function issueCommand(store: DeviceStore, deviceId: string, input: unknow
   return { status: 201, body: { command: envelope } }
 }
 
+/**
+ * Dashboard sugar: POST /v1/devices/{id}/scan
+ * Maps kind → RUN_HEALTH_ASSESSMENT | RUN_MALWARE_SCAN | RUN_VULNERABILITY_SCAN.
+ */
+export function requestScan(store: DeviceStore, deviceId: string, input: unknown): HandlerResult {
+  const o = (input ?? {}) as Record<string, unknown>
+  const kind = typeof o.kind === 'string' ? o.kind : typeof o.type === 'string' ? o.type : ''
+  const parameters = (o.parameters && typeof o.parameters === 'object')
+    ? { ...(o.parameters as Record<string, unknown>) }
+    : {}
+  if (typeof o.scope === 'string' && parameters.scope === undefined) {
+    parameters.scope = o.scope
+  }
+  const type = (() => {
+    switch (kind.trim().toLowerCase()) {
+      case 'health':
+      case 'health_assessment':
+      case 'run_health_assessment':
+        return 'RUN_HEALTH_ASSESSMENT'
+      case 'malware':
+      case 'malware_scan':
+      case 'run_malware_scan':
+        if (parameters.scope === undefined) parameters.scope = 'quick'
+        return 'RUN_MALWARE_SCAN'
+      case 'vulnerability':
+      case 'vuln':
+      case 'vulnerability_scan':
+      case 'run_vulnerability_scan':
+        return 'RUN_VULNERABILITY_SCAN'
+      default:
+        return null
+    }
+  })()
+  if (!type) {
+    return {
+      status: 400,
+      body: { error: 'kind must be health, malware, or vulnerability' },
+    }
+  }
+  return issueCommand(store, deviceId, { type, parameters })
+}
+
 /** Device side: fetch pending signed commands (device verifies them locally). */
 export function pollCommands(store: DeviceStore, deviceId: string): HandlerResult {
   return { status: 200, body: { commands: store.pendingCommands(deviceId) } }

@@ -608,6 +608,16 @@ const api = {
     { success: true; command: { commandId: string; type: string } } | { success: false; error: string }
   > => ipcRenderer.invoke(IPC.DASHBOARD_ISSUE_COMMAND, payload),
 
+  dashboardRequestScan: (payload: {
+    baseUrl?: string
+    token?: string
+    deviceId: string
+    kind: 'health' | 'malware' | 'vulnerability'
+    scope?: string
+  }): Promise<
+    { success: true; command: { commandId: string; type: string } } | { success: false; error: string }
+  > => ipcRenderer.invoke(IPC.DASHBOARD_REQUEST_SCAN, payload),
+
   // Duplicate Finder
   duplicatesSelectDir: (): Promise<string | null> =>
     ipcRenderer.invoke(IPC.DUPLICATES_SELECT_DIR),

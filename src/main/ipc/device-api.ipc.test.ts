@@ -25,6 +25,7 @@ vi.mock('../../shared/channels', () => ({
     DASHBOARD_LIST_EVENTS: 'dashboard:list-events',
     DASHBOARD_LIST_FINDINGS: 'dashboard:list-findings',
     DASHBOARD_ISSUE_COMMAND: 'dashboard:issue-command',
+    DASHBOARD_REQUEST_SCAN: 'dashboard:request-scan',
   },
 }))
 
@@ -48,6 +49,7 @@ vi.mock('../services/dashboard-api-client', () => {
     listNetworkEvents: vi.fn(),
     listFindings: vi.fn(),
     issueCommand: vi.fn(),
+    requestScan: vi.fn(),
   }
   class MockDashboardApiClient {
     constructor() {
@@ -152,5 +154,20 @@ describe('device-api IPC', () => {
     registerDeviceApiIpc()
     const result = await invoke('dashboard:isolate', { baseUrl: 'http://127.0.0.1:8787' })
     expect(result).toEqual({ success: false, error: 'deviceId is required' })
+  })
+
+  it('queues a remote scan via requestScan', async () => {
+    registerDeviceApiIpc()
+    const dash = (dashboardMod as unknown as { __mockDashboard: {
+      requestScan: ReturnType<typeof vi.fn>
+    } }).__mockDashboard
+    dash.requestScan.mockResolvedValue({ command: { commandId: 'cmd_s', type: 'RUN_HEALTH_ASSESSMENT' } })
+    const result = await invoke('dashboard:request-scan', {
+      baseUrl: 'http://127.0.0.1:8787',
+      deviceId: 'dev_1',
+      kind: 'health',
+    })
+    expect(dash.requestScan).toHaveBeenCalledWith('dev_1', 'health', { scope: undefined })
+    expect(result).toEqual({ success: true, command: { commandId: 'cmd_s', type: 'RUN_HEALTH_ASSESSMENT' } })
   })
 })

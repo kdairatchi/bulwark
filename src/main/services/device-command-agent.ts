@@ -25,6 +25,7 @@ import {
   parseRemotePolicy,
 } from './device-policy-enforcer'
 import { collectDesktopInventory } from './desktop-inventory'
+import { executeRemoteScan } from './desktop-remote-scans'
 import { getPlatform } from '../platform'
 import { cloudLog } from './logger'
 
@@ -65,7 +66,7 @@ export type CommandExecutor = (
   parameters: Record<string, unknown>,
 ) => Promise<Record<string, unknown>>
 
-/** Default allowlisted handlers — policy/DNS/inventory use real local data; scanners stay stubs. */
+/** Default allowlisted handlers — inventory/scans use real local posture data. */
 export async function defaultCommandExecutor(
   type: CommandType,
   parameters: Record<string, unknown>,
@@ -102,8 +103,22 @@ export async function defaultCommandExecutor(
     }
     case 'RUN_MALWARE_SCAN':
     case 'RUN_VULNERABILITY_SCAN':
-    case 'RUN_HEALTH_ASSESSMENT':
-      return { ok: true, stub: true, type, threatsFound: 0, findings: 0, parameters }
+    case 'RUN_HEALTH_ASSESSMENT': {
+      try {
+        const apps = await getPlatform().commands.getInstalledApps()
+        return executeRemoteScan(type, apps, parameters)
+      } catch (err) {
+        return {
+          ok: false,
+          stub: false,
+          type,
+          threatsFound: 0,
+          findings: 0,
+          error: err instanceof Error ? err.message : String(err),
+          parameters,
+        }
+      }
+    }
     case 'UPDATE_THREAT_FEEDS':
       return { ok: true, stub: true, type, updated: false, parameters }
     case 'QUARANTINE_FILE':
@@ -438,6 +453,23 @@ export class DeviceCommandAgent {
           platform: `${platform()} ${release()}`,
         }
       }
+      if (
+        type === 'RUN_HEALTH_ASSESSMENT'
+        || type === 'RUN_MALWARE_SCAN'
+        || type === 'RUN_VULNERABILITY_SCAN'
+      ) {
+        const result = await this.execute(type, parameters)
+        const embedded = Array.isArray(result._findings)
+          ? result._findings as Array<{ level: string; subjectName: string; reason: string; category?: string }>
+          : []
+        if (embedded.length > 0) {
+          await client.submitFindings(identity.privateKeyPem, identity.deviceId, embedded)
+          for (const f of embedded.slice(0, 20)) {
+            devicePolicyEnforcer.pushEvent('finding', f.subjectName, f.reason)
+          }
+        }
+        return result
+      }
       if (type === 'BLOCK_DOMAIN') {
         return defaultCommandExecutor(type, parameters)
       }
@@ -465,8 +497,8 @@ export class DeviceCommandAgent {
       return
     }
     try {
-      // Never post bulky _inventory blobs back as command results.
-      const { _inventory: _drop, ...safeResult } = processed.result
+      // Never post bulky embedded payloads back as command results.
+      const { _inventory: _dropInv, _findings: _dropFind, ...safeResult } = processed.result
       await client.postCommandResult(
         this.identity.privateKeyPem,
         this.identity.deviceId,

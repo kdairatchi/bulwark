@@ -681,6 +681,30 @@ function ParentControlPanel({
     setBusy(false)
   }
 
+  const handleRequestScan = async (kind: 'health' | 'malware' | 'vulnerability') => {
+    if (!selected) return
+    setBusy(true)
+    try {
+      const token = await ensureToken()
+      const res = await window.kudu?.dashboardRequestScan?.({
+        ...authPayload(),
+        token: token || undefined,
+        deviceId: selected.id,
+        kind,
+        scope: kind === 'malware' ? 'quick' : undefined,
+      })
+      if (res?.success) {
+        toast.success(t('parentScanQueuedToast'), { description: res.command.type })
+        await refresh()
+      } else {
+        toast.error(t('parentScanFailedToast'), { description: res && 'error' in res ? res.error : undefined })
+      }
+    } catch {
+      toast.error(t('parentScanFailedToast'))
+    }
+    setBusy(false)
+  }
+
   return (
     <div
       className="rounded-2xl p-6 mb-4 mt-4"
@@ -807,6 +831,33 @@ function ParentControlPanel({
                   >
                     <FileSearch className="h-3.5 w-3.5" strokeWidth={1.8} />
                     {t('parentRequestInventory')}
+                  </button>
+                  <button
+                    onClick={() => handleRequestScan('health')}
+                    disabled={busy}
+                    className="flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-[13px] font-medium disabled:opacity-40"
+                    style={{ background: 'var(--bg-subtle)', border: '1px solid var(--border-medium)', color: 'var(--text-secondary)' }}
+                  >
+                    <Activity className="h-3.5 w-3.5" strokeWidth={1.8} />
+                    {t('parentRunHealth')}
+                  </button>
+                  <button
+                    onClick={() => handleRequestScan('malware')}
+                    disabled={busy}
+                    className="flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-[13px] font-medium disabled:opacity-40"
+                    style={{ background: 'var(--bg-subtle)', border: '1px solid var(--border-medium)', color: 'var(--text-secondary)' }}
+                  >
+                    <ShieldAlert className="h-3.5 w-3.5" strokeWidth={1.8} />
+                    {t('parentRunMalware')}
+                  </button>
+                  <button
+                    onClick={() => handleRequestScan('vulnerability')}
+                    disabled={busy}
+                    className="flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-[13px] font-medium disabled:opacity-40"
+                    style={{ background: 'var(--bg-subtle)', border: '1px solid var(--border-medium)', color: 'var(--text-secondary)' }}
+                  >
+                    <Bug className="h-3.5 w-3.5" strokeWidth={1.8} />
+                    {t('parentRunVuln')}
                   </button>
                 </div>
 

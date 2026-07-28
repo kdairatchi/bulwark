@@ -204,6 +204,19 @@ export class DashboardApiClient {
     if (status < 200 || status >= 300) throw new DeviceApiHttpError(status, body)
     return body as { command: { commandId: string; type: string } }
   }
+
+  /** Sugar for enqueueing RUN_*_SCAN / RUN_HEALTH_ASSESSMENT. */
+  async requestScan(
+    deviceId: string,
+    kind: 'health' | 'malware' | 'vulnerability',
+    opts?: { scope?: string },
+  ): Promise<{ command: { commandId: string; type: string } }> {
+    const payload: Record<string, unknown> = { kind }
+    if (opts?.scope) payload.scope = opts.scope
+    const { status, body } = await this.request('POST', `/v1/devices/${deviceId}/scan`, payload)
+    if (status < 200 || status >= 300) throw new DeviceApiHttpError(status, body)
+    return body as { command: { commandId: string; type: string } }
+  }
 }
 
 /** Resolve dashboard base URL from payload or env default. */

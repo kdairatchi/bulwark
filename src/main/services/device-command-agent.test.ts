@@ -152,6 +152,17 @@ describe('defaultCommandExecutor', () => {
     expect(r.type).toBe('REQUEST_INVENTORY')
     expect(typeof r.count).toBe('number')
   })
+
+  it('runs health / malware / vuln scans without stubbing', async () => {
+    for (const type of ['RUN_HEALTH_ASSESSMENT', 'RUN_MALWARE_SCAN', 'RUN_VULNERABILITY_SCAN'] as const) {
+      const r = await defaultCommandExecutor(type, { scope: 'quick' })
+      expect(r.ok).toBe(true)
+      expect(r.stub).toBe(false)
+      expect(r.type).toBe(type)
+      expect(typeof r.findings).toBe('number')
+      expect(Array.isArray(r._findings)).toBe(true)
+    }
+  })
 })
 
 describe('isValidPairingCode', () => {

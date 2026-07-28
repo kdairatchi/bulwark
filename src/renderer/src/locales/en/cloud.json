@@ -186,10 +186,15 @@
   "parentNever": "never",
   "parentApps": "Apps",
   "parentFindings": "Findings",
-  "parentNoFindings": "No findings yet. Request inventory from an enrolled device.",
+  "parentNoFindings": "No findings yet. Request inventory or run a scan from an enrolled device.",
   "parentRequestInventory": "Request inventory",
   "parentInventoryQueuedToast": "REQUEST_INVENTORY queued — agent will sync apps + findings",
   "parentInventoryFailedToast": "Could not queue inventory request",
+  "parentRunHealth": "Run health check",
+  "parentRunMalware": "Run malware scan",
+  "parentRunVuln": "Run vuln scan",
+  "parentScanQueuedToast": "Scan queued — agent will post findings on next poll",
+  "parentScanFailedToast": "Could not queue scan",
   "parentTokenPlaceholder": "Dashboard token (Bearer) — auto-filled via local bootstrap",
   "parentTokenHint": "Write actions require Authorization: Bearer. Local cloud:dev exposes GET /v1/dashboard-bootstrap; production sets DASHBOARD_TOKEN."
 }

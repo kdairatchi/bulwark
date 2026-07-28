@@ -7,7 +7,7 @@ import {
   createPairingCode, enrollDevice, listDevices, getDevice, listFindings,
   authenticateDevice, authenticateDashboard, dashboardBootstrap,
   heartbeat, submitInventory, submitFindings,
-  getServerKey, issueCommand, pollCommands, commandResult,
+  getServerKey, issueCommand, requestScan, pollCommands, commandResult,
   getPolicy, putPolicy, isolateDevice, clearIsolation,
   submitNetworkEvents, listNetworkEvents,
   type HandlerResult, type SignedRequest,
@@ -87,6 +87,13 @@ export function createDeviceApiServer(store: DeviceStore): Server {
         const body = parseJson(rawBody)
         if (body === null) return send(res, { status: 400, body: { error: 'invalid JSON' } })
         return send(res, issueCommand(store, enqueue[1], body))
+      }
+      const scanPath = path.match(/^\/v1\/devices\/([^/]+)\/scan$/)
+      if (method === 'POST' && scanPath) {
+        if (!requireDashboard(store, req, res)) return
+        const body = parseJson(rawBody)
+        if (body === null) return send(res, { status: 400, body: { error: 'invalid JSON' } })
+        return send(res, requestScan(store, scanPath[1], body))
       }
 
       // Dashboard policy write + emergency isolate (Bearer token required).

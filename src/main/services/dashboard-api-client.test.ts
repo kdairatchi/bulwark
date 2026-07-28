@@ -128,4 +128,20 @@ describe('DashboardApiClient', () => {
     const issued = await client.issueCommand('dev_1', 'REQUEST_INVENTORY')
     expect(issued.command.type).toBe('REQUEST_INVENTORY')
   })
+
+  it('requestScan posts kind to /scan', async () => {
+    const fetchImpl = mockFetch((url, init) => {
+      expect(String(url)).toContain('/v1/devices/dev_1/scan')
+      expect(init?.method).toBe('POST')
+      expect(JSON.parse(String(init?.body))).toEqual({ kind: 'malware', scope: 'quick' })
+      return { status: 201, body: { command: { commandId: 'cmd_m', type: 'RUN_MALWARE_SCAN' } } }
+    })
+    const client = new DashboardApiClient({
+      baseUrl: 'http://127.0.0.1:8787',
+      token: 'tok',
+      fetchImpl: fetchImpl as unknown as typeof fetch,
+    })
+    const issued = await client.requestScan('dev_1', 'malware', { scope: 'quick' })
+    expect(issued.command.type).toBe('RUN_MALWARE_SCAN')
+  })
 })
