@@ -325,7 +325,7 @@ async function attemptWingetUpgrade(
   extraArgs: string[] = [],
 ): Promise<{ success: boolean; output: string }> {
   // Validate appId format to prevent argument injection (e.g. --source flags)
-  if (!/^[\w][\w.\-]{0,200}$/.test(appId)) {
+  if (!isValidAppIdForSource(appId, 'winget')) {
     return { success: false, output: 'Invalid app ID format' }
   }
   let upgradeStdout = ''
@@ -357,8 +357,8 @@ async function attemptWingetUpgrade(
 
 /** Retry a failed upgrade with elevation using PowerShell Start-Process -Verb RunAs */
 async function attemptElevatedUpgrade(appId: string): Promise<{ success: boolean; output: string }> {
-  // Validate appId format to prevent injection — winget IDs are alphanumeric with dots, dashes, underscores
-  if (!/^[\w][\w.\-]{0,200}$/.test(appId)) {
+  // Validate appId format to prevent injection — winget IDs are alphanumeric with dots, dashes, underscores, plus
+  if (!isValidAppIdForSource(appId, 'winget')) {
     return { success: false, output: 'Invalid app ID format' }
   }
 
@@ -1823,8 +1823,8 @@ export async function runUpdates(
   return { succeeded: 0, failed: 0, errors: [] }
 }
 
-/** Winget package id: alphanumeric plus dot/dash/underscore */
-const WINGET_ID_PATTERN = /^[\w][\w.\-]{0,200}$/
+/** Winget package id: alphanumeric plus dot/dash/underscore/plus (e.g. Notepad++.Notepad++) */
+const WINGET_ID_PATTERN = /^[\w+][\w.+\-]{0,200}$/
 
 /** Validate an app ID for the current platform's package manager */
 export function isValidAppId(id: string): boolean {

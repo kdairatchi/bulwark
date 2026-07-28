@@ -1,0 +1,49 @@
+{
+  "pageTitle": "Utilities",
+  "pageDescription": "Install apps with WinGet, apply reversible tweaks, and configure Windows features — inspired by WinUtil.",
+  "tabs": {
+    "install": "Install",
+    "installDescription": "WinGet catalog",
+    "tweaks": "Tweaks",
+    "tweaksDescription": "Essential & advanced",
+    "config": "Config",
+    "configDescription": "Features & panels"
+  },
+  "install": {
+    "heading": "Install",
+    "description": "Use WinGet to install, upgrade, or uninstall popular applications without hunting for download links.",
+    "wingetMissing": "WinGet not found",
+    "wingetMissingHint": "Install App Installer from the Microsoft Store to use this tab.",
+    "searchPlaceholder": "Search apps… (Ctrl+F)",
+    "installUpgrade": "Install / Upgrade Selected",
+    "upgradeAll": "Upgrade All",
+    "uninstall": "Uninstall",
+    "getInstalled": "Get Installed",
+    "clearSelection": "Clear Selection",
+    "installed": "Installed",
+    "notInstalled": "Not installed",
+    "selectedCount": "{{count}} selected",
+    "noMatches": "No apps match your search.",
+    "loading": "Loading catalog…",
+    "running": "Running WinGet…",
+    "toastSuccess": "{{count}} succeeded",
+    "toastFailed": "{{count}} failed",
+    "toastNothingSelected": "Select one or more apps first",
+    "categories": {
+      "browsers": "Browsers",
+      "utilities": "Utilities",
+      "media": "Media",
+      "communication": "Communication",
+      "development": "Development",
+      "security": "Security"
+    }
+  },
+  "tweaks": {
+    "comingSoonTitle": "Tweaks — coming next",
+    "comingSoonDescription": "Essential and Advanced reversible tweaks with an automatic System Restore Point, Ultimate Performance power plans, and O&O ShutUp10++ launch — matching WinUtil’s Tweaks tab."
+  },
+  "config": {
+    "comingSoonTitle": "Config — coming next",
+    "comingSoonDescription": "Windows optional features (.NET, Hyper-V, WSL, Sandbox), legacy Control Panel launchers, OpenSSH server, and one-click fixes."
+  }
+}

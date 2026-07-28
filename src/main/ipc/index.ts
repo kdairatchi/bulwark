@@ -26,6 +26,7 @@ import { registerProgramUninstallerIpc } from './program-uninstaller.ipc'
 import { registerServiceManagerIpc } from './service-manager.ipc'
 import { registerFirewallAuditIpc } from './firewall-audit.ipc'
 import { registerSoftwareUpdaterIpc } from './software-updater.ipc'
+import { registerUtilityInstallIpc } from './utility-install.ipc'
 import { registerShortcutCleanerIpc } from './shortcut-cleaner.ipc'
 import { registerEnvironmentCleanerIpc } from './environment-cleaner.ipc'
 import { registerDatabaseOptimizerIpc } from './database-optimizer.ipc'
@@ -83,6 +84,7 @@ export function registerCleanerIpc(getWindow: WindowGetter): void {
   registerServiceManagerIpc(getWindow)
   registerFirewallAuditIpc(getWindow)
   registerSoftwareUpdaterIpc(getWindow)
+  registerUtilityInstallIpc(getWindow)
   registerCloudAgentIpc()
   registerDeviceApiIpc()
   registerCveScannerIpc()
@@ -116,6 +118,7 @@ export function registerCleanerIpc(getWindow: WindowGetter): void {
       gameMode: true,
       firewallAudit: isWin,
       contextMenu: isWin,
+      utilityTabs: isWin,
     },
   }))
 

@@ -55,6 +55,10 @@ import type {
   UpdateProgress,
   UpdateRequestItem,
   UpdateResult,
+  UtilityInstallCatalogResult,
+  UtilityInstallActionResult,
+  UtilityInstallProgress,
+  UtilityWingetAction,
   FileTypeInfo,
   CloudActionEntry,
   ThreatSnapshot,
@@ -472,6 +476,21 @@ const api = {
     const handler = (_event: Electron.IpcRendererEvent, data: UpdateProgress) => callback(data)
     ipcRenderer.on(IPC.SOFTWARE_UPDATE_PROGRESS, handler)
     return () => { ipcRenderer.removeListener(IPC.SOFTWARE_UPDATE_PROGRESS, handler) }
+  },
+
+  // Utility Tabs — Install (WinGet)
+  utilityInstallCatalog: (): Promise<UtilityInstallCatalogResult> =>
+    ipcRenderer.invoke(IPC.UTILITY_INSTALL_CATALOG),
+  utilityInstallRefresh: (): Promise<UtilityInstallCatalogResult> =>
+    ipcRenderer.invoke(IPC.UTILITY_INSTALL_REFRESH),
+  utilityInstallRun: (payload: { action: UtilityWingetAction; ids: string[] }): Promise<UtilityInstallActionResult> =>
+    ipcRenderer.invoke(IPC.UTILITY_INSTALL_RUN, payload),
+  utilityInstallUpgradeAll: (): Promise<UtilityInstallActionResult> =>
+    ipcRenderer.invoke(IPC.UTILITY_INSTALL_UPGRADE_ALL),
+  onUtilityInstallProgress: (callback: (data: UtilityInstallProgress) => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, data: UtilityInstallProgress) => callback(data)
+    ipcRenderer.on(IPC.UTILITY_INSTALL_PROGRESS, handler)
+    return () => { ipcRenderer.removeListener(IPC.UTILITY_INSTALL_PROGRESS, handler) }
   },
 
   // Cloud Agent

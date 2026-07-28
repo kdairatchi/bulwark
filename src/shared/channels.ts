@@ -226,6 +226,13 @@ export const IPC = {
   SOFTWARE_UPDATE_RUN: 'software-update:run',
   SOFTWARE_UPDATE_PROGRESS: 'software-update:progress',
 
+  // Utility Tabs — Install (WinGet catalog)
+  UTILITY_INSTALL_CATALOG: 'utility-install:catalog',
+  UTILITY_INSTALL_REFRESH: 'utility-install:refresh',
+  UTILITY_INSTALL_RUN: 'utility-install:run',
+  UTILITY_INSTALL_UPGRADE_ALL: 'utility-install:upgrade-all',
+  UTILITY_INSTALL_PROGRESS: 'utility-install:progress',
+
   // Cloud Agent
   CLOUD_LINK: 'cloud:link',
   CLOUD_UNLINK: 'cloud:unlink',

@@ -9,6 +9,8 @@ export interface PlatformInfo {
     gameMode: boolean
     firewallAudit: boolean
     contextMenu: boolean
+    /** WinUtil-style Install / Tweaks / Config tabs (Windows only). */
+    utilityTabs: boolean
   }
 }
 
@@ -1011,6 +1013,39 @@ export interface UpToDateApp {
   name: string
   version: string
   source: string
+}
+
+/** Utility → Install: curated catalog entry (mirrors WinUtil Install tab). */
+export interface UtilityCatalogApp {
+  id: string
+  name: string
+  category: string
+  description?: string
+}
+
+export type UtilityInstalledMap = Record<string, { version: string; name: string }>
+
+export interface UtilityInstallCatalogResult {
+  wingetAvailable: boolean
+  apps: UtilityCatalogApp[]
+  installed: UtilityInstalledMap
+}
+
+export type UtilityWingetAction = 'install' | 'upgrade' | 'uninstall'
+
+export interface UtilityInstallProgress {
+  phase: 'running' | 'done'
+  action: UtilityWingetAction | 'upgrade-all'
+  currentId: string
+  current: number
+  total: number
+  message: string
+}
+
+export interface UtilityInstallActionResult {
+  succeeded: number
+  failed: number
+  errors: Array<{ id: string; reason: string }>
 }
 
 export interface UpdateCheckResult {
