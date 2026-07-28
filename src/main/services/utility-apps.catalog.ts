@@ -25,6 +25,7 @@ export const UTILITY_APP_CATALOG: UtilityCatalogApp[] = [
   { id: 'Vivaldi.Vivaldi', name: 'Vivaldi', category: 'browsers' },
   { id: 'Opera.Opera', name: 'Opera', category: 'browsers' },
   { id: 'Microsoft.Edge', name: 'Microsoft Edge', category: 'browsers' },
+  { id: 'TorProject.TorBrowser', name: 'Tor Browser', category: 'browsers' },
 
   // Utilities
   { id: '7zip.7zip', name: '7-Zip', category: 'utilities' },
@@ -45,6 +46,10 @@ export const UTILITY_APP_CATALOG: UtilityCatalogApp[] = [
   { id: 'SumatraPDF.SumatraPDF', name: 'SumatraPDF', category: 'utilities' },
   { id: 'WinMerge.WinMerge', name: 'WinMerge', category: 'utilities' },
   { id: 'LibreOffice.LibreOffice', name: 'LibreOffice', category: 'utilities' },
+  { id: 'Obsidian.Obsidian', name: 'Obsidian', category: 'utilities' },
+  { id: 'Notion.Notion', name: 'Notion', category: 'utilities' },
+  { id: 'qBittorrent.qBittorrent', name: 'qBittorrent', category: 'utilities' },
+  { id: 'Valve.Steam', name: 'Steam', category: 'utilities' },
 
   // Media
   { id: 'VideoLAN.VLC', name: 'VLC media player', category: 'media' },
@@ -55,6 +60,8 @@ export const UTILITY_APP_CATALOG: UtilityCatalogApp[] = [
   { id: 'HandBrake.HandBrake', name: 'HandBrake', category: 'media' },
   { id: 'Spotify.Spotify', name: 'Spotify', category: 'media' },
   { id: 'BlenderFoundation.Blender', name: 'Blender', category: 'media' },
+  { id: 'Meltytech.Shotcut', name: 'Shotcut', category: 'media' },
+  { id: 'KDE.Kdenlive', name: 'Kdenlive', category: 'media' },
 
   // Communication
   { id: 'Discord.Discord', name: 'Discord', category: 'communication' },
@@ -64,6 +71,7 @@ export const UTILITY_APP_CATALOG: UtilityCatalogApp[] = [
   { id: 'Mozilla.Thunderbird', name: 'Thunderbird', category: 'communication' },
   { id: 'Signal.Signal', name: 'Signal', category: 'communication' },
   { id: 'Microsoft.Teams', name: 'Microsoft Teams', category: 'communication' },
+  { id: 'Element.Element', name: 'Element', category: 'communication' },
 
   // Development
   { id: 'Microsoft.VisualStudioCode', name: 'Visual Studio Code', category: 'development' },
@@ -81,6 +89,9 @@ export const UTILITY_APP_CATALOG: UtilityCatalogApp[] = [
   { id: 'DBeaver.DBeaver.Community', name: 'DBeaver Community', category: 'development' },
   { id: 'Insomnia.Insomnia', name: 'Insomnia', category: 'development' },
   { id: 'JetBrains.Toolbox', name: 'JetBrains Toolbox', category: 'development' },
+  { id: 'Neovim.Neovim', name: 'Neovim', category: 'development' },
+  { id: 'Rustlang.Rustup', name: 'Rustup', category: 'development' },
+  { id: 'GoLang.Go', name: 'Go', category: 'development' },
 
   // Security / privacy tools
   { id: 'WiresharkFoundation.Wireshark', name: 'Wireshark', category: 'security' },
@@ -88,6 +99,8 @@ export const UTILITY_APP_CATALOG: UtilityCatalogApp[] = [
   { id: 'Bitwarden.Bitwarden', name: 'Bitwarden', category: 'security' },
   { id: 'KeePassXCTeam.KeePassXC', name: 'KeePassXC', category: 'security' },
   { id: 'Yubico.YubikeyManager', name: 'YubiKey Manager', category: 'security' },
+  { id: 'Proton.ProtonVPN', name: 'Proton VPN', category: 'security' },
+  { id: 'WireGuard.WireGuard', name: 'WireGuard', category: 'security' },
 ]
 
 export const UTILITY_CATEGORY_ORDER: UtilityAppCategory[] = [

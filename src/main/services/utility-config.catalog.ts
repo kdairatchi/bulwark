@@ -11,6 +11,9 @@ export type UtilityConfigFeatureId =
   | 'nfs'
   | 'wsl'
   | 'windows-sandbox'
+  | 'telnet-client'
+  | 'tftp-client'
+  | 'containers'
   | 'f8-boot-recovery'
   | 'daily-registry-backup'
 
@@ -110,6 +113,31 @@ export const UTILITY_CONFIG_FEATURES: UtilityConfigFeatureDefinition[] = [
     notes: 'Requires a supported Windows edition and virtualization support.',
   },
   {
+    id: 'telnet-client',
+    name: 'Telnet client',
+    description: 'Enable the legacy Telnet client optional feature.',
+    kind: 'optional-feature',
+    requiresAdmin: true,
+    featureNames: ['TelnetClient'],
+  },
+  {
+    id: 'tftp-client',
+    name: 'TFTP client',
+    description: 'Enable the Trivial File Transfer Protocol client.',
+    kind: 'optional-feature',
+    requiresAdmin: true,
+    featureNames: ['TFTP'],
+  },
+  {
+    id: 'containers',
+    name: 'Windows Containers',
+    description: 'Enable the Containers optional feature used by Windows container workloads.',
+    kind: 'optional-feature',
+    requiresAdmin: true,
+    featureNames: ['Containers'],
+    notes: 'Requires a supported Windows edition; often paired with Hyper-V.',
+  },
+  {
     id: 'f8-boot-recovery',
     name: 'Legacy F8 boot recovery',
     description: 'Use the legacy boot menu policy so F8 can open recovery options.',
@@ -202,7 +230,7 @@ export const UTILITY_CONFIG_FIXES: UtilityConfigFixDefinition[] = [
     description: 'Run SFC and DISM RestoreHealth using the existing Disk Repair command pattern.',
     requiresAdmin: true,
     requiresReboot: false,
-    notes: 'Long-running operation; P3b UI should surface progress or a busy state.',
+    notes: 'Long-running operation; the Config tab streams SFC/DISM progress while this runs.',
   },
   {
     id: 'winget-repair',

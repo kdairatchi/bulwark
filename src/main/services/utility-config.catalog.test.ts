@@ -14,6 +14,9 @@ describe('utility-config catalog', () => {
       'nfs',
       'wsl',
       'windows-sandbox',
+      'telnet-client',
+      'tftp-client',
+      'containers',
       'f8-boot-recovery',
       'daily-registry-backup',
     ])

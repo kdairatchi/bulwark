@@ -92,6 +92,26 @@ export const UTILITY_TWEAK_CATALOG: UtilityTweakDefinition[] = [
     name: 'Disable app launch tracking',
     description: 'Stop Windows from tracking app launches to personalize Start.',
   }),
+  privacyTweak('tailored-experiences', 'essential', false, {
+    name: 'Disable tailored experiences',
+    description: 'Stop Windows from using diagnostic data for personalized tips and ads.',
+  }),
+  privacyTweak('feedback-frequency', 'essential', false, {
+    name: 'Disable feedback prompts',
+    description: 'Stop Windows from asking for feedback on a recurring schedule.',
+  }),
+  privacyTweak('cortana', 'essential', true, {
+    name: 'Disable Cortana',
+    description: 'Apply the Windows Search policy that turns Cortana off.',
+  }),
+  privacyTweak('lock-screen-spotlight', 'essential', false, {
+    name: 'Disable lock screen Spotlight',
+    description: 'Stop rotating Microsoft Spotlight imagery and ads on the lock screen.',
+  }),
+  privacyTweak('silently-installed-apps', 'essential', false, {
+    name: 'Disable silent app installs',
+    description: 'Block Windows from silently installing suggested Store apps.',
+  }),
   privacyTweak('clipboard-sync', 'advanced', true, {
     name: 'Disable cloud clipboard sync',
     description: 'Prevent clipboard data from syncing through Microsoft cloud services.',
@@ -100,6 +120,10 @@ export const UTILITY_TWEAK_CATALOG: UtilityTweakDefinition[] = [
     name: 'Disable clipboard history',
     description: 'Stop Windows from storing copied text and images in clipboard history.',
   }),
+  privacyTweak('settings-sync', 'advanced', true, {
+    name: 'Disable Settings sync',
+    description: 'Prevent Windows settings from syncing through a Microsoft account.',
+  }),
   privacyTweak('copilot', 'advanced', true, {
     name: 'Disable Microsoft Copilot',
     description: 'Apply the Windows policy that turns off Microsoft Copilot.',
@@ -107,6 +131,10 @@ export const UTILITY_TWEAK_CATALOG: UtilityTweakDefinition[] = [
   privacyTweak('windows-recall', 'advanced', true, {
     name: 'Disable Windows Recall',
     description: 'Apply the Windows policy that disables Recall AI data analysis.',
+  }),
+  privacyTweak('edge-ai-features', 'advanced', true, {
+    name: 'Disable Edge AI compose features',
+    description: 'Turn off Microsoft Edge inline AI compose policy features.',
   }),
   privacyTweak('service-diagtrack', 'advanced', true, {
     name: 'Disable DiagTrack service',
@@ -119,6 +147,14 @@ export const UTILITY_TWEAK_CATALOG: UtilityTweakDefinition[] = [
   privacyTweak('task-compatibility-appraiser', 'advanced', true, {
     name: 'Disable Compatibility Appraiser task',
     description: 'Disable the scheduled task that collects app compatibility telemetry.',
+  }),
+  privacyTweak('task-ceip-consolidator', 'advanced', true, {
+    name: 'Disable CEIP Consolidator task',
+    description: 'Disable the Customer Experience Improvement Program consolidator task.',
+  }),
+  privacyTweak('task-usb-ceip', 'advanced', true, {
+    name: 'Disable USB CEIP task',
+    description: 'Disable the scheduled task that collects USB CEIP telemetry.',
   }),
 ]
 

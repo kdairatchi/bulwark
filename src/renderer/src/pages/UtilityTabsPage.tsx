@@ -116,12 +116,53 @@ function configStatusIcon(status: UtilityConfigFeatureStatus | 'loading') {
   return CircleDashed
 }
 
+interface UtilityProgressState {
+  message: string
+  current: number
+  total: number
+}
+
+function UtilityProgressBar({
+  progress,
+  fallback,
+}: {
+  progress: UtilityProgressState | null
+  fallback: string
+}) {
+  const message = progress?.message || fallback
+  const total = progress?.total ?? 0
+  const current = progress?.current ?? 0
+  const pct = total > 0 ? Math.min(100, Math.round((current / total) * 100)) : null
+
+  return (
+    <div className="min-w-0 flex-1 space-y-1.5">
+      <div className="flex items-center justify-end gap-2 text-amber-400">
+        <Loader2 className="h-3 w-3 animate-spin shrink-0" />
+        <span className="truncate text-right">{message}</span>
+        {pct !== null && (
+          <span className="shrink-0 font-mono text-[10px] text-amber-300/80">
+            {current}/{total}
+          </span>
+        )}
+      </div>
+      {pct !== null && (
+        <div className="h-1.5 overflow-hidden rounded-full" style={{ background: 'rgba(245,158,11,0.15)' }}>
+          <div
+            className="h-full rounded-full transition-[width] duration-300"
+            style={{ width: `${pct}%`, background: 'rgb(245,158,11)' }}
+          />
+        </div>
+      )}
+    </div>
+  )
+}
+
 function InstallTab() {
   const { t } = useTranslation('utilities')
   const searchRef = useRef<HTMLInputElement>(null)
   const [loading, setLoading] = useState(true)
   const [running, setRunning] = useState(false)
-  const [progressMsg, setProgressMsg] = useState('')
+  const [progress, setProgress] = useState<UtilityProgressState | null>(null)
   const [wingetAvailable, setWingetAvailable] = useState(false)
   const [apps, setApps] = useState<UtilityCatalogApp[]>([])
   const [installed, setInstalled] = useState<UtilityInstalledMap>({})
@@ -147,7 +188,11 @@ function InstallTab() {
   useEffect(() => {
     void load(false)
     const off = window.kudu.onUtilityInstallProgress?.((p) => {
-      setProgressMsg(p.message)
+      setProgress({
+        message: p.message,
+        current: p.current,
+        total: p.total,
+      })
     })
     return () => { off?.() }
   }, [load])
@@ -197,13 +242,26 @@ function InstallTab() {
 
   const clearSelection = () => setSelected(new Set())
 
+  const toggleCategory = (list: UtilityCatalogApp[]) => {
+    setSelected((prev) => {
+      const next = new Set(prev)
+      const allSelected = list.length > 0 && list.every((app) => next.has(app.id))
+      if (allSelected) {
+        for (const app of list) next.delete(app.id)
+      } else {
+        for (const app of list) next.add(app.id)
+      }
+      return next
+    })
+  }
+
   const runInstallOrUpgrade = async () => {
     if (selected.size === 0) {
       toast.error(t('install.toastNothingSelected'))
       return
     }
     setRunning(true)
-    setProgressMsg('')
+    setProgress(null)
     try {
       const ids = [...selected]
       const toInstall = ids.filter((id) => !installed[id])
@@ -231,7 +289,7 @@ function InstallTab() {
       toast.error(t('install.toastFailed', { count: selected.size }))
     } finally {
       setRunning(false)
-      setProgressMsg('')
+      setProgress(null)
     }
   }
 
@@ -241,7 +299,7 @@ function InstallTab() {
       return
     }
     setRunning(true)
-    setProgressMsg('')
+    setProgress(null)
     try {
       const result = await window.kudu.utilityInstallRun({
         action: 'uninstall',
@@ -253,13 +311,13 @@ function InstallTab() {
       toast.error(t('install.toastFailed', { count: selected.size }))
     } finally {
       setRunning(false)
-      setProgressMsg('')
+      setProgress(null)
     }
   }
 
   const runUpgradeAll = async () => {
     setRunning(true)
-    setProgressMsg('')
+    setProgress(null)
     try {
       const result = await window.kudu.utilityInstallUpgradeAll()
       reportActionResult(t, result)
@@ -268,7 +326,7 @@ function InstallTab() {
       toast.error(t('install.toastFailed', { count: 1 }))
     } finally {
       setRunning(false)
-      setProgressMsg('')
+      setProgress(null)
     }
   }
 
@@ -367,13 +425,10 @@ function InstallTab() {
         />
       </div>
 
-      <div className="flex items-center justify-between text-[11px]" style={{ color: 'var(--text-muted)' }}>
-        <span>{t('install.selectedCount', { count: selected.size })}</span>
+      <div className="flex items-start justify-between gap-4 text-[11px]" style={{ color: 'var(--text-muted)' }}>
+        <span className="shrink-0 pt-0.5">{t('install.selectedCount', { count: selected.size })}</span>
         {running && (
-          <span className="flex items-center gap-1.5 text-amber-400">
-            <Loader2 className="h-3 w-3 animate-spin" />
-            {progressMsg || t('install.running')}
-          </span>
+          <UtilityProgressBar progress={progress} fallback={t('install.running')} />
         )}
       </div>
 
@@ -381,18 +436,35 @@ function InstallTab() {
         <p className="text-[13px] py-8 text-center" style={{ color: 'var(--text-muted)' }}>{t('install.noMatches')}</p>
       ) : (
         <div className="space-y-4">
-          {grouped.map(([category, list]) => (
+          {grouped.map(([category, list]) => {
+            const categorySelectedCount = list.filter((app) => selected.has(app.id)).length
+            const categoryAllSelected = list.length > 0 && categorySelectedCount === list.length
+            return (
             <div
               key={category}
               className="rounded-2xl overflow-hidden"
               style={{ background: 'var(--card-bg)', border: '1px solid var(--border-default)' }}
             >
-              <div
-                className="px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wider"
+              <button
+                type="button"
+                disabled={running}
+                onClick={() => toggleCategory(list)}
+                className="w-full flex items-center gap-2 px-4 py-2.5 text-left transition-colors hover:bg-white/[0.02] disabled:opacity-50"
                 style={{ color: 'var(--text-muted)', borderBottom: '1px solid var(--border-default)' }}
+                title={t('install.selectCategory')}
               >
-                {t(`install.categories.${category}`, { defaultValue: category })}
-              </div>
+                {categoryAllSelected ? (
+                  <CheckSquare className="h-3.5 w-3.5 text-amber-400 shrink-0" />
+                ) : (
+                  <Square className="h-3.5 w-3.5 shrink-0" />
+                )}
+                <span className="text-[11px] font-semibold uppercase tracking-wider">
+                  {t(`install.categories.${category}`, { defaultValue: category })}
+                </span>
+                <span className="text-[10px] font-normal normal-case tracking-normal">
+                  ({categorySelectedCount}/{list.length})
+                </span>
+              </button>
               <ul>
                 {list.map((app) => {
                   const isOn = !!installed[app.id]
@@ -433,7 +505,8 @@ function InstallTab() {
                 })}
               </ul>
             </div>
-          ))}
+            )
+          })}
         </div>
       )}
     </div>
@@ -796,7 +869,7 @@ function ConfigTab() {
   const [featureStatus, setFeatureStatus] = useState<Record<string, UtilityConfigFeatureStatusResult>>({})
   const [openSshStatus, setOpenSshStatus] = useState<UtilityConfigOpenSshStatusResult | null>(null)
   const [selected, setSelected] = useState<Set<string>>(new Set())
-  const [progressMsg, setProgressMsg] = useState('')
+  const [progress, setProgress] = useState<UtilityProgressState | null>(null)
 
   const busy = runningId !== null
 
@@ -868,7 +941,11 @@ function ConfigTab() {
 
   useEffect(() => {
     const off = window.kudu.onUtilityConfigFixProgress?.((p) => {
-      setProgressMsg(p.message)
+      setProgress({
+        message: p.message,
+        current: p.current,
+        total: p.total,
+      })
     })
     return () => { off?.() }
   }, [])
@@ -958,7 +1035,7 @@ function ConfigTab() {
       return
     }
     setRunningId(`fix:${fix.id}`)
-    setProgressMsg('')
+    setProgress(null)
     try {
       const result = await window.kudu.utilityConfigFixRun(fix.id)
       reportConfigActionResult(t, result)
@@ -966,7 +1043,7 @@ function ConfigTab() {
       toast.error(t('config.toastActionFailed'))
     } finally {
       setRunningId(null)
-      setProgressMsg('')
+      setProgress(null)
     }
   }
 
@@ -1054,13 +1131,17 @@ function ConfigTab() {
               </button>
             </div>
           </div>
-          <div className="mt-3 flex items-center justify-between text-[11px]" style={{ color: 'var(--text-muted)' }}>
-            <span>{t('config.selectedCount', { count: selected.size })}</span>
+          <div className="mt-3 flex items-start justify-between gap-4 text-[11px]" style={{ color: 'var(--text-muted)' }}>
+            <span className="shrink-0 pt-0.5">{t('config.selectedCount', { count: selected.size })}</span>
             {(busy || statusLoading) && (
-              <span className="flex items-center gap-1.5 text-amber-400">
-                <Loader2 className="h-3 w-3 animate-spin" />
-                {statusLoading ? t('config.scanning') : progressMsg || t('config.running')}
-              </span>
+              statusLoading ? (
+                <span className="flex items-center gap-1.5 text-amber-400">
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                  {t('config.scanning')}
+                </span>
+              ) : (
+                <UtilityProgressBar progress={progress} fallback={t('config.running')} />
+              )
             )}
           </div>
         </div>
@@ -1172,6 +1253,11 @@ function ConfigTab() {
               <h3 className="text-[13px] font-semibold text-zinc-100">{t('config.fixesTitle')}</h3>
             </div>
             <p className="mt-1 text-[11px]" style={{ color: 'var(--text-muted)' }}>{t('config.fixesDescription')}</p>
+            {runningId?.startsWith('fix:') && (
+              <div className="mt-3 text-[11px]" style={{ color: 'var(--text-muted)' }}>
+                <UtilityProgressBar progress={progress} fallback={t('config.running')} />
+              </div>
+            )}
             <div className="mt-3 grid gap-3 sm:grid-cols-2">
               {catalog.fixes.map((fix) => (
                 <div
