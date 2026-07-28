@@ -67,8 +67,34 @@ function ConnectionsTab() {
   const overview = useNetworkGuardStore((s) => s.overview)
   const loading = useNetworkGuardStore((s) => s.monitorLoading)
   const refresh = useNetworkGuardStore((s) => s.refreshConnections)
+  const rules = useNetworkGuardStore((s) => s.rules)
+  const saveRules = useNetworkGuardStore((s) => s.saveRules)
+  const loadRules = useNetworkGuardStore((s) => s.loadRules)
+  const [live, setLive] = useState(true)
 
-  useEffect(() => { if (!overview) refresh() }, [overview, refresh])
+  useEffect(() => { if (!overview) refresh(); loadRules() }, [overview, refresh, loadRules])
+
+  // Real-time: poll while "Live" is on and the tab is mounted.
+  useEffect(() => {
+    if (!live) return
+    const id = setInterval(() => refresh(), 4000)
+    return () => clearInterval(id)
+  }, [live, refresh])
+
+  const blockRemote = async (remote: string) => {
+    const isIp = /^[0-9.]+$/.test(remote) || remote.includes(':')
+    const rule: NetworkRule = {
+      id: `rule_${Date.now()}`,
+      name: `block ${remote}`,
+      scope: { kind: 'global' },
+      match: isIp ? { ip: remote } : { domain: remote },
+      action: 'block',
+      enabled: true,
+    }
+    await saveRules([...rules, rule])
+    refresh()
+  }
+  const blockedSet = new Set(rules.filter((r) => r.action === 'block' && r.enabled).map((r) => r.match.domain || r.match.ip))
 
   return (
     <div>
@@ -80,13 +106,25 @@ function ConnectionsTab() {
           <Stat label={t('statAlerted')} value={overview?.alerted ?? 0} color="#fbbf24" />
           <Stat label={t('statListening')} value={overview?.listeningPorts.length ?? 0} />
         </div>
-        <button
-          onClick={() => refresh()}
-          disabled={loading}
-          className="flex items-center gap-2 rounded-xl px-4 py-2 text-[12px] font-medium text-zinc-200 transition-colors disabled:opacity-60"
-          style={{ background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)' }}>
-          <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} strokeWidth={1.8} /> {t('refresh')}
-        </button>
+        <div className="flex items-center gap-2.5">
+          <button
+            onClick={() => setLive((v) => !v)}
+            className="flex items-center gap-2 rounded-xl px-3 py-2 text-[12px] font-medium transition-colors"
+            style={{ background: live ? 'rgba(34,197,94,0.12)' : 'var(--bg-hover-2)', color: live ? '#4ade80' : 'var(--text-muted)', border: `1px solid ${live ? 'rgba(34,197,94,0.3)' : 'var(--border-default)'}` }}>
+            <span className="relative flex h-2 w-2">
+              {live && <span className="absolute inline-flex h-full w-full animate-ping rounded-full" style={{ background: '#4ade80', opacity: 0.75 }} />}
+              <span className="relative inline-flex h-2 w-2 rounded-full" style={{ background: live ? '#4ade80' : 'var(--text-muted)' }} />
+            </span>
+            {live ? t('live') : t('paused')}
+          </button>
+          <button
+            onClick={() => refresh()}
+            disabled={loading}
+            className="flex items-center gap-2 rounded-xl px-4 py-2 text-[12px] font-medium text-zinc-200 transition-colors disabled:opacity-60"
+            style={{ background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)' }}>
+            <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} strokeWidth={1.8} /> {t('refresh')}
+          </button>
+        </div>
       </div>
 
       {loading && !overview && <Centered text={t('loadingConnections')} />}
@@ -96,7 +134,7 @@ function ConnectionsTab() {
         </div>
       )}
       <div className="space-y-2.5">
-        {overview?.apps.map((app, i) => <AppRow key={`${app.app}-${app.pid}-${i}`} app={app} />)}
+        {overview?.apps.map((app, i) => <AppRow key={`${app.app}-${app.pid}-${i}`} app={app} onBlock={blockRemote} blockedSet={blockedSet} />)}
       </div>
 
       {overview && overview.listeningPorts.length > 0 && (
@@ -113,7 +151,8 @@ function ConnectionsTab() {
   )
 }
 
-function AppRow({ app }: { app: AppConnections }) {
+function AppRow({ app, onBlock, blockedSet }: { app: AppConnections; onBlock: (remote: string) => void; blockedSet: Set<string | undefined> }) {
+  const { t } = useTranslation('networkGuard')
   const [open, setOpen] = useState(false)
   const s = DECISION_STYLE[app.worst]
   const Caret = open ? ChevronDown : ChevronRight
@@ -133,11 +172,22 @@ function AppRow({ app }: { app: AppConnections }) {
         <div className="border-t px-4 py-2" style={{ borderColor: s.border }}>
           {app.connections.map((c, i) => {
             const cs = DECISION_STYLE[c.decision]
+            const isBlocked = blockedSet.has(c.remoteAddress)
             return (
-              <div key={i} className="flex items-center gap-3 py-1.5 font-mono text-[12px]">
+              <div key={i} className="group flex items-center gap-3 py-1.5 font-mono text-[12px]">
                 <span className="min-w-0 flex-1 truncate text-zinc-300">{c.remoteAddress}:{c.remotePort}</span>
                 {c.category && <span style={{ color: 'var(--text-muted)' }}>{c.reason}</span>}
                 <span style={{ color: cs.color }}>{cs.label}</span>
+                {isBlocked ? (
+                  <span className="shrink-0 text-[11px]" style={{ color: '#f87171' }}>{t('ruleBlocked')}</span>
+                ) : (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); onBlock(c.remoteAddress) }}
+                    className="shrink-0 rounded-md px-2 py-0.5 text-[11px] font-medium opacity-0 transition-opacity group-hover:opacity-100"
+                    style={{ color: '#f87171', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)' }}>
+                    {t('blockBtn')}
+                  </button>
+                )}
               </div>
             )
           })}
