@@ -17,7 +17,14 @@ describe('nvd-client', () => {
 
   it('maps known inventory products to CPE candidates', () => {
     expect(guessNvdCpes(app())).toEqual([{ vendor: 'haxx', product: 'curl', version: '7.88.1' }])
+    expect(guessNvdCpes(app({ name: 'Mozilla Firefox', version: 'v123.0' })))
+      .toEqual([{ vendor: 'mozilla', product: 'firefox', version: '123.0' }])
+    expect(guessNvdCpes(app({ name: 'Visual Studio Code', publisher: 'Microsoft Corporation', version: '1.85.2' })))
+      .toEqual([{ vendor: 'microsoft', product: 'visual_studio_code', version: '1.85.2' }])
+    expect(guessNvdCpes(app({ name: 'Apache HTTP Server', version: '2.4.58' })))
+      .toEqual([{ vendor: 'apache', product: 'http_server', version: '2.4.58' }])
     expect(guessNvdCpes(app({ name: 'Mystery' }))).toEqual([])
+    expect(guessNvdCpes(app({ name: 'Edge', version: '1.0' }))).toEqual([])
     expect(toCpe23({ vendor: 'haxx', product: 'curl', version: '7.88.1' }))
       .toBe('cpe:2.3:a:haxx:curl:7.88.1:*:*:*:*:*:*:*')
   })
