@@ -12,6 +12,10 @@ describe('desktop-inventory', () => {
     const findings = analyzeInstalledApps(apps)
     expect(findings.some((f) => f.subjectName === 'Mystery Tool' && f.reason === 'unknown_publisher')).toBe(true)
     expect(findings.some((f) => f.subjectName === 'Game Crack Pack' && f.reason === 'suspicious_app_name')).toBe(true)
+    expect(findings.find((f) => f.reason === 'unknown_publisher')?.level).toBe('medium')
+    expect(findings.find((f) => f.reason === 'unknown_publisher')?.status).toBe('potential_match')
+    expect(findings.find((f) => f.reason === 'suspicious_app_name')?.level).toBe('high')
+    expect(findings.find((f) => f.reason === 'suspicious_app_name')?.status).toBe('likely_affected')
     expect(findings.some((f) => f.subjectName === 'Chrome')).toBe(false)
   })
 

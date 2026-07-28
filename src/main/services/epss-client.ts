@@ -78,7 +78,12 @@ export function enrichFindingsWithEpss(
       ...f,
       reason: `${f.reason}:${tag}`.slice(0, 200),
       // High EPSS (≥0.5) elevates potential → likely when still a CVE hit
-      level: score.epss >= 0.5 && f.level === 'potential_match' ? 'likely_affected' : f.level,
+      ...(score.epss >= 0.5 && (f.level === 'potential_match' || f.status === 'potential_match' || f.level === 'medium' || f.level === 'low')
+        ? {
+            level: f.level === 'potential_match' || f.level === 'medium' || f.level === 'low' ? 'high' : f.level,
+            status: 'likely_affected' as const,
+          }
+        : {}),
     }
   })
 }

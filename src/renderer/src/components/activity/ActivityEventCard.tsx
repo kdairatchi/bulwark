@@ -6,6 +6,7 @@ import {
   explainEvent,
   formatEventCardTime,
   formatEventHeadline,
+  redactEvidence,
   severityDisplay,
 } from '@shared/activity-explain'
 
@@ -41,6 +42,10 @@ export function ActivityEventCard({
   const [mode, setMode] = useState<ActivityLogMode>(defaultMode)
   const [explainOpen, setExplainOpen] = useState(false)
   const levels = useMemo(() => explainEvent(event), [event])
+  const evidence = useMemo(
+    () => redactEvidence(levels.evidence, { hideIps: mode === 'simple' }),
+    [levels.evidence, mode],
+  )
 
   return (
     <div
@@ -56,16 +61,24 @@ export function ActivityEventCard({
           <div className="font-medium text-[13px]" style={{ color: 'var(--text-primary)' }}>
             {formatEventHeadline(event)}
           </div>
-          {!compact && (
-            <div className="mt-0.5 text-[11px]" style={{ color: 'var(--text-dim)' }}>
-              {formatEventCardTime(event.timestamp)}
-              {event.source.deviceName ? ` · ${event.source.deviceName}` : ''}
-              {' · '}
-              <span style={{ color: severityColor(event.severity) }}>
-                {severityDisplay(event.severity)}
-              </span>
-            </div>
-          )}
+          <div className="mt-0.5 text-[11px]" style={{ color: 'var(--text-dim)' }}>
+            {!compact && (
+              <>
+                {formatEventCardTime(event.timestamp)}
+                {event.source.deviceName ? ` · ${event.source.deviceName}` : ''}
+                {' · '}
+              </>
+            )}
+            {compact && event.source.deviceName ? (
+              <>
+                <span>{event.source.deviceName}</span>
+                {' · '}
+              </>
+            ) : null}
+            <span style={{ color: severityColor(event.severity) }}>
+              {severityDisplay(event.severity)}
+            </span>
+          </div>
         </div>
         <div
           className="flex shrink-0 rounded-lg overflow-hidden"
@@ -121,9 +134,9 @@ export function ActivityEventCard({
                 rule={event.source.ruleId} · {event.eventType}
               </p>
             )}
-            {levels.evidence.length > 0 && (
+            {evidence.length > 0 && (
               <ul className="mt-1 space-y-0.5 font-mono text-[11px]" style={{ color: 'var(--text-muted)' }}>
-                {levels.evidence.slice(0, 8).map((e) => (
+                {evidence.slice(0, 8).map((e) => (
                   <li key={`${e.label}:${e.value}`}>
                     {e.label}: {e.value}
                   </li>

@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   alertToBulwarkEvent,
+  findingToBulwarkEvent,
   networkEventToBulwarkEvent,
   scanHistoryToBulwarkEvent,
 } from './activity-adapters'
@@ -26,6 +27,25 @@ describe('activity-adapters', () => {
     expect(ev.cause?.confidenceLabel).toBe('highly_likely')
     expect(ev.remediation?.nextStep).toMatch(/Findings/i)
     expect(ev.source.deviceName).toBe('Living Room')
+  })
+
+  it('maps unified findings to activity cards', () => {
+    const ev = findingToBulwarkEvent({
+      id: 'f1',
+      type: 'vulnerability',
+      subjectName: 'CVE-2023-38545',
+      level: 'high',
+      status: 'likely_affected',
+      category: 'kev',
+      reason: 'kev_version_match',
+      evidence: ['Version is affected'],
+      fixRecommendation: 'Update curl',
+      createdAt: '2026-07-28T12:00:00.000Z',
+    }, { deviceName: 'Laptop' })
+    expect(ev.category).toBe('vulnerability')
+    expect(ev.summary).toContain('CVE-2023-38545')
+    expect(ev.remediation?.nextStep).toMatch(/Update curl/)
+    expect(ev.source.deviceName).toBe('Laptop')
   })
 
   it('maps isolation alerts to policy cards', () => {

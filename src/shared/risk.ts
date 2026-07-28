@@ -110,7 +110,11 @@ export interface AppRiskReport {
 /** A structured finding produced from an assessment about a specific subject. */
 export interface Finding {
   id: string
-  type: 'application_risk'
+  /**
+   * Finding taxonomy. App-risk engine always emits `application_risk`;
+   * other scanners use UnifiedFinding (src/shared/finding.ts) with wider types.
+   */
+  type: 'application_risk' | 'malware' | 'vulnerability' | 'network' | 'privacy' | 'technique' | 'inventory' | 'health'
   subjectId: string
   subjectName: string
   level: RiskLevel
@@ -121,4 +125,6 @@ export interface Finding {
   evidence: string[]
   recommendedAction: string
   createdAt: string
+  /** Optional taxonomy (defaults to risk for app-risk findings). */
+  category?: string
 }

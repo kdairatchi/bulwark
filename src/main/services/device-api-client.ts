@@ -172,6 +172,7 @@ export class DeviceApiClient {
       level: string
       subjectName: string
       reason: string
+      status?: string
       category?: string
       fixRecommendation?: string
     }>,

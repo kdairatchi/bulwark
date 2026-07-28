@@ -229,7 +229,8 @@ export function hitsToMalwareThreats(hits: LolbinHit[], pathStr: string, fileNam
 
 export function hitsToCloudFindings(hits: LolbinHit[]): InventoryFinding[] {
   return hits.map((h) => ({
-    level: h.severity === 'critical' || h.severity === 'high' ? 'likely_affected' : 'potential_match',
+    level: h.severity === 'critical' ? 'critical' : h.severity === 'high' ? 'high' : h.severity === 'medium' ? 'medium' : 'low',
+    status: h.severity === 'critical' || h.severity === 'high' ? 'likely_affected' : 'potential_match',
     subjectName: h.detectionName,
     reason: h.ruleId,
     category:

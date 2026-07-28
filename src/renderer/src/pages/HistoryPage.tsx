@@ -21,6 +21,7 @@ import { formatBytes } from '@/lib/utils'
 import { usePlatform } from '@/hooks/usePlatform'
 import type { ScanHistoryEntry, HistoryEntryType, CloudActionEntry, DeletedFileRecord } from '@shared/types'
 import { scanHistoryToBulwarkEvent } from '@shared/activity-adapters'
+import { groupEventsByDay } from '@shared/activity-explain'
 
 const typeConfigBase: Record<HistoryEntryType, { labelKey: string; icon: typeof Sparkles; color: string; bg: string }> = {
   cleaner: { labelKey: 'typeLabels.cleaner', icon: Sparkles, color: '#f59e0b', bg: 'rgba(245,158,11,0.1)' },
@@ -145,19 +146,6 @@ export function HistoryPage() {
 
   if (!loaded) return null
 
-  if (entries.length === 0) {
-    return (
-      <div className="animate-fade-in">
-        <PageHeader title={t('pageTitle')} description={t('pageDescription')} />
-        <EmptyState
-          icon={History}
-          title={t('emptyStateTitle')}
-          description={t('emptyStateDescription')}
-        />
-      </div>
-    )
-  }
-
   return (
     <div className="animate-fade-in">
       <PageHeader
@@ -208,28 +196,38 @@ export function HistoryPage() {
                 {t('viewCloud')}
               </button>
             </div>
-            <button
-              onClick={() => setShowClearConfirm(true)}
-              className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-[13px] font-medium text-zinc-500 transition-all hover:text-zinc-300"
-              style={{ background: 'var(--bg-subtle)', border: '1px solid var(--border-medium)' }}
-            >
-              <Trash2 className="h-3.5 w-3.5" strokeWidth={1.8} />
-              {t('clearButton')}
-            </button>
+            {(entries.length > 0 || cloudEntries.length > 0) && (
+              <button
+                onClick={() => setShowClearConfirm(true)}
+                className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-[13px] font-medium text-zinc-500 transition-all hover:text-zinc-300"
+                style={{ background: 'var(--bg-subtle)', border: '1px solid var(--border-medium)' }}
+              >
+                <Trash2 className="h-3.5 w-3.5" strokeWidth={1.8} />
+                {t('clearButton')}
+              </button>
+            )}
           </div>
         }
       />
 
       {viewMode === 'overview' ? (
-        <OverviewView
-          stats={stats}
-          timelineData={timelineData}
-          typeBreakdown={typeBreakdown}
-          categoryBreakdown={categoryBreakdown}
-          weeklyData={weeklyData}
-          typeConfig={typeConfig}
-          entries={entries}
-        />
+        entries.length === 0 ? (
+          <EmptyState
+            icon={History}
+            title={t('emptyStateTitle')}
+            description={t('emptyStateDescription')}
+          />
+        ) : (
+          <OverviewView
+            stats={stats}
+            timelineData={timelineData}
+            typeBreakdown={typeBreakdown}
+            categoryBreakdown={categoryBreakdown}
+            weeklyData={weeklyData}
+            typeConfig={typeConfig}
+            entries={entries}
+          />
+        )
       ) : viewMode === 'timeline' ? (
         <TimelineView
           entries={filtered}
@@ -240,7 +238,12 @@ export function HistoryPage() {
           typeConfig={typeConfig}
         />
       ) : viewMode === 'activity' ? (
-        <ActivityView entries={filtered} />
+        <ActivityView
+          entries={filtered}
+          allCount={entries.length}
+          typeFilter={typeFilter}
+          setTypeFilter={setTypeFilter}
+        />
       ) : (
         <CloudView entries={cloudEntries} loaded={cloudLoaded} />
       )}
@@ -876,8 +879,43 @@ const cloudCommandLabelKeys: Record<string, string> = {
   'registry-fix': 'cloudCommandLabels.registryFix',
 }
 
-function ActivityView({ entries }: { entries: ScanHistoryEntry[] }) {
-  if (entries.length === 0) {
+function ActivityView({
+  entries,
+  allCount,
+  typeFilter,
+  setTypeFilter,
+}: {
+  entries: ScanHistoryEntry[]
+  allCount: number
+  typeFilter: 'all' | ScanHistoryEntry['type']
+  setTypeFilter: (f: 'all' | ScanHistoryEntry['type']) => void
+}) {
+  const { t } = useTranslation('history')
+  const { features } = usePlatform()
+  const [limit, setLimit] = useState(50)
+
+  const filters: { label: string; value: 'all' | ScanHistoryEntry['type'] }[] = [
+    { label: t('timeline.filterAll'), value: 'all' },
+    { label: t('timeline.filterCleaner'), value: 'cleaner' },
+    ...(features.registry ? [{ label: t('timeline.filterRegistry'), value: 'registry' as const }] : []),
+    ...(features.debloater ? [{ label: t('timeline.filterDebloater'), value: 'debloater' as const }] : []),
+    { label: t('timeline.filterNetwork'), value: 'network' },
+    ...(features.drivers ? [{ label: t('timeline.filterDrivers'), value: 'drivers' as const }] : []),
+    { label: t('timeline.filterMalware'), value: 'malware' },
+    { label: t('timeline.filterPrivacy'), value: 'privacy' },
+    { label: t('timeline.filterStartup'), value: 'startup' },
+    { label: t('timeline.filterServices'), value: 'services' },
+    { label: t('timeline.filterUpdates'), value: 'software-update' },
+  ]
+
+  const visible = useMemo(() => entries.slice(0, limit), [entries, limit])
+  const events = useMemo(
+    () => visible.map((e) => scanHistoryToBulwarkEvent(e)),
+    [visible],
+  )
+  const groups = useMemo(() => groupEventsByDay(events), [events])
+
+  if (allCount === 0) {
     return (
       <div className="mt-6">
         <EmptyState
@@ -890,14 +928,74 @@ function ActivityView({ entries }: { entries: ScanHistoryEntry[] }) {
   }
 
   return (
-    <div className="mt-4 space-y-2 max-w-3xl">
-      <p className="text-[12px] mb-3" style={{ color: 'var(--text-dim)' }}>
-        Each card explains what happened, why it matters, and what you can do next.
-        Use Simple / Advanced / Raw, or Explain This.
-      </p>
-      {entries.slice(0, 50).map((e) => (
-        <ActivityEventCard key={e.id} event={scanHistoryToBulwarkEvent(e)} />
-      ))}
+    <div className="mt-4 max-w-3xl">
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        {filters.map((f) => (
+          <button
+            key={f.value}
+            type="button"
+            onClick={() => { setTypeFilter(f.value); setLimit(50) }}
+            className="rounded-full px-3.5 py-1.5 text-[12px] font-medium transition-colors"
+            style={{
+              background: typeFilter === f.value ? 'var(--accent-muted-bg)' : 'var(--bg-subtle-2)',
+              color: typeFilter === f.value ? 'var(--accent)' : 'var(--text-muted)',
+            }}
+          >
+            {f.label}
+          </button>
+        ))}
+        <span className="ml-auto text-[12px] font-mono" style={{ color: 'var(--text-muted)' }}>
+          {entries.length === allCount
+            ? t('timeline.entriesCount', { count: entries.length })
+            : `${entries.length} of ${allCount}`}
+        </span>
+      </div>
+
+      {entries.length === 0 ? (
+        <EmptyState
+          icon={History}
+          title="Nothing matches this filter"
+          description="Try another scan type, or choose All to see every activity card."
+        />
+      ) : (
+        <>
+          <p className="text-[12px] mb-3" style={{ color: 'var(--text-dim)' }}>
+            Each card explains what happened, why it matters, and what you can do next.
+            Use Simple / Advanced / Raw, or Explain This.
+          </p>
+          <div className="space-y-4">
+            {groups.map((g) => (
+              <div key={g.key}>
+                <h4
+                  className="mb-2 text-[11px] font-semibold uppercase tracking-wider"
+                  style={{ color: 'var(--text-muted)' }}
+                >
+                  {g.label}
+                </h4>
+                <div className="space-y-2">
+                  {g.events.map((e) => (
+                    <ActivityEventCard key={e.id} event={e} />
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+          {entries.length > visible.length && (
+            <button
+              type="button"
+              onClick={() => setLimit((n) => n + 50)}
+              className="mt-4 w-full rounded-xl px-4 py-2.5 text-[12px] font-medium transition-colors"
+              style={{
+                background: 'var(--bg-subtle)',
+                border: '1px solid var(--border-medium)',
+                color: 'var(--text-secondary)',
+              }}
+            >
+              Show more ({visible.length} of {entries.length})
+            </button>
+          )}
+        </>
+      )}
     </div>
   )
 }

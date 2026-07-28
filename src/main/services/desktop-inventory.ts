@@ -1,18 +1,16 @@
 /**
  * Desktop inventory collection + lightweight posture findings for the device API.
  * Pure-ish helpers (platform I/O injected) so unit tests stay offline.
+ *
+ * Wire findings use the shared UnifiedFinding → WireFinding contract
+ * (`level` = RiskLevel, `status` = FindingStatus). See src/shared/finding.ts.
  */
 
 import type { InstalledApp } from '../platform/types'
+import type { WireFinding } from '../../shared/finding'
 
-export interface InventoryFinding {
-  level: string
-  subjectName: string
-  reason: string
-  category?: string
-  /** Human-readable remediation hint (KEV requiredAction / upgrade floor). */
-  fixRecommendation?: string
-}
+/** @deprecated Prefer WireFinding from shared/finding — alias kept for call sites. */
+export type InventoryFinding = WireFinding
 
 export interface DesktopInventoryPayload {
   apps: Array<{
@@ -37,7 +35,8 @@ export function analyzeInstalledApps(apps: InstalledApp[]): InventoryFinding[] {
     const publisher = (app.publisher || '').trim()
     if (!publisher || /^unknown$/i.test(publisher) || publisher === '-') {
       findings.push({
-        level: 'potential_match',
+        level: 'medium',
+        status: 'potential_match',
         subjectName: app.name || 'unknown',
         reason: 'unknown_publisher',
         category: 'publisher',
@@ -45,7 +44,8 @@ export function analyzeInstalledApps(apps: InstalledApp[]): InventoryFinding[] {
     }
     if (SUSPICIOUS_NAME_RE.test(app.name || '')) {
       findings.push({
-        level: 'likely_affected',
+        level: 'high',
+        status: 'likely_affected',
         subjectName: app.name,
         reason: 'suspicious_app_name',
         category: 'name',

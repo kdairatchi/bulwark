@@ -90,6 +90,8 @@ describe('lolbin-scanner', () => {
     )
     const findings = hitsToCloudFindings(hits)
     expect(findings[0].category).toBe('lolbin')
+    expect(findings[0].level).toMatch(/critical|high|medium|low/)
+    expect(findings[0].status).toMatch(/likely_affected|potential_match/)
     const threats = hitsToMalwareThreats(hits, 'cmdline', 'mshta.exe')
     expect(threats[0].source).toBe('heuristic')
     expect(threats[0].detectionName).toContain('LOLBin')

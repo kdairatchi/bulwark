@@ -157,6 +157,44 @@ export function buildCause(
   }
 }
 
+/** Group events into day buckets for Activity timeline headers. */
+export function groupEventsByDay<T extends { timestamp: string }>(
+  events: T[],
+  now = new Date(),
+): Array<{ key: string; label: string; events: T[] }> {
+  const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()
+  const today = startOfDay(now)
+  const yesterday = today - 86_400_000
+  const buckets = new Map<string, { label: string; events: T[]; sort: number }>()
+
+  for (const event of events) {
+    const t = new Date(event.timestamp)
+    const day = startOfDay(t)
+    let key: string
+    let label: string
+    if (Number.isNaN(day)) {
+      key = 'unknown'
+      label = 'Unknown date'
+    } else if (day === today) {
+      key = 'today'
+      label = 'Today'
+    } else if (day === yesterday) {
+      key = 'yesterday'
+      label = 'Yesterday'
+    } else {
+      key = String(day)
+      label = t.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })
+    }
+    const bucket = buckets.get(key) || { label, events: [], sort: Number.isNaN(day) ? 0 : day }
+    bucket.events.push(event)
+    buckets.set(key, bucket)
+  }
+
+  return [...buckets.entries()]
+    .sort((a, b) => b[1].sort - a[1].sort)
+    .map(([key, b]) => ({ key, label: b.label, events: b.events }))
+}
+
 export function redactEvidence(
   items: ActivityEvidenceItem[],
   opts: { hideIps?: boolean; hidePaths?: boolean; hideApps?: boolean } = {},

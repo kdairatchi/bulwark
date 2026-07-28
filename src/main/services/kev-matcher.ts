@@ -199,10 +199,12 @@ export function matchKevAgainstApps(
 export function kevHitsToCloudFindings(hits: KevHit[]): InventoryFinding[] {
   return hits.map((h) => {
     const fixRecommendation = kevFixRecommendation(h)
+    const status = h.severity === 'critical' || h.severity === 'high'
+      ? (h.reason.startsWith('kev_version_match') ? 'likely_affected' : 'potential_match')
+      : 'potential_match'
     return {
-      level: h.severity === 'critical' || h.severity === 'high'
-        ? (h.reason.startsWith('kev_version_match') ? 'likely_affected' : 'potential_match')
-        : 'potential_match',
+      level: h.severity === 'critical' ? 'critical' : h.severity === 'high' ? 'high' : h.severity === 'medium' ? 'medium' : 'low',
+      status,
       subjectName: h.cveId,
       reason: `${h.reason}:${h.appName}@${h.installedVersion}${h.ransomware ? ':ransomware' : ''}`.slice(0, 200),
       category: 'kev',

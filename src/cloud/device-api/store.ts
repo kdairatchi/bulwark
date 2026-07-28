@@ -101,9 +101,10 @@ export function normalizeFixRecommendation(raw: unknown): string | null {
 export function findingPenalty(finding: Pick<StoredFinding, 'level' | 'category' | 'reason'>): number {
   const level = finding.level.toLowerCase()
   let base = 8
-  if (level.includes('critical') || level.includes('likely') || level === 'dangerous') base = 25
-  else if (level.includes('high') || level.includes('confirmed')) base = 20
-  else if (level.includes('medium') || level.includes('potential')) base = 10
+  // Prefer RiskLevel vocabulary; still understand legacy status-as-level.
+  if (level === 'critical' || level.includes('critical') || level === 'dangerous') base = 25
+  else if (level === 'high' || level.includes('high') || level.includes('confirmed') || level.includes('likely')) base = 20
+  else if (level === 'medium' || level.includes('medium') || level.includes('potential')) base = 10
   else if (level === 'safe' || level === 'low') base = 2
 
   const cat = (finding.category || '').toLowerCase()
@@ -115,6 +116,10 @@ export function findingPenalty(finding: Pick<StoredFinding, 'level' | 'category'
     weight = 1.15
   } else if (cat === 'sideload' || cat === 'malware') {
     weight = 1.2
+  } else if (cat === 'publisher' || cat === 'name') {
+    weight = 0.7
+  } else if (cat === 'privacy' || cat === 'network') {
+    weight = cat === 'privacy' ? 0.5 : 1.1
   } else if (cat === 'health' || cat === 'risk') {
     weight = 0.85
   }
