@@ -91,6 +91,7 @@ import type {
 } from '../shared/types'
 import type { AppRiskReport } from '../shared/risk'
 import type { NetworkEvent, ThreatIndicator } from '../shared/network-guard'
+import type { ConnectionOverview, PortScanResult } from '../shared/network-monitor'
 
 const api = {
   // Platform
@@ -430,6 +431,10 @@ const api = {
   appRiskFetch: (): Promise<AppRiskReport> => ipcRenderer.invoke(IPC.APP_RISK_FETCH),
   networkGuardCheck: (req: { destination: string; indicators?: ThreatIndicator[]; port?: number; protocol?: 'tcp' | 'udp' }): Promise<NetworkEvent> =>
     ipcRenderer.invoke(IPC.NETWORK_GUARD_CHECK, req),
+  networkMonitorList: (indicators?: ThreatIndicator[]): Promise<ConnectionOverview> =>
+    ipcRenderer.invoke(IPC.NETWORK_MONITOR_LIST, indicators),
+  networkPortScan: (req: { host?: string; ports?: string; timeoutMs?: number }): Promise<PortScanResult> =>
+    ipcRenderer.invoke(IPC.NETWORK_PORT_SCAN, req),
   onProgramSafetyUpdated: (callback: (data: StartupSafetyResult) => void) => {
     const handler = (_event: Electron.IpcRendererEvent, data: StartupSafetyResult) => callback(data)
     ipcRenderer.on(IPC.PROGRAM_SAFETY_UPDATED, handler)

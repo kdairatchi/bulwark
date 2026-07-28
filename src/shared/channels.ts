@@ -172,6 +172,8 @@ export const IPC = {
 
   // Network Guard (local threat-indicator matching)
   NETWORK_GUARD_CHECK: 'network-guard:check',
+  NETWORK_MONITOR_LIST: 'network-guard:monitor',
+  NETWORK_PORT_SCAN: 'network-guard:port-scan',
 
   // Onboarding
   ONBOARDING_GET: 'onboarding:get',

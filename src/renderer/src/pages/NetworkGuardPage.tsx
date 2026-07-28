@@ -1,9 +1,13 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { ShieldCheck, ShieldAlert, ShieldX, Search, Globe } from 'lucide-react'
+import {
+  ShieldCheck, ShieldAlert, ShieldX, Search, Globe, Activity, Radar, Network,
+  RefreshCw, Lock, ChevronDown, ChevronRight,
+} from 'lucide-react'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { useNetworkGuardStore } from '@/stores/network-guard-store'
 import type { NetworkDecision, NetworkEvent } from '@shared/network-guard'
+import type { AppConnections } from '@shared/network-monitor'
 
 const DECISION_STYLE: Record<NetworkDecision, { label: string; color: string; bg: string; border: string; Icon: typeof ShieldCheck }> = {
   allow: { label: 'Allow', color: '#4ade80', bg: 'rgba(34,197,94,0.10)', border: 'rgba(34,197,94,0.30)', Icon: ShieldCheck },
@@ -11,7 +15,196 @@ const DECISION_STYLE: Record<NetworkDecision, { label: string; color: string; bg
   block: { label: 'Block', color: '#f87171', bg: 'rgba(239,68,68,0.10)', border: 'rgba(239,68,68,0.30)', Icon: ShieldX },
 }
 
+type Tab = 'connections' | 'scan' | 'check' | 'spn'
+
 export function NetworkGuardPage() {
+  const { t } = useTranslation('networkGuard')
+  const [tab, setTab] = useState<Tab>('connections')
+
+  const tabs: { id: Tab; label: string; Icon: typeof Activity }[] = [
+    { id: 'connections', label: t('tabConnections'), Icon: Activity },
+    { id: 'scan', label: t('tabScan'), Icon: Radar },
+    { id: 'check', label: t('tabCheck'), Icon: Search },
+    { id: 'spn', label: t('tabSpn'), Icon: Lock },
+  ]
+
+  return (
+    <div className="p-8 animate-fade-in">
+      <PageHeader title={t('pageTitle')} description={t('pageDescription')} />
+
+      <div className="mb-6 flex gap-1.5 border-b" style={{ borderColor: 'var(--border-default)' }}>
+        {tabs.map((tb) => (
+          <button
+            key={tb.id}
+            onClick={() => setTab(tb.id)}
+            className="flex items-center gap-2 border-b-2 px-4 py-2.5 text-[13px] font-medium transition-colors"
+            style={{
+              borderColor: tab === tb.id ? '#f59e0b' : 'transparent',
+              color: tab === tb.id ? '#fafafa' : 'var(--text-muted)',
+            }}>
+            <tb.Icon className="h-4 w-4" strokeWidth={1.8} /> {tb.label}
+          </button>
+        ))}
+      </div>
+
+      {tab === 'connections' && <ConnectionsTab />}
+      {tab === 'scan' && <PortScanTab />}
+      {tab === 'check' && <CheckTab />}
+      {tab === 'spn' && <SpnTab />}
+    </div>
+  )
+}
+
+// ─── Connections (Portmaster-style per-app monitor) ─────────
+
+function ConnectionsTab() {
+  const { t } = useTranslation('networkGuard')
+  const overview = useNetworkGuardStore((s) => s.overview)
+  const loading = useNetworkGuardStore((s) => s.monitorLoading)
+  const refresh = useNetworkGuardStore((s) => s.refreshConnections)
+
+  useEffect(() => { if (!overview) refresh() }, [overview, refresh])
+
+  return (
+    <div>
+      <div className="mb-4 flex items-center justify-between">
+        <div className="flex gap-3">
+          <Stat label={t('statApps')} value={overview?.apps.length ?? 0} />
+          <Stat label={t('statConnections')} value={overview?.totalConnections ?? 0} />
+          <Stat label={t('statBlocked')} value={overview?.blocked ?? 0} color="#f87171" />
+          <Stat label={t('statAlerted')} value={overview?.alerted ?? 0} color="#fbbf24" />
+          <Stat label={t('statListening')} value={overview?.listeningPorts.length ?? 0} />
+        </div>
+        <button
+          onClick={() => refresh()}
+          disabled={loading}
+          className="flex items-center gap-2 rounded-xl px-4 py-2 text-[12px] font-medium text-zinc-200 transition-colors disabled:opacity-60"
+          style={{ background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)' }}>
+          <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} strokeWidth={1.8} /> {t('refresh')}
+        </button>
+      </div>
+
+      {loading && !overview && <Centered text={t('loadingConnections')} />}
+      {overview && overview.apps.length === 0 && (
+        <div className="rounded-xl px-4 py-10 text-center text-[13px]" style={{ color: 'var(--text-muted)', border: '1px solid var(--border-default)' }}>
+          {t('noConnections')}
+        </div>
+      )}
+      <div className="space-y-2.5">
+        {overview?.apps.map((app, i) => <AppRow key={`${app.app}-${app.pid}-${i}`} app={app} />)}
+      </div>
+
+      {overview && overview.listeningPorts.length > 0 && (
+        <div className="mt-6">
+          <p className="mb-2 text-[12px] font-semibold uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>{t('listeningTitle')}</p>
+          <div className="flex flex-wrap gap-1.5">
+            {overview.listeningPorts.map((p) => (
+              <span key={p} className="rounded-md px-2 py-1 font-mono text-[11px]" style={{ background: 'var(--bg-hover-2)', border: '1px solid var(--border-default)', color: 'var(--text-muted)' }}>{p}</span>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function AppRow({ app }: { app: AppConnections }) {
+  const [open, setOpen] = useState(false)
+  const s = DECISION_STYLE[app.worst]
+  const Caret = open ? ChevronDown : ChevronRight
+  return (
+    <div className="rounded-xl" style={{ background: s.bg, border: `1px solid ${s.border}` }}>
+      <button onClick={() => setOpen((o) => !o)} className="flex w-full items-center gap-3 px-4 py-3 text-left">
+        <Caret className="h-4 w-4 shrink-0" style={{ color: 'var(--text-muted)' }} />
+        <Network className="h-4 w-4 shrink-0" style={{ color: s.color }} strokeWidth={1.8} />
+        <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-zinc-100">{app.app}</span>
+        {app.pid != null && <span className="shrink-0 font-mono text-[11px]" style={{ color: 'var(--text-muted)' }}>pid {app.pid}</span>}
+        <span className="shrink-0 text-[12px]" style={{ color: 'var(--text-muted)' }}>{app.count} conn</span>
+        {app.worst !== 'allow' && (
+          <span className="shrink-0 rounded-full px-2.5 py-0.5 text-[11px] font-semibold" style={{ color: s.color, background: `${s.color}1a`, border: `1px solid ${s.color}40` }}>{s.label}</span>
+        )}
+      </button>
+      {open && (
+        <div className="border-t px-4 py-2" style={{ borderColor: s.border }}>
+          {app.connections.map((c, i) => {
+            const cs = DECISION_STYLE[c.decision]
+            return (
+              <div key={i} className="flex items-center gap-3 py-1.5 font-mono text-[12px]">
+                <span className="min-w-0 flex-1 truncate text-zinc-300">{c.remoteAddress}:{c.remotePort}</span>
+                {c.category && <span style={{ color: 'var(--text-muted)' }}>{c.reason}</span>}
+                <span style={{ color: cs.color }}>{cs.label}</span>
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─── Port scanner ───────────────────────────────────────────
+
+function PortScanTab() {
+  const { t } = useTranslation('networkGuard')
+  const scan = useNetworkGuardStore((s) => s.scanPorts)
+  const scanning = useNetworkGuardStore((s) => s.scanning)
+  const result = useNetworkGuardStore((s) => s.scanResult)
+  const [host, setHost] = useState('127.0.0.1')
+  const [ports, setPorts] = useState('top')
+
+  return (
+    <div className="glass-card rounded-2xl p-6">
+      <div className="grid grid-cols-[1fr_1fr_auto] gap-2.5">
+        <Labeled label={t('host')}>
+          <input value={host} onChange={(e) => setHost(e.target.value)} className="w-full rounded-xl px-3.5 py-2.5 text-[13px] text-zinc-100 outline-none" style={{ background: 'var(--bg-hover-2)', border: '1px solid var(--border-default)' }} placeholder="127.0.0.1" />
+        </Labeled>
+        <Labeled label={t('ports')}>
+          <input value={ports} onChange={(e) => setPorts(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') scan(host, ports) }} className="w-full rounded-xl px-3.5 py-2.5 text-[13px] text-zinc-100 outline-none" style={{ background: 'var(--bg-hover-2)', border: '1px solid var(--border-default)' }} placeholder="top, 1-1024, 22,80,443" />
+        </Labeled>
+        <div className="flex items-end">
+          <button
+            onClick={() => scan(host, ports)}
+            disabled={scanning}
+            className="flex h-[42px] items-center gap-2 rounded-xl px-5 text-[12px] font-medium text-zinc-100 transition-colors disabled:opacity-60"
+            style={{ background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)' }}>
+            <Radar className={`h-3.5 w-3.5 ${scanning ? 'animate-spin' : ''}`} strokeWidth={1.8} /> {scanning ? t('scanningPorts') : t('scan')}
+          </button>
+        </div>
+      </div>
+      <p className="mt-2 text-[11px]" style={{ color: 'var(--text-muted)' }}>{t('scanHint')}</p>
+
+      {result && (
+        <div className="mt-5">
+          {result.error ? (
+            <p className="text-[13px]" style={{ color: '#f87171' }}>{result.error}</p>
+          ) : (
+            <>
+              <p className="mb-3 text-[12px]" style={{ color: 'var(--text-muted)' }}>
+                {t('scanSummary', { open: result.openPorts.length, scanned: result.scanned, host: result.host, ms: result.durationMs })}
+              </p>
+              <div className="space-y-2">
+                {result.openPorts.length === 0 && (
+                  <p className="text-[13px]" style={{ color: 'var(--text-muted)' }}>{t('noOpenPorts')}</p>
+                )}
+                {result.openPorts.map((p) => (
+                  <div key={p.port} className="flex items-center gap-3 rounded-lg px-4 py-2.5 text-[13px]" style={{ background: 'rgba(34,197,94,0.06)', border: '1px solid rgba(34,197,94,0.2)' }}>
+                    <span className="font-mono font-semibold text-zinc-100">{p.port}</span>
+                    <span className="rounded-md px-2 py-0.5 text-[11px]" style={{ background: 'rgba(34,197,94,0.15)', color: '#4ade80' }}>{t('open')}</span>
+                    <span style={{ color: 'var(--text-muted)' }}>{p.service}</span>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─── Destination checker ────────────────────────────────────
+
+function CheckTab() {
   const { t } = useTranslation('networkGuard')
   const feedText = useNetworkGuardStore((s) => s.feedText)
   const setFeedText = useNetworkGuardStore((s) => s.setFeedText)
@@ -19,60 +212,27 @@ export function NetworkGuardPage() {
   const checking = useNetworkGuardStore((s) => s.checking)
   const error = useNetworkGuardStore((s) => s.error)
   const result = useNetworkGuardStore((s) => s.result)
-  const history = useNetworkGuardStore((s) => s.history)
   const [target, setTarget] = useState('')
 
-  const onCheck = () => check(target)
-
   return (
-    <div className="p-8 animate-fade-in">
-      <PageHeader title={t('pageTitle')} description={t('pageDescription')} />
-
-      <div className="glass-card rounded-2xl p-6">
-        <label className="mb-2 block text-[12px] font-medium" style={{ color: 'var(--text-muted)' }}>{t('checkLabel')}</label>
-        <div className="flex gap-2.5">
-          <div className="flex flex-1 items-center gap-2 rounded-xl px-3.5" style={{ background: 'var(--bg-hover-2)', border: '1px solid var(--border-default)' }}>
-            <Globe className="h-4 w-4 shrink-0" style={{ color: 'var(--text-muted)' }} />
-            <input
-              value={target}
-              onChange={(e) => setTarget(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter') onCheck() }}
-              placeholder={t('placeholder')}
-              className="w-full bg-transparent py-2.5 text-[13px] text-zinc-100 outline-none"
-            />
-          </div>
-          <button
-            onClick={onCheck}
-            disabled={checking}
-            className="flex items-center gap-2 rounded-xl px-5 py-2.5 text-[12px] font-medium text-zinc-100 transition-colors disabled:opacity-60"
-            style={{ background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)' }}>
-            <Search className={`h-3.5 w-3.5 ${checking ? 'animate-pulse' : ''}`} strokeWidth={1.8} />
-            {checking ? t('checking') : t('check')}
-          </button>
+    <div className="glass-card rounded-2xl p-6">
+      <label className="mb-2 block text-[12px] font-medium" style={{ color: 'var(--text-muted)' }}>{t('checkLabel')}</label>
+      <div className="flex gap-2.5">
+        <div className="flex flex-1 items-center gap-2 rounded-xl px-3.5" style={{ background: 'var(--bg-hover-2)', border: '1px solid var(--border-default)' }}>
+          <Globe className="h-4 w-4 shrink-0" style={{ color: 'var(--text-muted)' }} />
+          <input value={target} onChange={(e) => setTarget(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') check(target) }} placeholder={t('placeholder')} className="w-full bg-transparent py-2.5 text-[13px] text-zinc-100 outline-none" />
         </div>
-        {error && <p className="mt-3 text-[12px]" style={{ color: '#f87171' }}>{error}</p>}
-        {result && <VerdictCard event={result} />}
+        <button onClick={() => check(target)} disabled={checking} className="flex items-center gap-2 rounded-xl px-5 py-2.5 text-[12px] font-medium text-zinc-100 transition-colors disabled:opacity-60" style={{ background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)' }}>
+          <Search className={`h-3.5 w-3.5 ${checking ? 'animate-pulse' : ''}`} strokeWidth={1.8} /> {checking ? t('checking') : t('check')}
+        </button>
       </div>
+      {error && <p className="mt-3 text-[12px]" style={{ color: '#f87171' }}>{error}</p>}
+      {result && <VerdictCard event={result} />}
 
-      {history.length > 1 && (
-        <div className="mt-6">
-          <p className="mb-2.5 text-[12px] font-semibold uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>{t('recent')}</p>
-          <div className="space-y-2">
-            {history.slice(1).map((h, i) => <HistoryRow key={i} event={h.event} />)}
-          </div>
-        </div>
-      )}
-
-      <details className="mt-6 rounded-2xl p-5 glass-card">
+      <details className="mt-5">
         <summary className="cursor-pointer text-[13px] font-medium text-zinc-200">{t('feedTitle')}</summary>
         <p className="mb-2 mt-2 text-[12px]" style={{ color: 'var(--text-muted)' }}>{t('feedHint')}</p>
-        <textarea
-          value={feedText}
-          onChange={(e) => setFeedText(e.target.value)}
-          spellCheck={false}
-          className="h-56 w-full rounded-xl p-3 font-mono text-[11px] text-zinc-200 outline-none"
-          style={{ background: 'var(--bg-hover-2)', border: '1px solid var(--border-default)' }}
-        />
+        <textarea value={feedText} onChange={(e) => setFeedText(e.target.value)} spellCheck={false} className="h-48 w-full rounded-xl p-3 font-mono text-[11px] text-zinc-200 outline-none" style={{ background: 'var(--bg-hover-2)', border: '1px solid var(--border-default)' }} />
       </details>
     </div>
   )
@@ -87,13 +247,9 @@ function VerdictCard({ event }: { event: NetworkEvent }) {
         <s.Icon className="h-6 w-6 shrink-0" style={{ color: s.color }} strokeWidth={1.8} />
         <div className="min-w-0 flex-1">
           <p className="truncate text-[14px] font-semibold text-zinc-100">{event.destination}</p>
-          <p className="text-[12px]" style={{ color: 'var(--text-muted)' }}>
-            {event.destinationType.toUpperCase()}{event.port ? ` · port ${event.port}` : ''}
-          </p>
+          <p className="text-[12px]" style={{ color: 'var(--text-muted)' }}>{event.destinationType.toUpperCase()}{event.port ? ` · port ${event.port}` : ''}</p>
         </div>
-        <span className="shrink-0 rounded-full px-3 py-1 text-[12px] font-semibold" style={{ color: s.color, background: `${s.color}1a`, border: `1px solid ${s.color}40` }}>
-          {s.label}
-        </span>
+        <span className="shrink-0 rounded-full px-3 py-1 text-[12px] font-semibold" style={{ color: s.color, background: `${s.color}1a`, border: `1px solid ${s.color}40` }}>{s.label}</span>
       </div>
       <div className="mt-3 grid grid-cols-3 gap-3 text-[12px]">
         <Field label={t('reason')} value={event.reason} />
@@ -101,10 +257,44 @@ function VerdictCard({ event }: { event: NetworkEvent }) {
         <Field label={t('confidence')} value={event.decision === 'allow' ? '—' : `${Math.round(event.confidence * 100)}%`} />
       </div>
       {event.matchedIndicator && (
-        <p className="mt-3 text-[12px]" style={{ color: 'var(--text-muted)' }}>
-          {t('matched')}: <span className="font-mono text-zinc-300">{event.matchedIndicator}</span>
-        </p>
+        <p className="mt-3 text-[12px]" style={{ color: 'var(--text-muted)' }}>{t('matched')}: <span className="font-mono text-zinc-300">{event.matchedIndicator}</span></p>
       )}
+    </div>
+  )
+}
+
+// ─── SPN (planned) ──────────────────────────────────────────
+
+function SpnTab() {
+  const { t } = useTranslation('networkGuard')
+  return (
+    <div className="glass-card rounded-2xl p-8 text-center">
+      <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl" style={{ background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.3)' }}>
+        <Lock className="h-8 w-8" style={{ color: '#f59e0b' }} strokeWidth={1.6} />
+      </div>
+      <p className="text-[16px] font-semibold text-white">{t('spnTitle')}</p>
+      <span className="mt-2 inline-block rounded-full px-3 py-1 text-[11px] font-semibold" style={{ background: 'rgba(245,158,11,0.12)', color: '#fbbf24', border: '1px solid rgba(245,158,11,0.3)' }}>{t('spnPlanned')}</span>
+      <p className="mx-auto mt-4 max-w-xl text-[13px] leading-relaxed" style={{ color: 'var(--text-muted)' }}>{t('spnDescription')}</p>
+    </div>
+  )
+}
+
+// ─── Shared bits ────────────────────────────────────────────
+
+function Stat({ label, value, color }: { label: string; value: number; color?: string }) {
+  return (
+    <div className="rounded-xl px-3.5 py-2" style={{ background: 'var(--bg-hover-2)', border: '1px solid var(--border-default)' }}>
+      <p className="text-[18px] font-bold leading-none" style={{ color: color ?? '#fafafa' }}>{value}</p>
+      <p className="mt-1 text-[10px] uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>{label}</p>
+    </div>
+  )
+}
+
+function Labeled({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <label className="mb-1.5 block text-[11px] font-medium uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>{label}</label>
+      {children}
     </div>
   )
 }
@@ -118,14 +308,11 @@ function Field({ label, value }: { label: string; value: string }) {
   )
 }
 
-function HistoryRow({ event }: { event: NetworkEvent }) {
-  const s = DECISION_STYLE[event.decision]
+function Centered({ text }: { text: string }) {
   return (
-    <div className="flex items-center gap-3 rounded-lg px-4 py-2.5 text-[12px]" style={{ background: s.bg, border: `1px solid ${s.border}` }}>
-      <s.Icon className="h-4 w-4 shrink-0" style={{ color: s.color }} strokeWidth={1.8} />
-      <span className="min-w-0 flex-1 truncate font-medium text-zinc-200">{event.destination}</span>
-      <span style={{ color: 'var(--text-muted)' }}>{event.reason}</span>
-      <span className="rounded-full px-2 py-0.5 text-[11px] font-semibold" style={{ color: s.color }}>{s.label}</span>
+    <div className="flex items-center justify-center py-16">
+      <div className="h-5 w-5 animate-spin rounded-full border-2 border-amber-400 border-t-transparent" />
+      <span className="ml-3 text-[13px]" style={{ color: 'var(--text-muted)' }}>{text}</span>
     </div>
   )
 }

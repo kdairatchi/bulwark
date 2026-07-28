@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import type { NetworkEvent, ThreatIndicator } from '@shared/network-guard'
+import type { ConnectionOverview, PortScanResult } from '@shared/network-monitor'
 
 // A small, clearly-labeled EXAMPLE feed so the checker is usable out of the box.
 // These use RFC 2606 reserved names — they are placeholders that demonstrate the
@@ -25,6 +26,14 @@ interface NetworkGuardState {
   history: HistoryItem[]
   setFeedText: (text: string) => void
   check: (destination: string) => Promise<void>
+  // Live connection monitor
+  overview: ConnectionOverview | null
+  monitorLoading: boolean
+  refreshConnections: () => Promise<void>
+  // Port scanner
+  scanResult: PortScanResult | null
+  scanning: boolean
+  scanPorts: (host: string, ports: string) => Promise<void>
 }
 
 function parseFeed(text: string): ThreatIndicator[] {
@@ -62,6 +71,32 @@ export const useNetworkGuardStore = create<NetworkGuardState>((set, get) => ({
       set((s) => ({ result: event, checking: false, history: [{ event }, ...s.history].slice(0, 12) }))
     } catch (err) {
       set({ error: err instanceof Error ? err.message : 'Check failed', checking: false })
+    }
+  },
+
+  overview: null,
+  monitorLoading: false,
+  refreshConnections: async () => {
+    let indicators: ThreatIndicator[] = []
+    try { indicators = parseFeed(get().feedText) } catch { /* use empty feed if invalid */ }
+    set({ monitorLoading: true })
+    try {
+      const overview = await window.kudu.networkMonitorList(indicators)
+      set({ overview, monitorLoading: false })
+    } catch (err) {
+      set({ error: err instanceof Error ? err.message : 'Failed to load connections', monitorLoading: false })
+    }
+  },
+
+  scanResult: null,
+  scanning: false,
+  scanPorts: async (host, ports) => {
+    set({ scanning: true, scanResult: null })
+    try {
+      const scanResult = await window.kudu.networkPortScan({ host: host.trim() || '127.0.0.1', ports })
+      set({ scanResult, scanning: false })
+    } catch (err) {
+      set({ error: err instanceof Error ? err.message : 'Scan failed', scanning: false })
     }
   },
 }))

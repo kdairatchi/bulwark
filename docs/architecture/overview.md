@@ -55,6 +55,23 @@ platform/
 └── docs/          architecture · threat-model · privacy · api · product
 ```
 
+## Network Guard & SPN
+
+The desktop **Network Guard** (Portmaster-inspired) provides three on-device,
+metadata-only capabilities today: a live **per-application connection monitor**
+(each connection evaluated by the threat-indicator engine), a TCP **port scanner**
+(`net.connect`, no root), and a **destination checker**. All of this is local-first
+— it inspects destination/connection metadata, never packet payloads.
+
+**SPN (Secure Private Network) — planned.** Inspired by Safing's SPN, this is a
+multi-hop, onion-style encrypted overlay that routes each app's traffic through
+independent relays so no single hop learns both identity and destination. It
+requires dedicated relay infrastructure plus a hardened tunnel client (a natural
+fit for the future Rust security sidecar), so it is intentionally on the roadmap
+and surfaced in the UI as "Planned" rather than shipped half-built. Enforcement
+(actually blocking a connection, not just flagging it) similarly depends on a
+privileged local firewall integration and is sequenced with the sidecar work.
+
 ## Cloud stack (planned)
 
 - **Frontend:** Next.js (TypeScript) dashboard.
