@@ -65,9 +65,11 @@ async function main() {
   const unsigned = await fetch(`${BASE}/v1/devices/${deviceId}/heartbeat`, { method: 'POST', body: '{}' })
   console.log('4. unsigned heartbeat rejected with status:', unsigned.status)
 
-  // 5. Dashboard views.
-  console.log('5. GET /v1/devices  ->', JSON.stringify(await (await fetch(`${BASE}/v1/devices`)).json(), null, 2))
-  console.log('   GET /v1/findings ->', JSON.stringify(await (await fetch(`${BASE}/v1/findings`)).json(), null, 2))
+  // 5. Dashboard views (Bearer required).
+  const denied = await fetch(`${BASE}/v1/devices`)
+  console.log('5. unauthenticated GET /v1/devices status:', denied.status)
+  console.log('   GET /v1/devices  ->', JSON.stringify(await (await fetch(`${BASE}/v1/devices`, { headers: dash })).json(), null, 2))
+  console.log('   GET /v1/findings ->', JSON.stringify(await (await fetch(`${BASE}/v1/findings`, { headers: dash })).json(), null, 2))
 }
 
 main().catch((e) => { console.error(e); process.exit(1) })

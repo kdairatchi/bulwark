@@ -201,5 +201,5 @@
   "parentScanQueuedToast": "Scan queued — agent will post findings on next poll",
   "parentScanFailedToast": "Could not queue scan",
   "parentTokenPlaceholder": "Dashboard token (Bearer) — auto-filled via local bootstrap",
-  "parentTokenHint": "Write actions require Authorization: Bearer. Local cloud:dev exposes GET /v1/dashboard-bootstrap; production sets DASHBOARD_TOKEN."
+  "parentTokenHint": "Dashboard reads and writes require Authorization: Bearer. Local cloud:dev exposes GET /v1/dashboard-bootstrap; production sets DASHBOARD_TOKEN."
 }

@@ -1,5 +1,4 @@
 /**
-import { fetchDashboardToken, dashboardAuthHeaders } from './dashboard-auth.mjs'
  * Demo: deeper posture findings + network-events batch ingest.
  *
  *   npm run cloud:dev
@@ -7,6 +6,7 @@ import { fetchDashboardToken, dashboardAuthHeaders } from './dashboard-auth.mjs'
  */
 
 import { generateKeyPairSync, sign, createHash } from 'crypto'
+import { fetchDashboardToken, dashboardAuthHeaders } from './dashboard-auth.mjs'
 
 const BASE = (process.env.DEVICE_API_URL || 'http://127.0.0.1:8787').replace(/\/+$/, '')
 const sha256 = (s) => createHash('sha256').update(s).digest('hex')
@@ -85,7 +85,7 @@ async function main() {
   })
   console.log('4. network-events accepted:', events.body)
 
-  const listed = await (await fetch(`${BASE}/v1/network-events?deviceId=${deviceId}`)).json()
+  const listed = await (await fetch(`${BASE}/v1/network-events?deviceId=${deviceId}`, { headers: dash })).json()
   console.log('5. dashboard sees', listed.count, 'events; types=', listed.events.map((e) => e.type).join(','))
   if (listed.count < 4) throw new Error('expected >= 4 events')
   console.log('DONE')

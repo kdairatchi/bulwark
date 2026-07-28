@@ -122,7 +122,7 @@ async function main() {
   const flush = await signed('POST', `/v1/devices/${deviceId}/network-events`, { events })
   console.log('6. flushed to cloud accepted=', (flush.body as { accepted: number }).accepted)
 
-  const listed = await (await fetch(`${BASE}/v1/network-events?deviceId=${deviceId}`)).json() as { count: number }
+  const listed = await (await fetch(`${BASE}/v1/network-events?deviceId=${deviceId}`, { headers: dash })).json() as { count: number }
   console.log('7. cloud events:', listed.count)
   if (listed.count < 1) throw new Error('expected cloud events')
 

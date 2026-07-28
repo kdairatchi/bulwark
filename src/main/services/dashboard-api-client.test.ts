@@ -12,22 +12,28 @@ function mockFetch(handler: (url: string, init?: RequestInit) => { status: numbe
 }
 
 describe('DashboardApiClient', () => {
-  it('lists devices from GET /v1/devices', async () => {
-    const fetchImpl = mockFetch((url) => {
+  it('lists devices from GET /v1/devices with Bearer token', async () => {
+    const fetchImpl = mockFetch((url, init) => {
       expect(url).toBe('http://127.0.0.1:8787/v1/devices')
+      expect((init?.headers as Record<string, string>).Authorization).toBe('Bearer tok')
       return {
         status: 200,
         body: {
           devices: [{
             id: 'dev_1', name: 'TV', os: 'Android TV', enrolledAt: 't',
             lastHeartbeat: null, inventoryCount: 0, findingsCount: 0,
+            openFindingsCount: 0, securityScore: 100,
             isolated: false, policyVersion: 1, dnsGuardRequired: false, blockedDomains: [],
           }],
           count: 1,
         },
       }
     })
-    const client = new DashboardApiClient({ baseUrl: 'http://127.0.0.1:8787/', fetchImpl: fetchImpl as unknown as typeof fetch })
+    const client = new DashboardApiClient({
+      baseUrl: 'http://127.0.0.1:8787/',
+      token: 'tok',
+      fetchImpl: fetchImpl as unknown as typeof fetch,
+    })
     const devices = await client.listDevices()
     expect(devices).toHaveLength(1)
     expect(devices[0].name).toBe('TV')

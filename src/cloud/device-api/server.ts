@@ -68,8 +68,12 @@ export function createDeviceApiServer(store: DeviceStore): Server {
         if (body === null) return send(res, { status: 400, body: { error: 'invalid JSON' } })
         return send(res, enrollDevice(store, body))
       }
-      if (method === 'GET' && path === '/v1/devices') return send(res, listDevices(store))
+      if (method === 'GET' && path === '/v1/devices') {
+        if (!requireDashboard(store, req, res)) return
+        return send(res, listDevices(store))
+      }
       if (method === 'GET' && path === '/v1/findings') {
+        if (!requireDashboard(store, req, res)) return
         const deviceId = url.searchParams.get('deviceId') ?? undefined
         return send(res, listFindings(store, deviceId))
       }
@@ -81,12 +85,16 @@ export function createDeviceApiServer(store: DeviceStore): Server {
         return send(res, reviewFinding(store, decodeURIComponent(reviewPath[1]), body))
       }
       if (method === 'GET' && path === '/v1/network-events') {
+        if (!requireDashboard(store, req, res)) return
         const deviceId = url.searchParams.get('deviceId') ?? undefined
         return send(res, listNetworkEvents(store, deviceId))
       }
       if (method === 'GET' && path === '/v1/server-key') return send(res, getServerKey(store))
       const deviceDetail = path.match(/^\/v1\/devices\/([^/]+)$/)
-      if (method === 'GET' && deviceDetail) return send(res, getDevice(store, deviceDetail[1]))
+      if (method === 'GET' && deviceDetail) {
+        if (!requireDashboard(store, req, res)) return
+        return send(res, getDevice(store, deviceDetail[1]))
+      }
 
       const enqueue = path.match(/^\/v1\/devices\/([^/]+)\/commands$/)
       if (method === 'POST' && enqueue) {

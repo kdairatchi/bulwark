@@ -1,6 +1,7 @@
 /**
  * Parent / operator dashboard client for the Bulwark device API.
- * Write routes require Authorization: Bearer <dashboard-token>.
+ * Dashboard read + write routes require Authorization: Bearer <dashboard-token>
+ * (except GET /v1/dashboard-bootstrap and GET /v1/server-key).
  * Local/dev servers expose GET /v1/dashboard-bootstrap when the token was auto-generated.
  */
 
@@ -56,7 +57,7 @@ export interface DashboardFinding {
 
 export interface DashboardApiClientOptions {
   baseUrl: string
-  /** Bearer token for write routes (pairing, policy, isolate, commands). */
+  /** Bearer token for dashboard read/write routes. */
   token?: string
   fetchImpl?: typeof fetch
 }
@@ -136,7 +137,7 @@ export class DashboardApiClient {
   }
 
   async listDevices(): Promise<DashboardDevice[]> {
-    const { status, body } = await this.request('GET', '/v1/devices', undefined, { auth: false })
+    const { status, body } = await this.request('GET', '/v1/devices')
     if (status < 200 || status >= 300) throw new DeviceApiHttpError(status, body)
     const devices = (body as { devices?: unknown }).devices
     return Array.isArray(devices) ? (devices as DashboardDevice[]) : []
@@ -180,7 +181,7 @@ export class DashboardApiClient {
     const path = deviceId
       ? `/v1/network-events?deviceId=${encodeURIComponent(deviceId)}`
       : '/v1/network-events'
-    const { status, body } = await this.request('GET', path, undefined, { auth: false })
+    const { status, body } = await this.request('GET', path)
     if (status < 200 || status >= 300) throw new DeviceApiHttpError(status, body)
     const events = (body as { events?: unknown }).events
     return Array.isArray(events) ? (events as DashboardNetworkEvent[]) : []
@@ -190,7 +191,7 @@ export class DashboardApiClient {
     const path = deviceId
       ? `/v1/findings?deviceId=${encodeURIComponent(deviceId)}`
       : '/v1/findings'
-    const { status, body } = await this.request('GET', path, undefined, { auth: false })
+    const { status, body } = await this.request('GET', path)
     if (status < 200 || status >= 300) throw new DeviceApiHttpError(status, body)
     const findings = (body as { findings?: unknown }).findings
     return Array.isArray(findings) ? (findings as DashboardFinding[]) : []

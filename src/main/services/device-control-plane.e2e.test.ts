@@ -107,13 +107,16 @@ describe('device control plane e2e · isolate → tick → dns_blocked', () => {
     })
     expect(isolateRes.status).toBe(202)
 
-    // Unauthenticated write must fail.
+    // Unauthenticated write/read must fail.
     const denied = await fetch(`${baseUrl}/v1/devices/${deviceId}/isolate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ reason: 'no token' }),
     })
     expect(denied.status).toBe(401)
+    expect((await fetch(`${baseUrl}/v1/devices`)).status).toBe(401)
+    expect((await fetch(`${baseUrl}/v1/findings`)).status).toBe(401)
+    expect((await fetch(`${baseUrl}/v1/network-events`)).status).toBe(401)
 
     // First tick: heartbeat, pull isolated policy, execute ISOLATE_DEVICE, start resolver.
     await agent.tick()
@@ -129,7 +132,9 @@ describe('device control plane e2e · isolate → tick → dns_blocked', () => {
     // Second tick: flush queued dns_blocked (+ isolation_enabled) events.
     await agent.tick()
 
-    const listed = await (await fetch(`${baseUrl}/v1/network-events?deviceId=${encodeURIComponent(deviceId)}`)).json() as {
+    const listed = await (await fetch(`${baseUrl}/v1/network-events?deviceId=${encodeURIComponent(deviceId)}`, {
+      headers: authHeaders,
+    })).json() as {
       events: Array<{ type: string; subject: string | null }>
       count: number
     }

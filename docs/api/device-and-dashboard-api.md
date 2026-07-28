@@ -30,12 +30,12 @@
 > - `POST /v1/pairing-codes` (dashboard auth), `POST /v1/devices/enroll`
 > - `GET /v1/dashboard-bootstrap` (local/dev only)
 > - `POST /v1/devices/{id}/heartbeat|inventory|findings` (device-signed)
-> - `GET /v1/devices`, `GET /v1/devices/{id}`, `GET /v1/findings`
-> - `GET /v1/server-key`
+> - `GET /v1/devices`, `GET /v1/devices/{id}`, `GET /v1/findings`, `GET /v1/network-events` (dashboard auth)
+> - `GET /v1/server-key` (public)
 > - `POST /v1/devices/{id}/commands` (dashboard auth) · `GET …/commands` · `POST …/commands/{id}/result`
 > - `GET /v1/devices/{id}/policy` (device-signed) · `PUT …/policy` (dashboard auth)
 > - `POST /v1/devices/{id}/isolate` · `DELETE …/isolate` (dashboard auth)
-> - `POST /v1/devices/{id}/network-events` (device-signed) · `GET /v1/network-events`
+> - `POST /v1/devices/{id}/network-events` (device-signed)
 
 ## Device APIs (agent → cloud)
 
@@ -53,17 +53,19 @@ GET  /v1/server-key                           # implemented (server Ed25519 publ
 
 ## Dashboard APIs (user → cloud)
 
+All of these require `Authorization: Bearer <dashboard-token>` unless noted.
+
 ```
-GET  /v1/devices
-GET  /v1/devices/{id}
-GET  /v1/findings
-GET  /v1/network-events                       # implemented
-POST /v1/devices/{id}/commands                # implemented (enqueue allowlisted command)
-PUT  /v1/devices/{id}/policy                  # implemented (merge policy + APPLY_POLICY command)
-POST /v1/devices/{id}/isolate                 # implemented (emergency isolate + ISOLATE_DEVICE)
-DELETE /v1/devices/{id}/isolate               # implemented (clear + CLEAR_ISOLATION)
-POST /v1/findings/{id}/review                 # implemented (Bearer; status=false_positive|accepted_risk|…)
-POST /v1/devices/{id}/scan                    # implemented (Bearer; kind=health|malware|vulnerability → RUN_*)
+GET  /v1/devices                              # Bearer
+GET  /v1/devices/{id}                         # Bearer
+GET  /v1/findings                             # Bearer
+GET  /v1/network-events                       # Bearer
+POST /v1/devices/{id}/commands                # Bearer (enqueue allowlisted command)
+PUT  /v1/devices/{id}/policy                  # Bearer (merge policy + APPLY_POLICY command)
+POST /v1/devices/{id}/isolate                 # Bearer (emergency isolate + ISOLATE_DEVICE)
+DELETE /v1/devices/{id}/isolate               # Bearer (clear + CLEAR_ISOLATION)
+POST /v1/findings/{id}/review                 # Bearer (status=false_positive|accepted_risk|…)
+POST /v1/devices/{id}/scan                    # Bearer (kind=health|malware|vulnerability → RUN_*)
 GET  /v1/reports                              # planned
 POST /v1/breach-monitors                      # planned
 GET  /v1/audit-events                         # planned

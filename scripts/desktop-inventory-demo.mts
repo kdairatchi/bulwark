@@ -76,7 +76,7 @@ async function main() {
   })
   console.log('3. findings accepted=', (findingsRes.body as { accepted: number }).accepted)
 
-  const listed = await (await fetch(`${BASE}/v1/devices`)).json() as {
+  const listed = await (await fetch(`${BASE}/v1/devices`, { headers: dash })).json() as {
     devices: Array<{ id: string; inventoryCount: number; findingsCount: number }>
   }
   const dev = listed.devices.find((d) => d.id === deviceId)!
@@ -84,7 +84,7 @@ async function main() {
   if (dev.inventoryCount < 3) throw new Error('expected inventoryCount >= 3')
   if (dev.findingsCount < 1) throw new Error('expected findingsCount >= 1')
 
-  const findings = await (await fetch(`${BASE}/v1/findings?deviceId=${deviceId}`)).json() as {
+  const findings = await (await fetch(`${BASE}/v1/findings?deviceId=${deviceId}`, { headers: dash })).json() as {
     findings: Array<{ subjectName: string; reason: string }>
     count: number
   }

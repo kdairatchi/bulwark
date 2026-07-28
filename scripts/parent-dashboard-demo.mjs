@@ -54,7 +54,7 @@ async function main() {
     return { status: res.status, body: await res.json() }
   }
 
-  const listed = await (await fetch(`${BASE}/v1/devices`)).json()
+  const listed = await (await fetch(`${BASE}/v1/devices`, { headers: dash })).json()
   const kid = listed.devices.find((d) => d.id === deviceId)
   if (!kid || kid.isolated !== false) throw new Error('listDevices missing policy summary')
   console.log('3. dashboard list:', kid.name, 'isolated=', kid.isolated, 'v=', kid.policyVersion)
@@ -76,7 +76,7 @@ async function main() {
   })).json()
   console.log('5. isolated=', isolate.policy.isolated, '→', isolate.command.type)
 
-  const after = await (await fetch(`${BASE}/v1/devices`)).json()
+  const after = await (await fetch(`${BASE}/v1/devices`, { headers: dash })).json()
   const kid2 = after.devices.find((d) => d.id === deviceId)
   if (!kid2?.isolated) throw new Error('expected isolated=true on listDevices')
   console.log('6. listDevices isolated badge=', kid2.isolated)
@@ -89,7 +89,7 @@ async function main() {
     ],
   })
 
-  const events = await (await fetch(`${BASE}/v1/network-events?deviceId=${encodeURIComponent(deviceId)}`)).json()
+  const events = await (await fetch(`${BASE}/v1/network-events?deviceId=${encodeURIComponent(deviceId)}`, { headers: dash })).json()
   console.log('7. network events:', events.count)
   if (events.count < 3) throw new Error('expected >=3 events')
   for (const e of events.events) {

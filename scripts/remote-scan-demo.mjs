@@ -81,6 +81,6 @@ await signed(keys.privateKey, deviceId, 'POST', `/v1/devices/${deviceId}/finding
   ],
 })
 
-const listed = await (await fetch(`${BASE}/v1/findings?deviceId=${encodeURIComponent(deviceId)}`)).json()
+const listed = await (await fetch(`${BASE}/v1/findings?deviceId=${encodeURIComponent(deviceId)}`, { headers })).json()
 console.log('findings', listed.count, listed.findings?.map((f) => f.reason))
 console.log('ok')
