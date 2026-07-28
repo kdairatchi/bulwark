@@ -114,6 +114,13 @@ CLEAR_ISOLATION
 APPLY_POLICY
 ```
 
+**Desktop enforcement (non-stub):**
+
+| Command | Behavior |
+|---------|----------|
+| `UPDATE_THREAT_FEEDS` | Syncs enabled filter lists (URLhaus by default) into the local DoT blocklist; optional `domains[]` (+ `replace`) merges into remote blocks (Android-parity). Params: `syncLists` (default true), `listIds[]`, `domains[]`, `replace`. |
+| `QUARANTINE_FILE` | Moves `path` / `paths[]` into the app quarantine folder when under platform malware allowlist (`/tmp`, Downloads, …). |
+
 **Not allowed:** arbitrary shell / PowerShell / remote-exec (`RUN_SHELL` is rejected
 at enqueue with HTTP 400).
 

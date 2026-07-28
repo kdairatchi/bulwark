@@ -26,6 +26,7 @@ import {
 } from './device-policy-enforcer'
 import { collectDesktopInventory } from './desktop-inventory'
 import { executeRemoteScan } from './desktop-remote-scans'
+import { executeUpdateThreatFeeds, executeQuarantineFile } from './desktop-remote-actions'
 import { getPlatform } from '../platform'
 import { cloudLog } from './logger'
 
@@ -120,9 +121,9 @@ export async function defaultCommandExecutor(
       }
     }
     case 'UPDATE_THREAT_FEEDS':
-      return { ok: true, stub: true, type, updated: false, parameters }
+      return executeUpdateThreatFeeds(parameters)
     case 'QUARANTINE_FILE':
-      return { ok: true, stub: true, type, applied: false, reason: 'stub — awaiting enforcement wiring', parameters }
+      return executeQuarantineFile(parameters)
     case 'BLOCK_DOMAIN': {
       const domain = typeof parameters.domain === 'string'
         ? parameters.domain

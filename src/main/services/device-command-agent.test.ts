@@ -163,6 +163,25 @@ describe('defaultCommandExecutor', () => {
       expect(Array.isArray(r._findings)).toBe(true)
     }
   })
+
+  it('UPDATE_THREAT_FEEDS domain push is not a stub', async () => {
+    const r = await defaultCommandExecutor('UPDATE_THREAT_FEEDS', {
+      syncLists: false,
+      domains: ['malware.example.invalid'],
+    })
+    expect(r.stub).toBe(false)
+    expect(r.type).toBe('UPDATE_THREAT_FEEDS')
+    expect(r.updated).toBe(true)
+    expect(r.domainsAdded).toBe(1)
+  })
+
+  it('QUARANTINE_FILE rejects disallowed paths without stubbing', async () => {
+    const r = await defaultCommandExecutor('QUARANTINE_FILE', { path: '/etc/passwd' })
+    expect(r.stub).toBe(false)
+    expect(r.applied).toBe(false)
+    expect(r.ok).toBe(false)
+    expect(String(r.reason)).toMatch(/outside allowed|missing path/i)
+  })
 })
 
 describe('isValidPairingCode', () => {

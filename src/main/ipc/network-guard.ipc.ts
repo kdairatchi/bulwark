@@ -8,9 +8,8 @@ import type { NetworkRule } from '../../shared/policy'
 import { buildIndicatorIndex, evaluateDestination, sanitizeIndicators } from '../services/network-guard'
 import { buildConnectionOverview, parsePortSpec, scanPorts } from '../services/network-monitor'
 import { dnsResolver } from '../services/dns-resolver'
-import { STARTER_BLOCKLIST } from '../services/dns-filter'
 import { loadRules, saveRules } from '../services/network-rules-store'
-import { getFilterListsState, syncFilterLists, mergedBlocklistDomains } from '../services/filter-lists'
+import { getFilterListsState, syncFilterLists } from '../services/filter-lists'
 import { getEnabledListIds, setEnabledListIds } from '../services/filter-lists-store'
 import type { FilterListsState } from '../../shared/filter-lists'
 import { DnsEnforcement, buildEnforcementPlan } from '../services/dns-enforcement'
@@ -20,7 +19,7 @@ import { evaluateRules } from '../services/policy-engine'
 import type { GeoipStatus } from '../../shared/geoip'
 import { cloudLog } from '../services/logger'
 import { getPlatform } from '../platform'
-import { devicePolicyEnforcer } from '../services/device-policy-enforcer'
+import { refreshResolverBlocklist } from '../services/dns-blocklist-refresh'
 
 /** Parse the resolver's bound port from its stats address (default 5353). */
 function currentResolverPort(): number {
@@ -35,31 +34,8 @@ const dnsEnforcement = new DnsEnforcement({
   audit: (event, detail) => cloudLog('INFO', `[enforcement] ${event}${detail ? ': ' + detail : ''}`),
 })
 
-/**
- * Build the resolver's block set from: the built-in starter list, all enabled
- * filter lists, and user domain block-rules.
- */
-function resolverBlocklist(rules: NetworkRule[]): string[] {
-  const domains = [...STARTER_BLOCKLIST, ...mergedBlocklistDomains(getEnabledListIds())]
-  for (const r of rules) {
-    if (r.enabled && r.action === 'block' && r.match.domain) domains.push(r.match.domain)
-  }
-  return domains
-}
-
-function refreshResolverBlocklist(): void {
-  // Wire local lists into the policy enforcer so remote blocklists merge correctly.
-  devicePolicyEnforcer.setLocalBlocklistProvider(() => resolverBlocklist(loadRules()))
-  if (devicePolicyEnforcer.isIsolated()) {
-    // Keep allowlist isolation intact — do not overwrite with blocklist rules.
-    void devicePolicyEnforcer.reapply()
-    return
-  }
-  const domains = [
-    ...resolverBlocklist(loadRules()),
-    ...devicePolicyEnforcer.remoteBlockedDomains(),
-  ]
-  dnsResolver.setFilterMode('blocklist', domains)
+function refreshLocalBlocklistAndAnswerPolicy(): void {
+  refreshResolverBlocklist()
   refreshResolverAnswerPolicy()
 }
 
@@ -135,7 +111,7 @@ export function registerNetworkGuardIpc(): void {
 
   // ─── Secure DNS (DNS-over-TLS filtering resolver) ─────────
   ipcMain.handle(IPC.DNS_RESOLVER_START, async (_e, config?: Partial<DnsResolverConfig>): Promise<DnsResolverStats> => {
-    refreshResolverBlocklist()
+    refreshLocalBlocklistAndAnswerPolicy()
     return dnsResolver.start(config)
   })
   ipcMain.handle(IPC.DNS_RESOLVER_STOP, async (): Promise<DnsResolverStats> => {
@@ -149,7 +125,7 @@ export function registerNetworkGuardIpc(): void {
   ipcMain.handle(IPC.NETWORK_RULES_SET, async (_e, rules: NetworkRule[]): Promise<NetworkRule[]> => {
     const saved = saveRules(rules)
     // Keep the running resolver's blocklist + response policy in sync with rules.
-    refreshResolverBlocklist()
+    refreshLocalBlocklistAndAnswerPolicy()
     return saved
   })
 
@@ -158,14 +134,14 @@ export function registerNetworkGuardIpc(): void {
 
   ipcMain.handle(IPC.FILTER_LISTS_SET_ENABLED, async (_e, ids: string[]): Promise<FilterListsState> => {
     const enabled = setEnabledListIds(Array.isArray(ids) ? ids : [])
-    refreshResolverBlocklist()
+    refreshLocalBlocklistAndAnswerPolicy()
     return getFilterListsState(enabled)
   })
 
   ipcMain.handle(IPC.FILTER_LISTS_SYNC, async (): Promise<FilterListsState> => {
     const enabled = getEnabledListIds()
     const state = await syncFilterLists(enabled)
-    refreshResolverBlocklist()
+    refreshLocalBlocklistAndAnswerPolicy()
     return state
   })
 

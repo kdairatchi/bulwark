@@ -96,6 +96,11 @@ export class DevicePolicyEnforcer {
     ]
   }
 
+  /** Clear BLOCK_DOMAIN / threat-feed manual blocks (does not clear filter lists). */
+  clearManualBlocks(): void {
+    this.manualBlocks.clear()
+  }
+
   pushEvent(type: string, subject?: string | null, detail?: string | null): void {
     this.pendingEvents.push({
       type,

@@ -20,6 +20,8 @@ import {
   Lock,
   Unlock,
   Radio,
+  Download,
+  FolderLock,
   type LucideIcon,
 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -506,6 +508,7 @@ function ParentControlPanel({
   const [minting, setMinting] = useState(false)
   const [mintedCode, setMintedCode] = useState<string | null>(null)
   const [blockedText, setBlockedText] = useState('')
+  const [quarantinePath, setQuarantinePath] = useState('')
   const [dnsGuard, setDnsGuard] = useState(false)
   const [busy, setBusy] = useState(false)
   const [dashboardToken, setDashboardToken] = useState('')
@@ -712,6 +715,67 @@ function ParentControlPanel({
     setBusy(false)
   }
 
+  const handleRefreshFeeds = async () => {
+    if (!selected) return
+    setBusy(true)
+    try {
+      const token = await ensureToken()
+      const extraDomains = blockedText
+        .split('\n')
+        .map((s) => s.trim())
+        .filter(Boolean)
+        .slice(0, 50)
+      const res = await window.kudu?.dashboardIssueCommand?.({
+        ...authPayload(),
+        token: token || undefined,
+        deviceId: selected.id,
+        type: 'UPDATE_THREAT_FEEDS',
+        parameters: {
+          syncLists: true,
+          ...(extraDomains.length ? { domains: extraDomains } : {}),
+        },
+      })
+      if (res?.success) {
+        toast.success(t('parentFeedsQueuedToast'))
+        await refresh()
+      } else {
+        toast.error(t('parentFeedsFailedToast'), { description: res && 'error' in res ? res.error : undefined })
+      }
+    } catch {
+      toast.error(t('parentFeedsFailedToast'))
+    }
+    setBusy(false)
+  }
+
+  const handleQuarantineFile = async () => {
+    if (!selected) return
+    const path = quarantinePath.trim()
+    if (!path) {
+      toast.error(t('parentQuarantinePathRequired'))
+      return
+    }
+    setBusy(true)
+    try {
+      const token = await ensureToken()
+      const res = await window.kudu?.dashboardIssueCommand?.({
+        ...authPayload(),
+        token: token || undefined,
+        deviceId: selected.id,
+        type: 'QUARANTINE_FILE',
+        parameters: { path },
+      })
+      if (res?.success) {
+        toast.success(t('parentQuarantineQueuedToast'))
+        await refresh()
+      } else {
+        toast.error(t('parentQuarantineFailedToast'), { description: res && 'error' in res ? res.error : undefined })
+      }
+    } catch {
+      toast.error(t('parentQuarantineFailedToast'))
+    }
+    setBusy(false)
+  }
+
   const handleReviewFinding = async (findingId: string, status: 'false_positive' | 'accepted_risk') => {
     setBusy(true)
     try {
@@ -912,6 +976,37 @@ function ParentControlPanel({
                   >
                     <Bug className="h-3.5 w-3.5" strokeWidth={1.8} />
                     {t('parentRunVuln')}
+                  </button>
+                  <button
+                    onClick={handleRefreshFeeds}
+                    disabled={busy}
+                    className="flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-[13px] font-medium disabled:opacity-40"
+                    style={{ background: 'var(--bg-subtle)', border: '1px solid var(--border-medium)', color: 'var(--text-secondary)' }}
+                  >
+                    <Download className="h-3.5 w-3.5" strokeWidth={1.8} />
+                    {t('parentRefreshFeeds')}
+                  </button>
+                </div>
+
+                <div className="flex flex-wrap items-end gap-2">
+                  <div className="flex-1 min-w-[200px]">
+                    <div className="text-[11px] mb-1" style={{ color: 'var(--text-muted)' }}>{t('parentQuarantinePath')}</div>
+                    <input
+                      value={quarantinePath}
+                      onChange={(e) => setQuarantinePath(e.target.value)}
+                      placeholder="/tmp/suspicious.bin"
+                      className="w-full rounded-xl px-3 py-2 text-[12px] text-zinc-300 outline-none font-mono"
+                      style={{ background: 'var(--bg-subtle)', border: '1px solid var(--border-medium)' }}
+                    />
+                  </div>
+                  <button
+                    onClick={handleQuarantineFile}
+                    disabled={busy}
+                    className="flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-[13px] font-medium disabled:opacity-40"
+                    style={{ background: 'var(--bg-subtle)', border: '1px solid var(--border-medium)', color: 'var(--text-secondary)' }}
+                  >
+                    <FolderLock className="h-3.5 w-3.5" strokeWidth={1.8} />
+                    {t('parentQuarantineFile')}
                   </button>
                 </div>
 
