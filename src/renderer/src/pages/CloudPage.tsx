@@ -475,6 +475,15 @@ type ParentEvent = {
   detail: string | null
 }
 
+type ParentFinding = {
+  id: string
+  deviceId: string
+  level: string
+  subjectName: string
+  reason: string
+  createdAt: string
+}
+
 function ParentControlPanel({
   t, baseUrl, onBaseUrlChange,
 }: {
@@ -484,6 +493,7 @@ function ParentControlPanel({
 }) {
   const [devices, setDevices] = useState<ParentDevice[]>([])
   const [events, setEvents] = useState<ParentEvent[]>([])
+  const [findings, setFindings] = useState<ParentFinding[]>([])
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [minting, setMinting] = useState(false)
@@ -497,9 +507,13 @@ function ParentControlPanel({
   const refresh = useCallback(async () => {
     setLoading(true)
     try {
-      const [devRes, evtRes] = await Promise.all([
+      const [devRes, evtRes, findRes] = await Promise.all([
         window.kudu?.dashboardListDevices?.({ baseUrl: baseUrl.trim() || undefined }),
         window.kudu?.dashboardListEvents?.({
+          baseUrl: baseUrl.trim() || undefined,
+          deviceId: selectedId || undefined,
+        }),
+        window.kudu?.dashboardListFindings?.({
           baseUrl: baseUrl.trim() || undefined,
           deviceId: selectedId || undefined,
         }),
@@ -515,6 +529,7 @@ function ParentControlPanel({
         toast.error(t('parentLoadFailedToast'), { description: devRes.error })
       }
       if (evtRes?.success) setEvents(evtRes.events)
+      if (findRes?.success) setFindings(findRes.findings)
     } catch {
       toast.error(t('parentLoadFailedToast'))
     }
@@ -613,6 +628,27 @@ function ParentControlPanel({
     setBusy(false)
   }
 
+  const handleRequestInventory = async () => {
+    if (!selected) return
+    setBusy(true)
+    try {
+      const res = await window.kudu?.dashboardIssueCommand?.({
+        baseUrl: baseUrl.trim() || undefined,
+        deviceId: selected.id,
+        type: 'REQUEST_INVENTORY',
+      })
+      if (res?.success) {
+        toast.success(t('parentInventoryQueuedToast'))
+        await refresh()
+      } else {
+        toast.error(t('parentInventoryFailedToast'), { description: res && 'error' in res ? res.error : undefined })
+      }
+    } catch {
+      toast.error(t('parentInventoryFailedToast'))
+    }
+    setBusy(false)
+  }
+
   return (
     <div
       className="rounded-2xl p-6 mb-4 mt-4"
@@ -690,6 +726,9 @@ function ParentControlPanel({
                 <div className="text-[11px] mt-1" style={{ color: 'var(--text-muted)' }}>
                   {d.os || 'unknown'} · {t('parentOnline')}: {d.lastHeartbeat ? new Date(d.lastHeartbeat).toLocaleString() : t('parentNever')}
                 </div>
+                <div className="text-[11px] mt-0.5" style={{ color: 'var(--text-dim)' }}>
+                  {t('parentApps')}: {d.inventoryCount} · {t('parentFindings')}: {d.findingsCount}
+                </div>
               </button>
             ))}
           </div>
@@ -719,6 +758,15 @@ function ParentControlPanel({
                       {t('parentIsolate')}
                     </button>
                   )}
+                  <button
+                    onClick={handleRequestInventory}
+                    disabled={busy}
+                    className="flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-[13px] font-medium disabled:opacity-40"
+                    style={{ background: 'var(--bg-subtle)', border: '1px solid var(--border-medium)', color: 'var(--text-secondary)' }}
+                  >
+                    <FileSearch className="h-3.5 w-3.5" strokeWidth={1.8} />
+                    {t('parentRequestInventory')}
+                  </button>
                 </div>
 
                 <label className="flex items-center gap-2 text-[12px]" style={{ color: 'var(--text-secondary)' }}>
@@ -751,6 +799,31 @@ function ParentControlPanel({
       )}
 
       <div className="mt-5">
+        <h4 className="text-[12px] font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--text-muted)' }}>
+          {t('parentFindings')}
+        </h4>
+        {findings.length === 0 ? (
+          <p className="text-[12px]" style={{ color: 'var(--text-dim)' }}>{t('parentNoFindings')}</p>
+        ) : (
+          <div className="max-h-40 overflow-y-auto space-y-1.5 mb-4">
+            {[...findings].reverse().slice(0, 40).map((f) => (
+              <div
+                key={f.id}
+                className="rounded-lg px-3 py-2 text-[11px] font-mono"
+                style={{ background: 'var(--bg-subtle)', border: '1px solid var(--border-medium)', color: 'var(--text-secondary)' }}
+              >
+                <span style={{ color: f.level.includes('likely') ? '#f87171' : '#fbbf24' }}>{f.level}</span>
+                {' · '}
+                {f.subjectName}
+                {' · '}
+                <span style={{ color: 'var(--text-dim)' }}>{f.reason}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="mt-2">
         <h4 className="text-[12px] font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--text-muted)' }}>
           {t('parentEvents')}
         </h4>

@@ -580,6 +580,28 @@ const api = {
       }
     | { success: false; error: string }
   > => ipcRenderer.invoke(IPC.DASHBOARD_LIST_EVENTS, payload ?? {}),
+  dashboardListFindings: (payload?: { baseUrl?: string; deviceId?: string }): Promise<
+    | {
+        success: true
+        findings: Array<{
+          id: string
+          deviceId: string
+          level: string
+          subjectName: string
+          reason: string
+          createdAt: string
+        }>
+      }
+    | { success: false; error: string }
+  > => ipcRenderer.invoke(IPC.DASHBOARD_LIST_FINDINGS, payload ?? {}),
+  dashboardIssueCommand: (payload: {
+    baseUrl?: string
+    deviceId: string
+    type: string
+    parameters?: Record<string, unknown>
+  }): Promise<
+    { success: true; command: { commandId: string; type: string } } | { success: false; error: string }
+  > => ipcRenderer.invoke(IPC.DASHBOARD_ISSUE_COMMAND, payload),
 
   // Duplicate Finder
   duplicatesSelectDir: (): Promise<string | null> =>

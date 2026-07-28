@@ -40,6 +40,15 @@ export interface DashboardNetworkEvent {
   metadata: Record<string, unknown>
 }
 
+export interface DashboardFinding {
+  id: string
+  deviceId: string
+  level: string
+  subjectName: string
+  reason: string
+  createdAt: string
+}
+
 export interface DashboardApiClientOptions {
   baseUrl: string
   fetchImpl?: typeof fetch
@@ -142,6 +151,30 @@ export class DashboardApiClient {
     if (status < 200 || status >= 300) throw new DeviceApiHttpError(status, body)
     const events = (body as { events?: unknown }).events
     return Array.isArray(events) ? (events as DashboardNetworkEvent[]) : []
+  }
+
+  async listFindings(deviceId?: string): Promise<DashboardFinding[]> {
+    const path = deviceId
+      ? `/v1/findings?deviceId=${encodeURIComponent(deviceId)}`
+      : '/v1/findings'
+    const { status, body } = await this.request('GET', path)
+    if (status < 200 || status >= 300) throw new DeviceApiHttpError(status, body)
+    const findings = (body as { findings?: unknown }).findings
+    return Array.isArray(findings) ? (findings as DashboardFinding[]) : []
+  }
+
+  async issueCommand(
+    deviceId: string,
+    type: string,
+    parameters: Record<string, unknown> = {},
+  ): Promise<{ command: { commandId: string; type: string } }> {
+    const { status, body } = await this.request(
+      'POST',
+      `/v1/devices/${deviceId}/commands`,
+      { type, parameters },
+    )
+    if (status < 200 || status >= 300) throw new DeviceApiHttpError(status, body)
+    return body as { command: { commandId: string; type: string } }
   }
 }
 

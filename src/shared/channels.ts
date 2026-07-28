@@ -243,6 +243,8 @@ export const IPC = {
   DASHBOARD_CLEAR_ISOLATION: 'dashboard:clear-isolation',
   DASHBOARD_PUT_POLICY: 'dashboard:put-policy',
   DASHBOARD_LIST_EVENTS: 'dashboard:list-events',
+  DASHBOARD_LIST_FINDINGS: 'dashboard:list-findings',
+  DASHBOARD_ISSUE_COMMAND: 'dashboard:issue-command',
 
   // Threat Monitor
   THREAT_MONITOR_GET_SNAPSHOT: 'threat-monitor:get-snapshot',

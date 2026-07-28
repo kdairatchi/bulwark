@@ -88,4 +88,25 @@ describe('DashboardApiClient', () => {
     const events = await client.listNetworkEvents('dev_1')
     expect(events[0].type).toBe('dns_blocked')
   })
+
+  it('lists findings and issues commands', async () => {
+    const fetchImpl = mockFetch((url, init) => {
+      if (String(url).includes('/commands')) {
+        expect(init?.method).toBe('POST')
+        return { status: 201, body: { command: { commandId: 'cmd_1', type: 'REQUEST_INVENTORY' } } }
+      }
+      return {
+        status: 200,
+        body: {
+          findings: [{ id: 'f1', deviceId: 'dev_1', level: 'potential_match', subjectName: 'Mystery', reason: 'unknown_publisher', createdAt: 't' }],
+          count: 1,
+        },
+      }
+    })
+    const client = new DashboardApiClient({ baseUrl: 'http://127.0.0.1:8787', fetchImpl: fetchImpl as unknown as typeof fetch })
+    const findings = await client.listFindings('dev_1')
+    expect(findings[0].reason).toBe('unknown_publisher')
+    const issued = await client.issueCommand('dev_1', 'REQUEST_INVENTORY')
+    expect(issued.command.type).toBe('REQUEST_INVENTORY')
+  })
 })

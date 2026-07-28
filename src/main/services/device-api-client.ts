@@ -165,6 +165,20 @@ export class DeviceApiClient {
     if (status < 200 || status >= 300) throw new DeviceApiHttpError(status, body)
   }
 
+  async submitFindings(
+    privateKeyPem: string,
+    deviceId: string,
+    findings: Array<{ level: string; subjectName: string; reason: string; category?: string }>,
+  ): Promise<number> {
+    const { status, body } = await this.signed(
+      privateKeyPem, deviceId, 'POST', `/v1/devices/${deviceId}/findings`, { findings },
+    )
+    if (status < 200 || status >= 300) throw new DeviceApiHttpError(status, body)
+    return typeof (body as { accepted?: number }).accepted === 'number'
+      ? (body as { accepted: number }).accepted
+      : findings.length
+  }
+
   async getPolicy(privateKeyPem: string, deviceId: string): Promise<{
     version: number
     updatedAt: string

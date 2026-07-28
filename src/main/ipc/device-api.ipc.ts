@@ -125,4 +125,32 @@ export function registerDeviceApiIpc(): void {
       return httpErr(err)
     }
   })
+
+  ipcMain.handle(IPC.DASHBOARD_LIST_FINDINGS, async (_event, payload: unknown) => {
+    const o = asRecord(payload)
+    const deviceId = typeof o.deviceId === 'string' ? o.deviceId : undefined
+    try {
+      const findings = await clientFromPayload(payload).listFindings(deviceId)
+      return { success: true as const, findings }
+    } catch (err) {
+      return httpErr(err)
+    }
+  })
+
+  ipcMain.handle(IPC.DASHBOARD_ISSUE_COMMAND, async (_event, payload: unknown) => {
+    const o = asRecord(payload)
+    const deviceId = typeof o.deviceId === 'string' ? o.deviceId : ''
+    const type = typeof o.type === 'string' ? o.type : ''
+    if (!deviceId) return { success: false, error: 'deviceId is required' }
+    if (!type) return { success: false, error: 'type is required' }
+    const parameters = (o.parameters && typeof o.parameters === 'object')
+      ? o.parameters as Record<string, unknown>
+      : {}
+    try {
+      const result = await clientFromPayload(payload).issueCommand(deviceId, type, parameters)
+      return { success: true as const, ...result }
+    } catch (err) {
+      return httpErr(err)
+    }
+  })
 }

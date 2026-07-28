@@ -183,5 +183,11 @@
   "parentNoEvents": "No network events yet.",
   "parentIsolatedBadge": "ISOLATED",
   "parentOnline": "Last seen",
-  "parentNever": "never"
+  "parentNever": "never",
+  "parentApps": "Apps",
+  "parentFindings": "Findings",
+  "parentNoFindings": "No findings yet. Request inventory from an enrolled device.",
+  "parentRequestInventory": "Request inventory",
+  "parentInventoryQueuedToast": "REQUEST_INVENTORY queued — agent will sync apps + findings",
+  "parentInventoryFailedToast": "Could not queue inventory request"
 }

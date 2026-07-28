@@ -22,6 +22,8 @@ vi.mock('../../shared/channels', () => ({
     DASHBOARD_CLEAR_ISOLATION: 'dashboard:clear-isolation',
     DASHBOARD_PUT_POLICY: 'dashboard:put-policy',
     DASHBOARD_LIST_EVENTS: 'dashboard:list-events',
+    DASHBOARD_LIST_FINDINGS: 'dashboard:list-findings',
+    DASHBOARD_ISSUE_COMMAND: 'dashboard:issue-command',
   },
 }))
 
@@ -42,6 +44,8 @@ vi.mock('../services/dashboard-api-client', () => {
     clearIsolation: vi.fn(),
     putPolicy: vi.fn(),
     listNetworkEvents: vi.fn(),
+    listFindings: vi.fn(),
+    issueCommand: vi.fn(),
   }
   class MockDashboardApiClient {
     constructor() {

@@ -24,10 +24,13 @@ import {
   devicePolicyEnforcer,
   parseRemotePolicy,
 } from './device-policy-enforcer'
+import { collectDesktopInventory } from './desktop-inventory'
+import { getPlatform } from '../platform'
 import { cloudLog } from './logger'
 
 const DEFAULT_BASE_URL = process.env.DEVICE_API_URL || 'http://127.0.0.1:8787'
 const DEFAULT_POLL_MS = 15_000
+const INVENTORY_SYNC_MS = 5 * 60 * 1000
 const MAX_SEEN_NONCES = 500
 
 /** Pairing codes are human-enterable like `K7Q2-9F3M` (hex; dash optional on input). */
@@ -62,22 +65,41 @@ export type CommandExecutor = (
   parameters: Record<string, unknown>,
 ) => Promise<Record<string, unknown>>
 
-/** Default allowlisted handlers — policy/DNS commands use the enforcer; scanners stay stubs. */
+/** Default allowlisted handlers — policy/DNS/inventory use real local data; scanners stay stubs. */
 export async function defaultCommandExecutor(
   type: CommandType,
   parameters: Record<string, unknown>,
 ): Promise<Record<string, unknown>> {
   switch (type) {
-    case 'REQUEST_INVENTORY':
-      return {
-        ok: true,
-        stub: true,
-        type,
-        hostname: hostname(),
-        platform: platform(),
-        release: release(),
-        parameters,
+    case 'REQUEST_INVENTORY': {
+      try {
+        const payload = await collectDesktopInventory({
+          loadApps: () => getPlatform().commands.getInstalledApps(),
+          platform: `${platform()} ${release()}`,
+          hostname: hostname(),
+        })
+        return {
+          ok: true,
+          stub: false,
+          type,
+          count: payload.count,
+          findingCount: payload.findings.length,
+          hostname: payload.hostname,
+          platform: payload.platform,
+          // Embedded for agent-bound sync (stripped from command result if desired).
+          _inventory: payload,
+          parameters,
+        }
+      } catch (err) {
+        return {
+          ok: false,
+          stub: false,
+          type,
+          error: err instanceof Error ? err.message : String(err),
+          parameters,
+        }
       }
+    }
     case 'RUN_MALWARE_SCAN':
     case 'RUN_VULNERABILITY_SCAN':
     case 'RUN_HEALTH_ASSESSMENT':
@@ -162,20 +184,24 @@ export class DeviceCommandAgent {
   private lastCommandAt: string | null = null
   private lastCommandType: string | null = null
   private lastError: string | null = null
+  private lastInventoryAt = 0
   private commandsProcessed = 0
   private commandsRejected = 0
   private readonly pollMs: number
   private readonly execute: CommandExecutor
   private readonly fetchImpl?: typeof fetch
+  private readonly inventorySyncMs: number
 
   constructor(opts?: {
     pollMs?: number
     execute?: CommandExecutor
     fetchImpl?: typeof fetch
+    inventorySyncMs?: number
   }) {
     this.pollMs = opts?.pollMs ?? DEFAULT_POLL_MS
     this.execute = opts?.execute ?? defaultCommandExecutor
     this.fetchImpl = opts?.fetchImpl
+    this.inventorySyncMs = opts?.inventorySyncMs ?? INVENTORY_SYNC_MS
   }
 
   getStatus(): DeviceAgentStatus {
@@ -303,6 +329,17 @@ export class DeviceCommandAgent {
         await this.handleCommand(client, cmd)
       }
 
+      // Periodic inventory sync (also runs immediately when never synced).
+      if (Date.now() - this.lastInventoryAt >= this.inventorySyncMs) {
+        try {
+          await this.syncInventory(client)
+        } catch (err) {
+          cloudLog('INFO', 'device-api inventory sync failed', {
+            error: err instanceof Error ? err.message : String(err),
+          })
+        }
+      }
+
       const events = devicePolicyEnforcer.drainEvents()
       if (events.length > 0) {
         try {
@@ -328,6 +365,34 @@ export class DeviceCommandAgent {
     }
   }
 
+  /** Collect installed apps, POST inventory + findings to the control plane. */
+  private async syncInventory(client: DeviceApiClient): Promise<{ count: number; findingCount: number }> {
+    if (!this.identity) return { count: 0, findingCount: 0 }
+    const payload = await collectDesktopInventory({
+      loadApps: () => getPlatform().commands.getInstalledApps(),
+      platform: `${platform()} ${release()}`,
+      hostname: hostname(),
+    })
+    await client.submitInventory(this.identity.privateKeyPem, this.identity.deviceId, {
+      apps: payload.apps,
+      count: payload.count,
+      platform: payload.platform,
+      hostname: payload.hostname,
+    })
+    if (payload.findings.length > 0) {
+      await client.submitFindings(this.identity.privateKeyPem, this.identity.deviceId, payload.findings)
+      for (const f of payload.findings.slice(0, 20)) {
+        devicePolicyEnforcer.pushEvent('finding', f.subjectName, f.reason)
+      }
+    }
+    this.lastInventoryAt = Date.now()
+    cloudLog('INFO', 'device-api inventory synced', {
+      count: payload.count,
+      findings: payload.findings.length,
+    })
+    return { count: payload.count, findingCount: payload.findings.length }
+  }
+
   private async handleCommand(client: DeviceApiClient, cmd: CommandEnvelope): Promise<void> {
     if (!this.identity) return
     const identity = this.identity
@@ -337,6 +402,18 @@ export class DeviceCommandAgent {
           await client.getPolicy(identity.privateKeyPem, identity.deviceId),
         )
         return devicePolicyEnforcer.applyRemotePolicy(policy)
+      }
+      if (type === 'REQUEST_INVENTORY') {
+        const synced = await this.syncInventory(client)
+        return {
+          ok: true,
+          stub: false,
+          type,
+          count: synced.count,
+          findingCount: synced.findingCount,
+          hostname: hostname(),
+          platform: `${platform()} ${release()}`,
+        }
       }
       if (type === 'BLOCK_DOMAIN') {
         return defaultCommandExecutor(type, parameters)
@@ -365,11 +442,13 @@ export class DeviceCommandAgent {
       return
     }
     try {
+      // Never post bulky _inventory blobs back as command results.
+      const { _inventory: _drop, ...safeResult } = processed.result
       await client.postCommandResult(
         this.identity.privateKeyPem,
         this.identity.deviceId,
         cmd.commandId,
-        processed.result,
+        safeResult,
       )
       this.commandsProcessed++
       this.lastCommandAt = new Date().toISOString()

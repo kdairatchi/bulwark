@@ -145,11 +145,12 @@ describe('processVerifiedCommand', () => {
 })
 
 describe('defaultCommandExecutor', () => {
-  it('returns stub inventory for REQUEST_INVENTORY', async () => {
+  it('collects real inventory for REQUEST_INVENTORY (not a stub)', async () => {
     const r = await defaultCommandExecutor('REQUEST_INVENTORY', {})
     expect(r.ok).toBe(true)
-    expect(r.stub).toBe(true)
+    expect(r.stub).toBe(false)
     expect(r.type).toBe('REQUEST_INVENTORY')
+    expect(typeof r.count).toBe('number')
   })
 })
 
