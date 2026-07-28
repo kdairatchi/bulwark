@@ -31,29 +31,45 @@ data class AppRecord(
     val apkSha256: String? = null,
     val certSha256: String? = null,
     val permissions: List<String> = emptyList(),
+    val versionName: String? = null,
+    val versionCode: Long? = null,
+    val targetSdk: Int? = null,
+    val minSdk: Int? = null,
+    val debuggable: Boolean = false,
+    val allowBackup: Boolean = false,
+    val exportedActivities: Int = 0,
+    val exportedServices: Int = 0,
+    val exportedReceivers: Int = 0,
+    val exportedProviders: Int = 0,
 )
 
 data class Finding(
     val level: String,
     val subjectName: String,
     val reason: String,
+    val category: String = "general",
 ) {
     fun toMap(): Map<String, Any?> = mapOf(
         "level" to level,
         "subjectName" to subjectName,
         "reason" to reason,
+        "category" to category,
     )
 }
 
 object AppPosture {
+    const val MODERN_TARGET_SDK = 33
+
     fun dangerousPermissions(permissions: List<String>): List<String> =
         permissions.filter { it in DANGEROUS_PERMISSIONS }.distinct().sorted()
 
     fun permissionRiskScore(permissions: List<String>): Int {
         val flagged = dangerousPermissions(permissions)
-        // Cap so a single app cannot dominate the fleet score.
         return minOf(100, flagged.size * 15)
     }
+
+    fun exportedComponentCount(app: AppRecord): Int =
+        app.exportedActivities + app.exportedServices + app.exportedReceivers + app.exportedProviders
 
     fun analyze(apps: List<AppRecord>): List<Finding> {
         val findings = mutableListOf<Finding>()
@@ -64,6 +80,7 @@ object AppPosture {
                     level = "likely_affected",
                     subjectName = app.packageName,
                     reason = "Sideloaded app (installer=${app.installer ?: "unknown"})",
+                    category = "sideload",
                 )
             }
             val dangerous = dangerousPermissions(app.permissions)
@@ -77,6 +94,7 @@ object AppPosture {
                     level = level,
                     subjectName = app.packageName,
                     reason = "Dangerous permissions: ${dangerous.joinToString(", ")}",
+                    category = "permissions",
                 )
             }
             if (app.sideloaded && app.certSha256 == null) {
@@ -84,6 +102,43 @@ object AppPosture {
                     level = "potential_match",
                     subjectName = app.packageName,
                     reason = "Sideloaded app without readable signing certificate",
+                    category = "integrity",
+                )
+            }
+            if (app.debuggable) {
+                findings += Finding(
+                    level = if (app.sideloaded) "confirmed_affected" else "likely_affected",
+                    subjectName = app.packageName,
+                    reason = "Application is debuggable (android:debuggable)",
+                    category = "hardening",
+                )
+            }
+            if (app.allowBackup && app.sideloaded) {
+                findings += Finding(
+                    level = "potential_match",
+                    subjectName = app.packageName,
+                    reason = "Sideloaded app allows backup (android:allowBackup)",
+                    category = "hardening",
+                )
+            }
+            val exported = exportedComponentCount(app)
+            if (app.sideloaded && exported >= 3) {
+                findings += Finding(
+                    level = "likely_affected",
+                    subjectName = app.packageName,
+                    reason = "Sideloaded app exposes $exported exported components " +
+                        "(activities=${app.exportedActivities}, services=${app.exportedServices}, " +
+                        "receivers=${app.exportedReceivers}, providers=${app.exportedProviders})",
+                    category = "attack_surface",
+                )
+            }
+            val target = app.targetSdk
+            if (target != null && target < MODERN_TARGET_SDK && (app.sideloaded || !app.system)) {
+                findings += Finding(
+                    level = if (target < 28) "likely_affected" else "potential_match",
+                    subjectName = app.packageName,
+                    reason = "Outdated targetSdk=$target (expected >= $MODERN_TARGET_SDK)",
+                    category = "outdated",
                 )
             }
         }
@@ -94,13 +149,15 @@ object AppPosture {
         val findings = analyze(apps)
         val sideloaded = apps.count { it.sideloaded && !it.system }
         val highRisk = findings.count { it.level == "confirmed_affected" || it.level == "likely_affected" }
-        val score = (100 - sideloaded * 8 - highRisk * 10).coerceIn(0, 100)
+        val debuggable = apps.count { it.debuggable && !it.system }
+        val score = (100 - sideloaded * 8 - highRisk * 8 - debuggable * 12).coerceIn(0, 100)
         return mapOf(
             "ok" to true,
             "type" to "RUN_HEALTH_ASSESSMENT",
             "score" to score,
             "appCount" to apps.size,
             "sideloadedCount" to sideloaded,
+            "debuggableCount" to debuggable,
             "findingCount" to findings.size,
             "highRiskFindingCount" to highRisk,
             "findings" to findings.map { it.toMap() },

@@ -8,6 +8,7 @@ import {
   authenticateDevice, heartbeat, submitInventory, submitFindings,
   getServerKey, issueCommand, pollCommands, commandResult,
   getPolicy, putPolicy, isolateDevice, clearIsolation,
+  submitNetworkEvents, listNetworkEvents,
   type HandlerResult, type SignedRequest,
 } from './handlers'
 
@@ -56,6 +57,10 @@ export function createDeviceApiServer(store: DeviceStore): Server {
         const deviceId = url.searchParams.get('deviceId') ?? undefined
         return send(res, listFindings(store, deviceId))
       }
+      if (method === 'GET' && path === '/v1/network-events') {
+        const deviceId = url.searchParams.get('deviceId') ?? undefined
+        return send(res, listNetworkEvents(store, deviceId))
+      }
       if (method === 'GET' && path === '/v1/server-key') return send(res, getServerKey(store))
       const deviceDetail = path.match(/^\/v1\/devices\/([^/]+)$/)
       if (method === 'GET' && deviceDetail) return send(res, getDevice(store, deviceDetail[1]))
@@ -86,7 +91,7 @@ export function createDeviceApiServer(store: DeviceStore): Server {
       }
 
       // ── Device-authenticated routes ──
-      const telemetry = path.match(/^\/v1\/devices\/([^/]+)\/(heartbeat|inventory|findings)$/)
+      const telemetry = path.match(/^\/v1\/devices\/([^/]+)\/(heartbeat|inventory|findings|network-events)$/)
       const pollCmds = path.match(/^\/v1\/devices\/([^/]+)\/commands$/)
       const cmdResult = path.match(/^\/v1\/devices\/([^/]+)\/commands\/([^/]+)\/result$/)
       const getPol = path.match(/^\/v1\/devices\/([^/]+)\/policy$/)
@@ -121,6 +126,7 @@ export function createDeviceApiServer(store: DeviceStore): Server {
           if (action === 'heartbeat') return send(res, heartbeat(store, auth.deviceId, now))
           if (action === 'inventory') return send(res, submitInventory(store, auth.deviceId, body))
           if (action === 'findings') return send(res, submitFindings(store, auth.deviceId, body))
+          if (action === 'network-events') return send(res, submitNetworkEvents(store, auth.deviceId, body))
         }
       }
 

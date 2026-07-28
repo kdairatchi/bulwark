@@ -1,6 +1,7 @@
 package com.bulwark.tv
 
 import android.content.pm.ApplicationInfo
+import android.content.pm.ComponentInfo
 import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
 import android.os.Build
@@ -10,7 +11,7 @@ import java.io.FileInputStream
 import java.security.MessageDigest
 
 /**
- * Collects APK SHA-256, signing-cert SHA-256, and requested permissions for posture.
+ * Collects APK integrity + static surface metadata for posture analysis.
  */
 object PackageInspector {
     fun inspect(packageManager: PackageManager, app: ApplicationInfo): AppRecord {
@@ -19,6 +20,8 @@ object PackageInspector {
         val pkgInfo = packageInfo(packageManager, app.packageName)
         val permissions = pkgInfo?.requestedPermissions?.toList() ?: emptyList()
         val apkPath = app.sourceDir
+        val debuggable = (app.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0
+        val allowBackup = (app.flags and ApplicationInfo.FLAG_ALLOW_BACKUP) != 0
         return AppRecord(
             packageName = app.packageName,
             label = app.loadLabel(packageManager).toString(),
@@ -28,6 +31,16 @@ object PackageInspector {
             apkSha256 = apkPath?.let { sha256File(it) },
             certSha256 = pkgInfo?.let { certSha256(it) },
             permissions = permissions,
+            versionName = pkgInfo?.versionName,
+            versionCode = versionCodeOf(pkgInfo),
+            targetSdk = app.targetSdkVersion,
+            minSdk = if (Build.VERSION.SDK_INT >= 24) app.minSdkVersion else null,
+            debuggable = debuggable,
+            allowBackup = allowBackup,
+            exportedActivities = countExported(pkgInfo?.activities),
+            exportedServices = countExported(pkgInfo?.services),
+            exportedReceivers = countExported(pkgInfo?.receivers),
+            exportedProviders = countExported(pkgInfo?.providers),
         )
     }
 
@@ -42,24 +55,50 @@ object PackageInspector {
         "permissions" to record.permissions,
         "dangerousPermissions" to com.bulwark.deviceapi.AppPosture.dangerousPermissions(record.permissions),
         "permissionRiskScore" to com.bulwark.deviceapi.AppPosture.permissionRiskScore(record.permissions),
+        "versionName" to record.versionName,
+        "versionCode" to record.versionCode,
+        "targetSdk" to record.targetSdk,
+        "minSdk" to record.minSdk,
+        "debuggable" to record.debuggable,
+        "allowBackup" to record.allowBackup,
+        "exportedActivities" to record.exportedActivities,
+        "exportedServices" to record.exportedServices,
+        "exportedReceivers" to record.exportedReceivers,
+        "exportedProviders" to record.exportedProviders,
+        "exportedComponentCount" to com.bulwark.deviceapi.AppPosture.exportedComponentCount(record),
     )
 
     private fun packageInfo(pm: PackageManager, packageName: String): PackageInfo? {
+        val flags = (
+            PackageManager.GET_PERMISSIONS or
+                PackageManager.GET_ACTIVITIES or
+                PackageManager.GET_SERVICES or
+                PackageManager.GET_RECEIVERS or
+                PackageManager.GET_PROVIDERS or
+                if (Build.VERSION.SDK_INT >= 28) {
+                    PackageManager.GET_SIGNING_CERTIFICATES
+                } else {
+                    @Suppress("DEPRECATION")
+                    PackageManager.GET_SIGNATURES
+                }
+            )
         return try {
-            if (Build.VERSION.SDK_INT >= 28) {
-                pm.getPackageInfo(
-                    packageName,
-                    PackageManager.GET_PERMISSIONS or PackageManager.GET_SIGNING_CERTIFICATES,
-                )
-            } else {
-                @Suppress("DEPRECATION")
-                pm.getPackageInfo(
-                    packageName,
-                    PackageManager.GET_PERMISSIONS or PackageManager.GET_SIGNATURES,
-                )
-            }
+            pm.getPackageInfo(packageName, flags)
         } catch (_: Exception) {
             null
+        }
+    }
+
+    private fun countExported(components: Array<out ComponentInfo>?): Int {
+        if (components == null) return 0
+        return components.count { it.exported }
+    }
+
+    private fun versionCodeOf(info: PackageInfo?): Long? {
+        if (info == null) return null
+        return if (Build.VERSION.SDK_INT >= 28) info.longVersionCode else {
+            @Suppress("DEPRECATION")
+            info.versionCode.toLong()
         }
     }
 

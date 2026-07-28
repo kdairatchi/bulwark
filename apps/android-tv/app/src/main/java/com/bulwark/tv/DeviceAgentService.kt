@@ -108,7 +108,21 @@ class DeviceAgentService(
                 client.submitInventory(identity, inventory)
                 @Suppress("UNCHECKED_CAST")
                 val findings = inventory["_findings"] as? List<Map<String, Any?>> ?: emptyList()
-                if (findings.isNotEmpty()) client.submitFindings(identity, findings)
+                if (findings.isNotEmpty()) {
+                    client.submitFindings(identity, findings)
+                    for (f in findings.take(20)) {
+                        AgentEvents.finding(
+                            f["subjectName"] as? String ?: "unknown",
+                            f["reason"] as? String ?: "",
+                            f["level"] as? String ?: "unknown",
+                        )
+                    }
+                }
+            }
+            // Flush queued DNS / isolation / finding events to the control plane.
+            val drained = AgentEvents.batcher.drain()
+            if (drained.isNotEmpty()) {
+                client.submitNetworkEvents(identity, drained.map { it.toMap() })
             }
             TickReport(processed = processed, rejected = rejected, lastType = lastType)
         }
@@ -167,6 +181,7 @@ class DeviceAgentService(
                 )
                 blocklistStore.applyPolicy(policy)
                 if (!DnsGuardVpnService.isRunning) DnsGuardVpnService.start(context)
+                AgentEvents.isolationChanged(true)
                 mapOf(
                     "ok" to true,
                     "type" to type,
@@ -187,6 +202,7 @@ class DeviceAgentService(
                 if (policy.blockedDomains.isEmpty()) {
                     blocklistStore.replaceAll(BlocklistStore.STARTER)
                 }
+                AgentEvents.isolationChanged(false)
                 mapOf(
                     "ok" to true,
                     "type" to type,

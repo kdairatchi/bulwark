@@ -18,17 +18,25 @@ class AppPostureTest {
                     "android.permission.REQUEST_INSTALL_PACKAGES",
                     "android.permission.INTERNET",
                 ),
+                debuggable = true,
+                targetSdk = 26,
+                exportedActivities = 2,
+                exportedServices = 2,
             ),
             AppRecord(
                 packageName = "com.netflix.ninja",
                 sideloaded = false,
                 system = false,
                 permissions = listOf("android.permission.INTERNET"),
+                targetSdk = 34,
             ),
         )
         val findings = AppPosture.analyze(apps)
         assertTrue(findings.any { it.subjectName == "com.example.sideload" && it.reason.contains("Sideloaded") })
         assertTrue(findings.any { it.reason.contains("Dangerous permissions") })
+        assertTrue(findings.any { it.category == "hardening" && it.reason.contains("debuggable") })
+        assertTrue(findings.any { it.category == "attack_surface" })
+        assertTrue(findings.any { it.category == "outdated" })
         val health = AppPosture.healthAssessment(apps)
         assertEquals(true, health["ok"])
         assertTrue((health["score"] as Int) < 100)
@@ -105,5 +113,21 @@ class DnsPacketTest {
         assertEquals((0x80 or 0x01).toByte(), nx[2]) // QR|RD
         assertEquals(0x03.toByte(), nx[3]) // NXDOMAIN
         assertEquals(packet.size, nx.size)
+    }
+}
+
+class EventBatcherTest {
+    @Test
+    fun drainsQueuedEvents() {
+        val b = EventBatcher(capacity = 3)
+        b.add(DeviceEvent.dnsBlocked("a.test"))
+        b.add(DeviceEvent.isolationChanged(true))
+        b.add(DeviceEvent.findingRaised("pkg", "reason", "likely_affected"))
+        b.add(DeviceEvent.dnsBlocked("b.test")) // drops oldest when over capacity
+        assertEquals(3, b.size())
+        val drained = b.drain()
+        assertEquals(3, drained.size)
+        assertEquals(0, b.size())
+        assertTrue(drained.any { it.type == "isolation_enabled" })
     }
 }

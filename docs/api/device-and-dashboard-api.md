@@ -15,6 +15,7 @@
 > - Desktop agent flow: `node scripts/device-agent-demo.mjs`
 > - Android TV agent core (JVM): `cd apps/android-tv && ./gradlew :core:runAgentDemo`
 > - Policy + emergency isolate: `node scripts/policy-isolate-demo.mjs`
+> - Event batch ingest: `node scripts/events-batch-demo.mjs`
 >
 > The Electron app exposes pairing enroll / poll / status on the Cloud page
 > (`deviceCommandAgent` in `src/main/services/device-command-agent.ts`).
@@ -28,6 +29,7 @@
 > - `POST /v1/devices/{id}/commands` · `GET …/commands` · `POST …/commands/{id}/result`
 > - `GET /v1/devices/{id}/policy` (device-signed) · `PUT …/policy` (dashboard)
 > - `POST /v1/devices/{id}/isolate` · `DELETE …/isolate` (dashboard emergency)
+> - `POST /v1/devices/{id}/network-events` (device-signed) · `GET /v1/network-events`
 
 ## Device APIs (agent → cloud)
 
@@ -36,7 +38,7 @@ POST /v1/devices/enroll
 POST /v1/devices/{id}/heartbeat
 POST /v1/devices/{id}/inventory
 POST /v1/devices/{id}/findings
-POST /v1/devices/{id}/network-events          # planned
+POST /v1/devices/{id}/network-events          # implemented (device-signed event batch)
 GET  /v1/devices/{id}/policy                  # implemented (device-signed)
 GET  /v1/devices/{id}/commands                # implemented (device-signed)
 POST /v1/devices/{id}/commands/{commandId}/result  # implemented (device-signed)
@@ -49,6 +51,7 @@ GET  /v1/server-key                           # implemented (server Ed25519 publ
 GET  /v1/devices
 GET  /v1/devices/{id}
 GET  /v1/findings
+GET  /v1/network-events                       # implemented
 POST /v1/devices/{id}/commands                # implemented (enqueue allowlisted command)
 PUT  /v1/devices/{id}/policy                  # implemented (merge policy + APPLY_POLICY command)
 POST /v1/devices/{id}/isolate                 # implemented (emergency isolate + ISOLATE_DEVICE)

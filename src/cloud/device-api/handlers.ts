@@ -97,9 +97,10 @@ export function heartbeat(store: DeviceStore, deviceId: string, now: number): Ha
 
 export function submitInventory(store: DeviceStore, deviceId: string, input: unknown): HandlerResult {
   const o = (input ?? {}) as Record<string, unknown>
-  const items = Array.isArray(o.items) ? o.items : []
-  store.addInventory(deviceId, items.length)
-  return { status: 202, body: { accepted: items.length } }
+  const items = Array.isArray(o.items) ? o.items : Array.isArray(o.apps) ? o.apps : []
+  const count = typeof o.count === 'number' ? o.count : items.length
+  store.addInventory(deviceId, count)
+  return { status: 202, body: { accepted: count } }
 }
 
 export function getServerKey(store: DeviceStore): HandlerResult {
@@ -181,4 +182,26 @@ export function clearIsolation(store: DeviceStore, deviceId: string): HandlerRes
   const result = store.clearIsolation(deviceId)
   if (!result) return { status: 404, body: { error: 'device not found' } }
   return { status: 202, body: result }
+}
+
+export function submitNetworkEvents(store: DeviceStore, deviceId: string, input: unknown): HandlerResult {
+  const o = (input ?? {}) as Record<string, unknown>
+  const raw = Array.isArray(o.events) ? o.events : []
+  const events = raw.map((e) => {
+    const r = (e ?? {}) as Record<string, unknown>
+    return {
+      type: typeof r.type === 'string' ? r.type : '',
+      at: typeof r.at === 'string' ? r.at : undefined,
+      subject: typeof r.subject === 'string' ? r.subject : null,
+      detail: typeof r.detail === 'string' ? r.detail : null,
+      metadata: (r.metadata && typeof r.metadata === 'object') ? r.metadata as Record<string, unknown> : {},
+    }
+  })
+  const accepted = store.addNetworkEvents(deviceId, events)
+  return { status: 202, body: { accepted } }
+}
+
+export function listNetworkEvents(store: DeviceStore, deviceId?: string): HandlerResult {
+  const events = store.listNetworkEvents(deviceId)
+  return { status: 200, body: { events, count: events.length } }
 }

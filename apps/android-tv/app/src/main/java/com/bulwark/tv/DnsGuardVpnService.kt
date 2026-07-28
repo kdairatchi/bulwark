@@ -115,6 +115,7 @@ class DnsGuardVpnService : VpnService() {
         val responseDns: ByteArray = if (blocked) {
             blocks.incrementAndGet()
             lastBlockedHost = query.qname
+            AgentEvents.dnsBlocked(query.qname)
             DnsPacket.buildNxDomain(dns, query)
         } else {
             forwardDns(dns, dnsLen, upstream) ?: return

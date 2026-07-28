@@ -241,6 +241,36 @@ export class DeviceStore {
     return deviceId ? this.findings.filter((f) => f.deviceId === deviceId) : [...this.findings]
   }
 
+  private networkEvents: Array<{ id: string; deviceId: string; type: string; at: string; subject: string | null; detail: string | null; metadata: Record<string, unknown> }> = []
+
+  addNetworkEvents(deviceId: string, events: Array<{ type: string; at?: string; subject?: string | null; detail?: string | null; metadata?: Record<string, unknown> }>): number {
+    if (!this.devices.has(deviceId)) return 0
+    let n = 0
+    for (const e of events) {
+      if (typeof e.type !== 'string' || !e.type) continue
+      this.networkEvents.push({
+        id: `evt_${this.deps.uuid()}`,
+        deviceId,
+        type: e.type,
+        at: typeof e.at === 'string' ? e.at : new Date(this.deps.now()).toISOString(),
+        subject: typeof e.subject === 'string' ? e.subject : null,
+        detail: typeof e.detail === 'string' ? e.detail : null,
+        metadata: (e.metadata && typeof e.metadata === 'object') ? e.metadata : {},
+      })
+      n++
+    }
+    // Cap memory for the reference service.
+    if (this.networkEvents.length > 5000) {
+      this.networkEvents.splice(0, this.networkEvents.length - 5000)
+    }
+    this.log('network_events_received', `${deviceId} +${n}`)
+    return n
+  }
+
+  listNetworkEvents(deviceId?: string): typeof this.networkEvents {
+    return deviceId ? this.networkEvents.filter((e) => e.deviceId === deviceId) : [...this.networkEvents]
+  }
+
   getPolicy(deviceId: string): DevicePolicy | null {
     if (!this.devices.has(deviceId)) return null
     return this.policies.get(deviceId) ?? defaultPolicy(this.deps.now())

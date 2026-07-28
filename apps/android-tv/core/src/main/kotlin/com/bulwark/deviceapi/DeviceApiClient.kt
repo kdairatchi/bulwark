@@ -97,6 +97,16 @@ class DeviceApiClient(
         return DevicePolicy.fromMap(policy)
     }
 
+    fun submitNetworkEvents(identity: DeviceIdentity, events: List<Map<String, Any?>>) {
+        if (events.isEmpty()) return
+        signed(
+            identity,
+            "POST",
+            "/v1/devices/${identity.deviceId}/network-events",
+            JsonLite.stringifyObject(mapOf("events" to events)),
+        )
+    }
+
     private fun parseCommand(raw: Any?): CommandEnvelope? {
         val o = raw as? Map<*, *> ?: return null
         fun str(key: String): String? = o[key] as? String

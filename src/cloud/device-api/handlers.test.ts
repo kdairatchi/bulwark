@@ -4,7 +4,8 @@ import {
   createPairingCode, enrollDevice, listDevices, getDevice, listFindings,
   authenticateDevice, heartbeat, submitInventory, submitFindings,
   getServerKey, issueCommand, pollCommands, commandResult,
-  getPolicy, putPolicy, isolateDevice, clearIsolation, type SignedRequest,
+  getPolicy, putPolicy, isolateDevice, clearIsolation,
+  submitNetworkEvents, listNetworkEvents, type SignedRequest,
 } from './handlers'
 import { generateDeviceKeyPair, signMessage, canonicalRequest, sha256Hex } from './crypto'
 
@@ -194,5 +195,21 @@ describe('device-api policy + emergency isolate', () => {
     const cleared = clearIsolation(store, deviceId)
     expect(cleared.status).toBe(202)
     expect((cleared.body as { policy: { isolated: boolean } }).policy.isolated).toBe(false)
+  })
+})
+
+describe('device-api network events', () => {
+  it('accepts a batch of events and lists them', () => {
+    const store = freshStore()
+    const { deviceId } = enrolledDevice(store)
+    const res = submitNetworkEvents(store, deviceId, {
+      events: [
+        { type: 'dns_blocked', subject: 'tracker.malware.test', detail: 'blocked' },
+        { type: 'isolation_enabled', subject: 'device' },
+      ],
+    })
+    expect(res.status).toBe(202)
+    expect((res.body as { accepted: number }).accepted).toBe(2)
+    expect((listNetworkEvents(store, deviceId).body as { count: number }).count).toBe(2)
   })
 })
