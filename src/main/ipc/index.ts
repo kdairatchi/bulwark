@@ -30,6 +30,7 @@ import { registerShortcutCleanerIpc } from './shortcut-cleaner.ipc'
 import { registerEnvironmentCleanerIpc } from './environment-cleaner.ipc'
 import { registerDatabaseOptimizerIpc } from './database-optimizer.ipc'
 import { registerCloudAgentIpc } from './cloud-agent.ipc'
+import { registerDeviceApiIpc } from './device-api.ipc'
 import { registerLargeFileFinderIpc } from './large-file-finder.ipc'
 import { registerEmptyFolderCleanerIpc } from './empty-folder-cleaner.ipc'
 import { registerFileShredderIpc } from './file-shredder.ipc'
@@ -83,6 +84,7 @@ export function registerCleanerIpc(getWindow: WindowGetter): void {
   registerFirewallAuditIpc(getWindow)
   registerSoftwareUpdaterIpc(getWindow)
   registerCloudAgentIpc()
+  registerDeviceApiIpc()
   registerCveScannerIpc()
   registerBreachMonitorIpc()
   registerStartupSafetyIpc()

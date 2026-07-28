@@ -41,6 +41,21 @@ export function CloudPage() {
   const [cloudUnlinking, setCloudUnlinking] = useState(false)
   const [cloudReconnecting, setCloudReconnecting] = useState(false)
   const [cveSummary, setCveSummary] = useState<{ total: number; critical: number; high: number; medium: number; low: number; librarySize: number } | null>(null)
+  const [pairingCode, setPairingCode] = useState('')
+  const [pairingBaseUrl, setPairingBaseUrl] = useState('http://127.0.0.1:8787')
+  const [pairingEnrolling, setPairingEnrolling] = useState(false)
+  const [deviceApiStatus, setDeviceApiStatus] = useState<{
+    enrolled: boolean
+    running: boolean
+    deviceId: string | null
+    name: string | null
+    baseUrl: string | null
+    lastHeartbeatAt: string | null
+    lastCommandAt: string | null
+    lastCommandType: string | null
+    lastError: string | null
+    commandsProcessed: number
+  } | null>(null)
 
   const isLinked = !!settings.cloud.apiKey
 
@@ -48,7 +63,17 @@ export function CloudPage() {
     window.kudu?.cloudGetStatus?.().then(setCloudStatus).catch(() => {})
   }, [])
 
+  const refreshDeviceApiStatus = useCallback(() => {
+    window.kudu?.deviceApiGetStatus?.().then(setDeviceApiStatus).catch(() => {})
+  }, [])
+
   useEffect(() => { window.kudu?.settingsGet?.().then(setSettings).catch(() => {}) }, [])
+
+  useEffect(() => {
+    refreshDeviceApiStatus()
+    const timer = setInterval(refreshDeviceApiStatus, 5000)
+    return () => clearInterval(timer)
+  }, [refreshDeviceApiStatus])
 
   useEffect(() => {
     if (!isLinked) { setCloudStatus(null); setCveSummary(null); return }
@@ -107,6 +132,47 @@ export function CloudPage() {
     setCloudReconnecting(false)
   }
 
+  const handleDeviceApiEnroll = async () => {
+    if (!pairingCode.trim()) return
+    setPairingEnrolling(true)
+    try {
+      const result = await window.kudu?.deviceApiEnroll?.({
+        code: pairingCode.trim(),
+        baseUrl: pairingBaseUrl.trim() || undefined,
+      })
+      if (result?.success) {
+        setPairingCode('')
+        toast.success(t('pairingEnrolledToast'), { description: result.deviceId })
+        refreshDeviceApiStatus()
+      } else {
+        toast.error(t('pairingFailedToast'), { description: result?.error || t('pairingFailedDefaultDesc') })
+      }
+    } catch {
+      toast.error(t('pairingFailedToast'), { description: t('pairingFailedConnectionDesc') })
+    }
+    setPairingEnrolling(false)
+  }
+
+  const handleDeviceApiUnenroll = async () => {
+    try {
+      await window.kudu?.deviceApiUnenroll?.()
+      toast.success(t('pairingUnenrolledToast'))
+      refreshDeviceApiStatus()
+    } catch {
+      toast.error(t('pairingUnenrollFailedToast'))
+    }
+  }
+
+  const handleDeviceApiPollNow = async () => {
+    try {
+      const status = await window.kudu?.deviceApiPollNow?.()
+      if (status) setDeviceApiStatus(status)
+      toast.success(t('pairingPolledToast'))
+    } catch {
+      toast.error(t('pairingPollFailedToast'))
+    }
+  }
+
   const save = (partial: Partial<typeof settings>) => {
     updateSettings(partial)
     window.kudu?.settingsSet?.(partial).catch(() => {})
@@ -133,6 +199,18 @@ export function CloudPage() {
           onReconnect={handleCloudReconnect}
           onUnlink={handleCloudUnlink}
           onSave={save}
+        />
+        <DeviceApiPairingCard
+          t={t}
+          status={deviceApiStatus}
+          pairingCode={pairingCode}
+          pairingBaseUrl={pairingBaseUrl}
+          pairingEnrolling={pairingEnrolling}
+          onCodeChange={setPairingCode}
+          onBaseUrlChange={setPairingBaseUrl}
+          onEnroll={handleDeviceApiEnroll}
+          onUnenroll={handleDeviceApiUnenroll}
+          onPollNow={handleDeviceApiPollNow}
         />
       </div>
     )
@@ -349,11 +427,129 @@ export function CloudPage() {
           {t('telemetryDisclaimer', { registryExtra: features.registry ? t('telemetryRegistryExtra') : '' })}
         </p>
       </div>
+
+      {/* Device API pairing (Ed25519 — preferred Bulwark path) */}
+      <DeviceApiPairingCard
+        t={t}
+        status={deviceApiStatus}
+        pairingCode={pairingCode}
+        pairingBaseUrl={pairingBaseUrl}
+        pairingEnrolling={pairingEnrolling}
+        onCodeChange={setPairingCode}
+        onBaseUrlChange={setPairingBaseUrl}
+        onEnroll={handleDeviceApiEnroll}
+        onUnenroll={handleDeviceApiUnenroll}
+        onPollNow={handleDeviceApiPollNow}
+      />
     </div>
   )
 }
 
 /* ── Sub-components ─────────────────────────────────────────── */
+
+function DeviceApiPairingCard({
+  t, status, pairingCode, pairingBaseUrl, pairingEnrolling,
+  onCodeChange, onBaseUrlChange, onEnroll, onUnenroll, onPollNow,
+}: {
+  t: (key: string) => string
+  status: {
+    enrolled: boolean
+    deviceId: string | null
+    baseUrl: string | null
+    lastHeartbeatAt: string | null
+    lastCommandAt: string | null
+    lastCommandType: string | null
+    lastError: string | null
+    commandsProcessed: number
+  } | null
+  pairingCode: string
+  pairingBaseUrl: string
+  pairingEnrolling: boolean
+  onCodeChange: (v: string) => void
+  onBaseUrlChange: (v: string) => void
+  onEnroll: () => void
+  onUnenroll: () => void
+  onPollNow: () => void
+}) {
+  return (
+    <div
+      className="rounded-2xl p-6 mb-4 mt-4"
+      style={{ background: 'var(--card-bg)', border: '1px solid var(--border-default)' }}
+    >
+      <h3 className="text-[15px] font-semibold text-white mb-1">{t('pairingTitle')}</h3>
+      <p className="text-[12px] mb-5" style={{ color: 'var(--text-muted)' }}>{t('pairingDescription')}</p>
+
+      {status?.enrolled ? (
+        <div className="space-y-3">
+          <div className="text-[13px]" style={{ color: 'var(--text-secondary)' }}>
+            <div><span style={{ color: 'var(--text-muted)' }}>{t('pairingDeviceId')}: </span>{status.deviceId}</div>
+            <div><span style={{ color: 'var(--text-muted)' }}>{t('pairingBaseUrl')}: </span>{status.baseUrl}</div>
+            <div><span style={{ color: 'var(--text-muted)' }}>{t('pairingHeartbeat')}: </span>{status.lastHeartbeatAt || t('statusLoading')}</div>
+            <div><span style={{ color: 'var(--text-muted)' }}>{t('pairingLastCommand')}: </span>
+              {status.lastCommandType
+                ? `${status.lastCommandType} @ ${status.lastCommandAt}`
+                : '—'}
+            </div>
+            <div><span style={{ color: 'var(--text-muted)' }}>{t('pairingProcessed')}: </span>{status.commandsProcessed}</div>
+            {status.lastError && (
+              <div className="text-red-400 text-[12px] mt-1">{status.lastError}</div>
+            )}
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={onPollNow}
+              className="flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-[13px] font-medium"
+              style={{ background: 'var(--bg-subtle)', border: '1px solid var(--border-medium)', color: 'var(--text-secondary)' }}
+            >
+              <RefreshCw className="h-3.5 w-3.5" strokeWidth={1.8} />
+              {t('pairingPollNow')}
+            </button>
+            <button
+              onClick={onUnenroll}
+              className="flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-[13px] font-medium"
+              style={{ background: 'var(--bg-subtle)', border: '1px solid var(--border-medium)', color: 'var(--text-secondary)' }}
+            >
+              <Unlink className="h-3.5 w-3.5" strokeWidth={1.8} />
+              {t('pairingUnenroll')}
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          <input
+            type="text"
+            value={pairingBaseUrl}
+            onChange={(e) => onBaseUrlChange(e.target.value)}
+            placeholder={t('pairingBaseUrlPlaceholder')}
+            className="w-full rounded-xl px-4 py-2.5 text-[13px] text-zinc-300 outline-none placeholder:text-zinc-700"
+            style={{ background: 'var(--bg-subtle)', border: '1px solid var(--border-medium)' }}
+          />
+          <div className="flex items-center gap-2.5">
+            <input
+              type="text"
+              value={pairingCode}
+              onChange={(e) => onCodeChange(e.target.value.toUpperCase())}
+              onKeyDown={(e) => e.key === 'Enter' && onEnroll()}
+              placeholder={t('pairingCodePlaceholder')}
+              className="flex-1 rounded-xl px-4 py-2.5 text-[13px] text-zinc-300 outline-none placeholder:text-zinc-700 tracking-widest"
+              style={{ background: 'var(--bg-subtle)', border: '1px solid var(--border-medium)' }}
+            />
+            <button
+              onClick={onEnroll}
+              disabled={pairingEnrolling || pairingCode.trim().length < 4}
+              className="flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-[13px] font-medium transition-colors disabled:opacity-40"
+              style={{ background: 'var(--accent)', color: 'var(--text-on-accent)' }}
+            >
+              <Link className="h-3.5 w-3.5" strokeWidth={1.8} />
+              {pairingEnrolling ? t('pairingEnrolling') : t('pairingEnroll')}
+            </button>
+          </div>
+          <p className="text-[11px]" style={{ color: 'var(--text-dim)' }}>{t('pairingHint')}</p>
+        </div>
+      )}
+    </div>
+  )
+}
 
 function SectionHeading({ title, subtitle }: { title: string; subtitle: string }) {
   return (

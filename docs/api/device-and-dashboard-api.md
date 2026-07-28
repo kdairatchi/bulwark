@@ -12,7 +12,10 @@
 > Try it end-to-end:
 > - Device telemetry: `node scripts/device-client-demo.mjs`
 > - Remote commands: `node scripts/command-demo.mjs`
+> - Desktop agent flow (enroll → poll → verify → result): `node scripts/device-agent-demo.mjs`
 >
+> The Electron app exposes pairing enroll / poll / status on the Cloud page
+> (`deviceCommandAgent` in `src/main/services/device-command-agent.ts`).
 > Implemented endpoints:
 > - `POST /v1/pairing-codes`, `POST /v1/devices/enroll`
 > - `POST /v1/devices/{id}/heartbeat|inventory|findings` (device-signed)

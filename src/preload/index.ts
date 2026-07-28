@@ -489,6 +489,43 @@ const api = {
     threatBlacklist: { version: string; updatedAt: string; domains: number; ips: number; cidrs: number } | null
   }> => ipcRenderer.invoke(IPC.CLOUD_GET_STATUS),
 
+  // Device API (pairing code / Ed25519 — Bulwark control plane)
+  deviceApiEnroll: (payload: { code: string; name?: string; baseUrl?: string }): Promise<
+    { success: true; deviceId: string } | { success: false; error: string }
+  > => ipcRenderer.invoke(IPC.DEVICE_API_ENROLL, payload),
+  deviceApiUnenroll: (): Promise<{ success: boolean }> =>
+    ipcRenderer.invoke(IPC.DEVICE_API_UNENROLL),
+  deviceApiGetStatus: (): Promise<{
+    enrolled: boolean
+    running: boolean
+    deviceId: string | null
+    name: string | null
+    baseUrl: string | null
+    enrolledAt: string | null
+    lastHeartbeatAt: string | null
+    lastPollAt: string | null
+    lastCommandAt: string | null
+    lastCommandType: string | null
+    lastError: string | null
+    commandsProcessed: number
+    commandsRejected: number
+  }> => ipcRenderer.invoke(IPC.DEVICE_API_GET_STATUS),
+  deviceApiPollNow: (): Promise<{
+    enrolled: boolean
+    running: boolean
+    deviceId: string | null
+    name: string | null
+    baseUrl: string | null
+    enrolledAt: string | null
+    lastHeartbeatAt: string | null
+    lastPollAt: string | null
+    lastCommandAt: string | null
+    lastCommandType: string | null
+    lastError: string | null
+    commandsProcessed: number
+    commandsRejected: number
+  }> => ipcRenderer.invoke(IPC.DEVICE_API_POLL_NOW),
+
   // Duplicate Finder
   duplicatesSelectDir: (): Promise<string | null> =>
     ipcRenderer.invoke(IPC.DUPLICATES_SELECT_DIR),

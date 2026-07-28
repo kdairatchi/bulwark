@@ -231,6 +231,12 @@ export const IPC = {
   CLOUD_GET_STATUS: 'cloud:get-status',
   CLOUD_RECONNECT: 'cloud:reconnect',
 
+  // Device API (pairing / Ed25519 — separate from legacy API-key agent)
+  DEVICE_API_ENROLL: 'device-api:enroll',
+  DEVICE_API_UNENROLL: 'device-api:unenroll',
+  DEVICE_API_GET_STATUS: 'device-api:get-status',
+  DEVICE_API_POLL_NOW: 'device-api:poll-now',
+
   // Threat Monitor
   THREAT_MONITOR_GET_SNAPSHOT: 'threat-monitor:get-snapshot',
   THREAT_MONITOR_UPDATED: 'threat-monitor:updated',

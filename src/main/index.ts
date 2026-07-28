@@ -14,6 +14,7 @@ import { startScheduler, stopScheduler, getNextScanTime, notifyScheduledScanComp
 import { initAutoUpdater } from './services/auto-updater'
 import { attachRendererDiagnostics } from './services/renderer-diagnostics'
 import { cloudAgent } from './services/cloud-agent'
+import { deviceCommandAgent } from './services/device-command-agent'
 import { shouldDisableGpu, applyGpuFallbackSwitches, registerGpuCrashRecovery } from './services/gpu-fallback'
 import { runCli } from './cli'
 import { runDaemon } from './daemon'
@@ -477,6 +478,9 @@ app.whenReady().then(() => {
     cloudAgent.start()
   }
 
+  // Start device-API command poller if enrolled (pairing / Ed25519 path)
+  deviceCommandAgent.start()
+
   // Listen for settings changes to update auto-launch and tray
   ipcMain.handle(IPC.SETTINGS_APPLY_STARTUP, async (_event, enabled: boolean) => {
     await applyAutoLaunch(enabled)
@@ -548,6 +552,7 @@ app.on('before-quit', () => {
   isQuitting = true
   stopScheduler()
   cloudAgent.stop()
+  deviceCommandAgent.stop()
   // Kill any active child processes (reg.exe, cmd.exe, etc.) to prevent orphans
   killAllChildren()
 })
