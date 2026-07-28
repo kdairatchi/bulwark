@@ -45,11 +45,11 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/kdairatchi/kudu.git"
+    "url": "https://github.com/kdairatchi/bulwark.git"
   },
-  "homepage": "https://github.com/kdairatchi/kudu",
+  "homepage": "https://github.com/kdairatchi/bulwark",
   "bugs": {
-    "url": "https://github.com/kdairatchi/kudu/issues"
+    "url": "https://github.com/kdairatchi/bulwark/issues"
   },
   "devDependencies": {
     "@axe-core/react": "^4.11.2",

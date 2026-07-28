@@ -74,11 +74,11 @@ npm run catalog          # Regenerate the rules catalog
 
 ## Reporting Bugs
 
-Use the [bug report template](https://github.com/kdairatchi/kudu/issues/new?template=bug_report.md). Include your OS, Bulwark version, and steps to reproduce.
+Use the [bug report template](https://github.com/kdairatchi/bulwark/issues/new?template=bug_report.md). Include your OS, Bulwark version, and steps to reproduce.
 
 ## Suggesting Features
 
-Use the [feature request template](https://github.com/kdairatchi/kudu/issues/new?template=feature_request.md).
+Use the [feature request template](https://github.com/kdairatchi/bulwark/issues/new?template=feature_request.md).
 
 ## Code of Conduct
 

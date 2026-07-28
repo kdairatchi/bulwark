@@ -13,7 +13,7 @@ We recommend always running the latest version of Bulwark.
 
 If you discover a security vulnerability in Bulwark, **please do not open a public issue.**
 
-Instead, report it privately via [GitHub Security Advisories](https://github.com/kdairatchi/kudu/security/advisories/new).
+Instead, report it privately via [GitHub Security Advisories](https://github.com/kdairatchi/bulwark/security/advisories/new).
 
 Please include:
 

@@ -151,7 +151,7 @@ export function SchedulesPage() {
         toast.error(t('failedEnableStartup'), {
           action: {
             label: t('failedEnableStartupAction'),
-            onClick: () => window.open('https://github.com/kdairatchi/kudu#troubleshooting', '_blank'),
+            onClick: () => window.open('https://github.com/kdairatchi/bulwark#troubleshooting', '_blank'),
           },
         })
       })

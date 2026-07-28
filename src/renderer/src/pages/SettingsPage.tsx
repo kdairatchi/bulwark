@@ -37,7 +37,7 @@ export function SettingsPage() {
         description: t('startupSettingFailedDesc'),
         action: {
           label: t('startupSettingFailedAction'),
-          onClick: () => window.open('https://github.com/kdairatchi/kudu#troubleshooting', '_blank'),
+          onClick: () => window.open('https://github.com/kdairatchi/bulwark#troubleshooting', '_blank'),
         },
       })
     }

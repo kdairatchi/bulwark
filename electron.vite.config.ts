@@ -44,7 +44,7 @@ export default defineConfig({
         // The renderer's hardcoded CSP (script-src 'self') blocks Vite's
         // inline HMR injection in dev → blank window. Strip the meta tag
         // when serving dev only; the production HTML keeps the strict CSP.
-        name: 'kudu-strip-csp-in-dev',
+        name: 'bulwark-strip-csp-in-dev',
         apply: 'serve',
         transformIndexHtml(html: string): string {
           return html.replace(

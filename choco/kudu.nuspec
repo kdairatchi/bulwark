@@ -6,15 +6,15 @@
     <title>Bulwark</title>
     <authors>Bulwark Contributors</authors>
     <owners>kdairatchi</owners>
-    <projectUrl>https://github.com/kdairatchi/kudu</projectUrl>
-    <projectSourceUrl>https://github.com/kdairatchi/kudu</projectSourceUrl>
-    <bugTrackerUrl>https://github.com/kdairatchi/kudu/issues</bugTrackerUrl>
-    <iconUrl>https://raw.githubusercontent.com/kdairatchi/kudu/main/resources/icon.png</iconUrl>
-    <licenseUrl>https://github.com/kdairatchi/kudu/blob/main/LICENSE</licenseUrl>
+    <projectUrl>https://github.com/kdairatchi/bulwark</projectUrl>
+    <projectSourceUrl>https://github.com/kdairatchi/bulwark</projectSourceUrl>
+    <bugTrackerUrl>https://github.com/kdairatchi/bulwark/issues</bugTrackerUrl>
+    <iconUrl>https://raw.githubusercontent.com/kdairatchi/bulwark/main/resources/icon.png</iconUrl>
+    <licenseUrl>https://github.com/kdairatchi/bulwark/blob/main/LICENSE</licenseUrl>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <tags>device-security malware-scanner vulnerability-management network-security family-security open-source</tags>
     <summary>A family-focused device security platform for Windows</summary>
     <description>Bulwark is a local-first device security agent that scans for malware, audits vulnerable software, checks security posture, and helps protect every device in your home. Forked from the open-source Kudu system cleaner.</description>
-    <releaseNotes>https://github.com/kdairatchi/kudu/releases/tag/v1.4.8</releaseNotes>
+    <releaseNotes>https://github.com/kdairatchi/bulwark/releases/tag/v1.4.8</releaseNotes>
   </metadata>
 </package>

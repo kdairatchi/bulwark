@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="https://github.com/kdairatchi/kudu"><img src="logo.png" alt="Bulwark" width="128" /></a>
+  <a href="https://github.com/kdairatchi/bulwark"><img src="logo.png" alt="Bulwark" width="128" /></a>
 </p>
 
 <h1 align="center">Bulwark</h1>
@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/kdairatchi/kudu/releases"><b>Download</b></a> &nbsp;&middot;&nbsp;
+  <a href="https://github.com/kdairatchi/bulwark/releases"><b>Download</b></a> &nbsp;&middot;&nbsp;
   <a href="ROADMAP.md"><b>Roadmap</b></a> &nbsp;&middot;&nbsp;
   <a href="docs/product/vision.md"><b>Product Vision</b></a> &nbsp;&middot;&nbsp;
   <a href="docs/architecture/overview.md"><b>Architecture</b></a> &nbsp;&middot;&nbsp;
@@ -66,7 +66,7 @@ documents are **never** collected. See [`docs/privacy/README.md`](docs/privacy/R
 ## Download
 
 Get the latest installer for your platform from
-[GitHub Releases](https://github.com/kdairatchi/kudu/releases):
+[GitHub Releases](https://github.com/kdairatchi/bulwark/releases):
 
 | Platform | Format |
 |----------|--------|

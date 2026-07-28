@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 # Bulwark Linux installer
 # Usage:
-#   curl -fsSL https://raw.githubusercontent.com/kdairatchi/kudu/main/scripts/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/kdairatchi/bulwark/main/scripts/install.sh | bash
 #   curl -fsSL ... | bash -s -- --api-key YOUR_KEY
 #   curl -fsSL ... | bash -s -- --no-daemon   (install only, don't enable daemon)
 #   curl -fsSL ... | bash -s -- --no-boot     (install only, don't enable boot service)
 
 set -euo pipefail
 
-REPO="kdairatchi/kudu"
+REPO="kdairatchi/bulwark"
 INSTALL_DIR="/opt/bulwark"
 BIN_LINK="/usr/local/bin/bulwark"
 SERVICE_NAME="bulwark-daemon"

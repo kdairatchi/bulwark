@@ -56,7 +56,7 @@ import { threatMonitor } from './threat-monitor'
 import { isLikelyFalsePositive, deduplicateCves } from './cve-filter'
 
 const execFileAsync = promisify(execFile)
-// Cloud control plane base URL. The upstream Kudu Cloud service (usekudu.com)
+// Cloud control plane base URL. The upstream service
 // is intentionally NOT part of this fork — point this at your own control
 // plane. Overridable via env for local/self-hosted development. Cloud features
 // stay dormant until the user opts in with an API key, so the placeholder
@@ -522,7 +522,7 @@ class CloudAgentService {
     // required...", etc.) — prefer it verbatim and fall back per-status.
     if (err.serverMessage) return err.serverMessage
     if (err.status === 402) {
-      return 'Kudu Cloud subscription required — add an active subscription to connect this device.'
+      return 'Bulwark Cloud subscription required — add an active subscription to connect this device.'
     }
     // 401 / 403 — invalid or unauthorized API key
     return 'Access denied — your API key is invalid or no longer authorized. Re-link this device.'
@@ -1417,7 +1417,7 @@ class CloudAgentService {
         if (connCount > 0) parts.push(`${connCount} suspicious connection${connCount > 1 ? 's' : ''}`)
         if (dnsCount > 0) parts.push(`${dnsCount} suspicious DNS entr${dnsCount > 1 ? 'ies' : 'y'}`)
         new Notification({
-          title: 'Kudu - Threat Detected',
+          title: 'Bulwark - Threat Detected',
           body: `Detected ${parts.join(' and ')}.`,
           silent: false,
         }).show()
