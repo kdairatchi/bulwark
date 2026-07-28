@@ -14,11 +14,13 @@ import {
 import { PageHeader } from '@/components/layout/PageHeader'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
+import { ActivityEventCard } from '@/components/activity/ActivityEventCard'
 import { useHistoryStore } from '@/stores/history-store'
 import { useCloudHistoryStore } from '@/stores/cloud-history-store'
 import { formatBytes } from '@/lib/utils'
 import { usePlatform } from '@/hooks/usePlatform'
 import type { ScanHistoryEntry, HistoryEntryType, CloudActionEntry, DeletedFileRecord } from '@shared/types'
+import { scanHistoryToBulwarkEvent } from '@shared/activity-adapters'
 
 const typeConfigBase: Record<HistoryEntryType, { labelKey: string; icon: typeof Sparkles; color: string; bg: string }> = {
   cleaner: { labelKey: 'typeLabels.cleaner', icon: Sparkles, color: '#f59e0b', bg: 'rgba(245,158,11,0.1)' },
@@ -47,7 +49,7 @@ function useTypeConfig() {
 
 const PIE_COLORS = ['#f59e0b', '#3b82f6', '#22c55e', '#a855f7', '#ec4899', '#14b8a6', '#ef4444', '#6366f1']
 
-type ViewMode = 'overview' | 'timeline' | 'cloud'
+type ViewMode = 'overview' | 'timeline' | 'activity' | 'cloud'
 
 export function HistoryPage() {
   const { t } = useTranslation('history')
@@ -186,6 +188,16 @@ export function HistoryPage() {
                 {t('viewTimeline')}
               </button>
               <button
+                onClick={() => setViewMode('activity')}
+                className="px-4 py-2 text-[12px] font-medium transition-colors"
+                style={{
+                  background: viewMode === 'activity' ? 'rgba(34,197,94,0.1)' : 'var(--bg-subtle)',
+                  color: viewMode === 'activity' ? '#22c55e' : 'var(--text-muted)'
+                }}
+              >
+                Activity
+              </button>
+              <button
                 onClick={() => setViewMode('cloud')}
                 className="px-4 py-2 text-[12px] font-medium transition-colors"
                 style={{
@@ -227,6 +239,8 @@ export function HistoryPage() {
           setSelectedEntry={setSelectedEntry}
           typeConfig={typeConfig}
         />
+      ) : viewMode === 'activity' ? (
+        <ActivityView entries={filtered} />
       ) : (
         <CloudView entries={cloudEntries} loaded={cloudLoaded} />
       )}
@@ -860,6 +874,32 @@ const cloudCommandLabelKeys: Record<string, string> = {
   'service-apply': 'cloudCommandLabels.serviceApply', 'malware-quarantine': 'cloudCommandLabels.malwareQuarantine',
   'malware-delete': 'cloudCommandLabels.malwareDelete', 'registry-scan': 'cloudCommandLabels.registryScan',
   'registry-fix': 'cloudCommandLabels.registryFix',
+}
+
+function ActivityView({ entries }: { entries: ScanHistoryEntry[] }) {
+  if (entries.length === 0) {
+    return (
+      <div className="mt-6">
+        <EmptyState
+          icon={History}
+          title="No activity yet"
+          description="Scans and cleans will show up here as plain-language cards with Simple, Advanced, and Raw modes."
+        />
+      </div>
+    )
+  }
+
+  return (
+    <div className="mt-4 space-y-2 max-w-3xl">
+      <p className="text-[12px] mb-3" style={{ color: 'var(--text-dim)' }}>
+        Each card explains what happened, why it matters, and what you can do next.
+        Use Simple / Advanced / Raw, or Explain This.
+      </p>
+      {entries.slice(0, 50).map((e) => (
+        <ActivityEventCard key={e.id} event={scanHistoryToBulwarkEvent(e)} />
+      ))}
+    </div>
+  )
 }
 
 function CloudView({ entries, loaded }: { entries: CloudActionEntry[]; loaded: boolean }) {
