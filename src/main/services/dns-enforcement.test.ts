@@ -23,6 +23,7 @@ describe('dns-enforcement · buildEnforcementPlan', () => {
     expect(plan.revert.length).toBeGreaterThanOrEqual(2)
     // The plan references the helper on :53 forwarding to the resolver port.
     expect(plan.apply.some((s) => s.command.includes('5353'))).toBe(true)
+    expect(plan.apply.some((s) => s.command.includes('pkexec'))).toBe(true)
     expect(plan.revert.some((s) => /resolv\.conf/.test(s.command))).toBe(true)
   })
 
