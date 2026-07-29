@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { buildEnforcementPlan, buildResolvConf, isBulwrkManagedResolvConf, parseMacDnsServices, parseWindowsDnsEntries } from './dns-enforcement'
+import { buildEnforcementPlan, buildResolvConf, isBulwrkManagedResolvConf, isManagedDnsServers, parseMacDnsServices, parseWindowsDnsEntries } from './dns-enforcement'
 
 describe('dns-enforcement · buildResolvConf', () => {
   it('produces a resolv.conf pointing at the given nameserver', () => {
@@ -64,5 +64,12 @@ describe('dns-enforcement · platform state parsing', () => {
       { service: 'Wi-Fi', servers: [] },
       { service: 'Ethernet', servers: ['1.1.1.1'] },
     ])
+  })
+
+  it('only considers an exact loopback setting owned by Bulwrk', () => {
+    expect(isManagedDnsServers(['127.0.0.1'], '127.0.0.1')).toBe(true)
+    expect(isManagedDnsServers(['127.0.0.1', '1.1.1.1'], '127.0.0.1')).toBe(false)
+    expect(isManagedDnsServers(['8.8.8.8'], '127.0.0.1')).toBe(false)
+    expect(isManagedDnsServers(undefined, '127.0.0.1')).toBe(false)
   })
 })

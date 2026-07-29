@@ -137,6 +137,11 @@ export function parseMacDnsServices(listOutput: string, dnsByService: Record<str
     .map((service) => ({ service, servers: (dnsByService[service] ?? '').split(/\s+/).filter((server) => /^((\d{1,3}\.){3}\d{1,3}|[0-9a-f:]+)$/i.test(server)) }))
 }
 
+/** Restore only a setting that still belongs to this enforcement session. */
+export function isManagedDnsServers(servers: string[] | undefined, expected: string): boolean {
+  return servers?.length === 1 && servers[0] === expected
+}
+
 function psQuote(value: string): string { return "'" + value.replace(/'/g, "''") + "'" }
 function shellQuote(value: string): string { return "'" + value.replace(/'/g, "'\\''") + "'" }
 
@@ -447,13 +452,35 @@ export class DnsEnforcement {
     if (!state) return
     try {
       if (state.platform === 'darwin') {
-        const commands = (state.mac ?? []).map(({ service, servers }) => `/usr/sbin/networksetup -setdnsservers ${shellQuote(service)} ${servers.length ? servers.map(shellQuote).join(' ') : 'Empty'}`)
+        const current = await this.queryMacDns()
+        const currentByService = new Map(current.map((entry) => [entry.service, entry.servers]))
+        const skipped = (state.mac ?? []).filter(({ service }) => {
+          const servers = currentByService.get(service)
+          return !isManagedDnsServers(servers, LOOPBACK)
+        }).length
+        const commands = (state.mac ?? []).filter(({ service }) => {
+          const servers = currentByService.get(service)
+          return isManagedDnsServers(servers, LOOPBACK)
+        }).map(({ service, servers }) => `/usr/sbin/networksetup -setdnsservers ${shellQuote(service)} ${servers.length ? servers.map(shellQuote).join(' ') : 'Empty'}`)
         if (commands.length) await elevatedMacShell(commands.join(' && '), 'Bulwrk needs administrator permission to restore DNS settings.')
+        if (skipped) this.message = 'Some DNS settings changed outside Bulwrk and were left untouched.'
       } else {
-        const commands = (state.windows ?? []).map(({ InterfaceIndex, AddressFamily, ServerAddresses }) => ServerAddresses.length
+        const current = await this.queryWindowsDns()
+        const currentByInterface = new Map(current.map((entry) => [`${entry.InterfaceIndex}:${entry.AddressFamily}`, entry.ServerAddresses]))
+        const skipped = (state.windows ?? []).filter(({ InterfaceIndex, AddressFamily }) => {
+          const servers = currentByInterface.get(`${InterfaceIndex}:${AddressFamily}`)
+          const expected = AddressFamily === 23 ? '::1' : LOOPBACK
+          return !isManagedDnsServers(servers, expected)
+        }).length
+        const commands = (state.windows ?? []).filter(({ InterfaceIndex, AddressFamily }) => {
+          const servers = currentByInterface.get(`${InterfaceIndex}:${AddressFamily}`)
+          const expected = AddressFamily === 23 ? '::1' : LOOPBACK
+          return isManagedDnsServers(servers, expected)
+        }).map(({ InterfaceIndex, AddressFamily, ServerAddresses }) => ServerAddresses.length
           ? `Set-DnsClientServerAddress -InterfaceIndex ${InterfaceIndex} -AddressFamily ${AddressFamily === 23 ? 'IPv6' : 'IPv4'} -ServerAddresses ${ServerAddresses.map(psQuote).join(',')}`
           : `Set-DnsClientServerAddress -InterfaceIndex ${InterfaceIndex} -AddressFamily ${AddressFamily === 23 ? 'IPv6' : 'IPv4'} -ResetServerAddresses`)
         if (commands.length) await powershell(`$ErrorActionPreference='Stop'; ${commands.join('; ')}`, true)
+        if (skipped) this.message = 'Some DNS settings changed outside Bulwrk and were left untouched.'
       }
     } catch (err) {
       this.message = `Failed to restore saved DNS settings: ${err instanceof Error ? err.message : err}`
