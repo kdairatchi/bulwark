@@ -27,7 +27,7 @@
   "enforceOff": "Route ALL system DNS through the resolver at {{address}} (not just apps you configure).",
   "enforceEnable": "Enable",
   "enforceDisable": "Disable",
-  "enforceWarn": "Requires elevation. Backs up your DNS settings and restores them when disabled or on auto-revert.",
+  "enforceWarn": "One administrator approval is required. Bulwrk backs up your DNS settings and restores them when disabled or on auto-revert.",
 
   "rulesHint": "Create allow/block rules. Block rules also feed the Secure DNS resolver's filter list. Rules override the automatic verdict on the Connections tab.",
   "rulesPlaceholder": "domain to block or allow, e.g. ads.example.com",
@@ -161,7 +161,7 @@
   "enforceWizardStillWorks": "Still works",
   "enforceWizardRisks": "Watch for",
   "enforceWizardConfirmBody": "Route all system DNS through Bulwrk’s local resolver? Previous DNS settings will be backed up.",
-  "enforceWizardConfirmHint": "Requires elevation. Auto-reverts as a safety backstop. Disable anytime from this tab.",
+  "enforceWizardConfirmHint": "Windows will show a UAC prompt; macOS and Linux show their normal administrator prompt. One approval starts the protected DNS helper and applies the saved, reversible settings. Auto-reverts as a safety backstop.",
   "enforceWizardConfirmAction": "Enable Protect this device",
   "enforceWizardDoneBody": "System DNS now goes through Bulwrk. Verify a few sites load, then Disable immediately if anything looks wrong."
 }

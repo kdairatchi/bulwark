@@ -140,6 +140,24 @@ export function parseMacDnsServices(listOutput: string, dnsByService: Record<str
 function psQuote(value: string): string { return "'" + value.replace(/'/g, "''") + "'" }
 function shellQuote(value: string): string { return "'" + value.replace(/'/g, "'\\''") + "'" }
 
+function parseHelperPid(output: string): number | null {
+  const match = output.match(/BULWRK_HELPER_PID=(\d+)/)
+  return match ? Number(match[1]) : null
+}
+
+function helperRuntime(): { path: string; electron: boolean } {
+  const electron = Boolean(process.versions.electron)
+  return { path: process.execPath, electron }
+}
+
+function friendlyElevationError(err: unknown): string {
+  const detail = err instanceof Error ? err.message : String(err)
+  if (/cancell?ed|0x800704c7|operation was canceled|user canceled/i.test(detail)) {
+    return 'Administrator approval was canceled. No DNS settings were changed.'
+  }
+  return detail
+}
+
 async function elevatedMacShell(command: string, prompt: string): Promise<string> {
   const script = `do shell script ${JSON.stringify(command)} with prompt ${JSON.stringify(prompt)} with administrator privileges`
   const { stdout } = await execFileAsync('/usr/bin/osascript', ['-e', script], { timeout: 30_000 })
@@ -217,26 +235,48 @@ export class DnsEnforcement {
     return parseMacDnsServices(services, dns)
   }
 
-  private async startElevatedHelper(port: number): Promise<boolean> {
+  private async applyMacElevated(state: PlatformDnsState, port: number): Promise<number | null> {
     const helperPath = join(this.dataDir(), 'dns-helper.cjs')
-    this.readyPath = join(this.dataDir(), 'dns-helper.ready')
-    try { unlinkSync(this.readyPath) } catch { /* absent */ }
-    writeFileSync(helperPath, helperSource(), 'utf-8')
-    const node = await resolveNodeBinary(process.execPath && !process.execPath.includes('electron') ? process.execPath : 'node')
-    if (process.platform === 'linux') {
-      this.helper = spawn('pkexec', [node, helperPath, String(port), this.readyPath], { stdio: ['ignore', 'pipe', 'pipe'] })
-      return waitForHelper(this.helper, this.readyPath)
-    }
-    if (process.platform === 'darwin') {
-      const command = `nohup ${shellQuote(node)} ${shellQuote(helperPath)} ${port} ${shellQuote(this.readyPath)} >/dev/null 2>&1 & echo $!`
-      const output = await elevatedMacShell(command, 'Bulwrk needs administrator permission to protect system DNS.')
-      this.helperPid = Number(output.trim().split(/\s+/).pop()) || null
-      return waitForHelper(null, this.readyPath)
-    }
-    const command = `$p = Start-Process -FilePath ${psQuote(node)} -ArgumentList ${psQuote(helperPath)},${psQuote(String(port))},${psQuote(this.readyPath)} -Verb RunAs -WindowStyle Hidden -PassThru; $p.Id`
+    const readyPath = join(this.dataDir(), 'dns-helper.ready')
+    const runtime = helperRuntime()
+    const node = runtime.path
+    const nodeCommand = `${runtime.electron ? 'ELECTRON_RUN_AS_NODE=1 ' : ''}${shellQuote(node)}`
+    const services = (state.mac ?? []).map(({ service }) => `/usr/sbin/networksetup -setdnsservers ${shellQuote(service)} ${LOOPBACK}`).join(' && ')
+    const command = [
+      `/bin/rm -f ${shellQuote(readyPath)}`,
+      `nohup ${nodeCommand} ${shellQuote(helperPath)} ${port} ${shellQuote(readyPath)} >/dev/null 2>&1 & pid=$!`,
+      `i=0; while [ $i -lt 40 ] && ! /usr/bin/grep -q 'helper-udp-ready' ${shellQuote(readyPath)} 2>/dev/null; do /bin/kill -0 $pid 2>/dev/null || exit 1; /bin/sleep 0.1; i=$((i+1)); done`,
+      `/usr/bin/grep -q 'helper-udp-ready' ${shellQuote(readyPath)} || { /bin/kill $pid 2>/dev/null || true; exit 1; }`,
+      services,
+      `echo BULWRK_HELPER_PID=$pid`,
+    ].join(' && ')
+    const output = await elevatedMacShell(command, 'Bulwrk needs administrator permission to protect system DNS.')
+    this.helperPid = parseHelperPid(output)
+    return this.helperPid
+  }
+
+  private async applyWindowsElevated(state: PlatformDnsState, port: number): Promise<number | null> {
+    const helperPath = join(this.dataDir(), 'dns-helper.cjs')
+    const readyPath = join(this.dataDir(), 'dns-helper.ready')
+    const runtime = helperRuntime()
+    const node = runtime.path
+    const commands = (state.windows ?? []).map(({ InterfaceIndex, AddressFamily }) => {
+      const address = AddressFamily === 23 ? '::1' : LOOPBACK
+      return `Set-DnsClientServerAddress -InterfaceIndex ${InterfaceIndex} -AddressFamily ${AddressFamily === 23 ? 'IPv6' : 'IPv4'} -ServerAddresses ${psQuote(address)}`
+    })
+    const command = [
+      "$ErrorActionPreference='Stop'",
+      ...(runtime.electron ? ["$env:ELECTRON_RUN_AS_NODE='1'"] : []),
+      `Remove-Item -LiteralPath ${psQuote(readyPath)} -Force -ErrorAction SilentlyContinue`,
+      `$p = Start-Process -FilePath ${psQuote(node)} -ArgumentList ${psQuote(helperPath)},${psQuote(String(port))},${psQuote(readyPath)} -WindowStyle Hidden -PassThru`,
+      `$deadline=(Get-Date).AddSeconds(4); while((Get-Date) -lt $deadline -and (!(Test-Path -LiteralPath ${psQuote(readyPath)}) -or -not ((Get-Content -LiteralPath ${psQuote(readyPath)} -Raw) -like '*helper-udp-ready*'))) { if($p.HasExited) { throw 'The elevated DNS helper exited before becoming ready' }; Start-Sleep -Milliseconds 100 }`,
+      `if(!(Test-Path -LiteralPath ${psQuote(readyPath)}) -or -not ((Get-Content -LiteralPath ${psQuote(readyPath)} -Raw) -like '*helper-udp-ready*')) { Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue; throw 'The elevated DNS helper could not bind port 53' }`,
+      ...commands,
+      `Write-Output ('BULWRK_HELPER_PID=' + $p.Id)`,
+    ].join('; ')
     const output = await powershell(command, true)
-    this.helperPid = Number(output.trim().split(/\s+/).pop()) || null
-    return waitForHelper(null, this.readyPath)
+    this.helperPid = parseHelperPid(output)
+    return this.helperPid
   }
 
   /**
@@ -310,12 +350,11 @@ export class DnsEnforcement {
           return this.getStatus()
         }
         writeFileSync(this.statePath(), JSON.stringify(this.platformState), 'utf8')
-        if (!await this.startElevatedHelper(port)) {
-          this.stopHelper()
-          this.message = 'Could not bind the local DNS port 53. Approve the administrator prompt and check whether another DNS service is using it.'
-          return this.getStatus()
-        }
-        await this.setPlatformLoopback(this.platformState)
+        writeFileSync(join(this.dataDir(), 'dns-helper.cjs'), helperSource(), 'utf8')
+        const helperPid = process.platform === 'darwin'
+          ? await this.applyMacElevated(this.platformState, port)
+          : await this.applyWindowsElevated(this.platformState, port)
+        if (!helperPid) throw new Error('The elevated DNS helper did not report a process id')
         this.enforcing = true
         this.method = process.platform === 'darwin' ? 'networksetup' : 'netsh'
         this.since = new Date().toISOString()
@@ -326,20 +365,24 @@ export class DnsEnforcement {
       } catch (err) {
         await this.restorePlatformState(this.platformState)
         this.stopHelper()
-        this.message = `Failed to update system DNS: ${err instanceof Error ? err.message : err}`
+        this.message = `Failed to update system DNS: ${friendlyElevationError(err)}`
         return this.getStatus()
       }
     }
 
-    const nodePath = process.execPath && !process.execPath.includes('electron') ? process.execPath : 'node'
-    // In dev, process.execPath is electron; fall back to a node on PATH.
-    const node = await resolveNodeBinary(nodePath)
+    const runtime = helperRuntime()
+    const node = runtime.path
 
     // 1. Write + launch the privileged :53 helper.
     const helperPath = join(this.dataDir(), 'dns-helper.cjs')
+    this.readyPath = join(this.dataDir(), 'dns-helper.ready')
+    try { unlinkSync(this.readyPath) } catch { /* absent */ }
     writeFileSync(helperPath, helperSource(), 'utf-8')
     try {
-    this.helper = spawn('pkexec', [node, helperPath, String(port), this.readyPath], { stdio: ['ignore', 'pipe', 'pipe'] })
+      const args = runtime.electron
+        ? ['env', 'ELECTRON_RUN_AS_NODE=1', node, helperPath, String(port), this.readyPath]
+        : [node, helperPath, String(port), this.readyPath]
+      this.helper = spawn('pkexec', args, { stdio: ['ignore', 'pipe', 'pipe'] })
     } catch (err) {
       this.message = `Failed to launch privileged helper: ${err instanceof Error ? err.message : err}`
       return this.getStatus()
@@ -400,19 +443,6 @@ export class DnsEnforcement {
     this.autoRevertTimer = setTimeout(() => { void this.revert('auto-revert') }, AUTO_REVERT_MS)
   }
 
-  private async setPlatformLoopback(state: PlatformDnsState): Promise<void> {
-    if (state.platform === 'darwin') {
-      const commands = (state.mac ?? []).map(({ service }) => `/usr/sbin/networksetup -setdnsservers ${shellQuote(service)} ${LOOPBACK}`)
-      await elevatedMacShell(commands.join(' && '), 'Bulwrk needs administrator permission to protect system DNS.')
-      return
-    }
-    const commands = (state.windows ?? []).map(({ InterfaceIndex, AddressFamily }) => {
-      const address = AddressFamily === 23 ? '::1' : LOOPBACK
-      return `Set-DnsClientServerAddress -InterfaceIndex ${InterfaceIndex} -AddressFamily ${AddressFamily === 23 ? 'IPv6' : 'IPv4'} -ServerAddresses ${psQuote(address)}`
-    })
-    await powershell(`$ErrorActionPreference='Stop'; ${commands.join('; ')}`, true)
-  }
-
   private async restorePlatformState(state: PlatformDnsState | null): Promise<void> {
     if (!state) return
     try {
@@ -444,22 +474,6 @@ export class DnsEnforcement {
     this.helperPid = null
     this.readyPath = null
   }
-}
-
-async function resolveNodeBinary(preferred: string): Promise<string> {
-  if (preferred && preferred !== 'node' && !preferred.includes('electron')) return preferred
-  try {
-    if (process.platform === 'win32') {
-      const { stdout } = await execFileAsync('where.exe', ['node.exe'])
-      const p = stdout.split(/\r?\n/).map((line) => line.trim()).find(Boolean)
-      if (p) return p
-      return 'node.exe'
-    }
-    const { stdout } = await execFileAsync('bash', ['-lc', 'command -v node'])
-    const p = stdout.trim()
-    if (p) return p
-  } catch { /* ignore */ }
-  return 'node'
 }
 
 function waitForHelper(child: ChildProcess | null, readyPath: string | null): Promise<boolean> {
