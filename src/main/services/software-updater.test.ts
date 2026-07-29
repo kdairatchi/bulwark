@@ -24,8 +24,25 @@ import {
   isValidAppIdForSource,
   classifyScoopUpdate,
   groupWindowsUpdateItems,
+  buildLinuxUpgradeCommand,
   BREW_PATH_CANDIDATES,
 } from './software-updater'
+
+describe('buildLinuxUpgradeCommand', () => {
+  it('wraps apt updates in pkexec for a normal desktop session', () => {
+    expect(buildLinuxUpgradeCommand('apt', 'curl', true)).toEqual({
+      file: 'pkexec',
+      args: ['/usr/bin/apt-get', 'install', '-y', '-qq', '--only-upgrade', 'curl'],
+    })
+  })
+
+  it('keeps direct package-manager execution for root', () => {
+    expect(buildLinuxUpgradeCommand('pacman', 'curl', false)).toEqual({
+      file: '/usr/bin/pacman',
+      args: ['-S', '--noconfirm', 'curl'],
+    })
+  })
+})
 
 // ─── cleanOutput ────────────────────────────────────────────
 

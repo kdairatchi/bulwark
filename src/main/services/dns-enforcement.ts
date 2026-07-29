@@ -11,7 +11,7 @@
 //
 // macOS/Windows plans are generated for completeness; execution here targets
 // Linux (the platform this build runs on). Production would ship a signed
-// helper invoked via pkexec/UAC instead of `sudo -n`.
+// helper invoked via pkexec/UAC instead of a non-interactive sudo call.
 
 import { spawn, execFile } from 'child_process'
 import { promisify } from 'util'
@@ -58,9 +58,9 @@ export function buildEnforcementPlan(platform: NodeJS.Platform, resolverPort: nu
   // linux
   const method: EnforcementMethod = 'resolv.conf'
   const apply: EnforcementStep[] = [
-    { describe: `Start a privileged helper on ${LOOPBACK}:53 forwarding to the resolver (:${resolverPort})`, command: `sudo <node> <helper> ${resolverPort}` },
+    { describe: `Start a privileged helper on ${LOOPBACK}:53 forwarding to the resolver (:${resolverPort})`, command: `pkexec <node> <helper> ${resolverPort}` },
     { describe: `Back up ${RESOLV_CONF}`, command: `cp ${RESOLV_CONF} <backup>` },
-    { describe: `Point the system resolver at ${LOOPBACK}`, command: `printf 'nameserver ${LOOPBACK}\\n' | sudo tee ${RESOLV_CONF}` },
+    { describe: `Point the system resolver at ${LOOPBACK}`, command: `printf 'nameserver ${LOOPBACK}\\n' | pkexec tee ${RESOLV_CONF}` },
   ]
   const revert: EnforcementStep[] = [
     { describe: `Restore ${RESOLV_CONF} from backup`, command: `cp <backup> ${RESOLV_CONF}` },
@@ -145,7 +145,7 @@ export class DnsEnforcement {
       if (!isBulwrkManagedResolvConf(current)) return
       const backup = join(this.dataDir(), 'resolv.conf.backup')
       if (existsSync(backup)) {
-        await execFileAsync('sudo', ['-n', 'cp', backup, RESOLV_CONF])
+        await execFileAsync('pkexec', ['cp', backup, RESOLV_CONF])
       }
       await this.killStaleHelpers()
       this.deps.audit('enforcement_reconciled', 'cleaned up stale enforcement from a previous run')
@@ -156,7 +156,7 @@ export class DnsEnforcement {
     try {
       const { stdout } = await execFileAsync('bash', ['-lc', "ps -eo pid,args | grep 'dns-helper.cjs' | grep -v grep | awk '{print $1}'"])
       for (const pid of stdout.split(/\s+/).filter(Boolean)) {
-        try { await execFileAsync('sudo', ['-n', 'kill', pid]) } catch { /* ignore */ }
+        try { await execFileAsync('pkexec', ['kill', pid]) } catch { /* ignore */ }
       }
     } catch { /* ignore */ }
   }
@@ -182,7 +182,7 @@ export class DnsEnforcement {
     const helperPath = join(this.dataDir(), 'dns-helper.cjs')
     writeFileSync(helperPath, helperSource(), 'utf-8')
     try {
-      this.helper = spawn('sudo', ['-n', node, helperPath, String(port)], { stdio: ['ignore', 'pipe', 'pipe'] })
+      this.helper = spawn('pkexec', [node, helperPath, String(port)], { stdio: ['ignore', 'pipe', 'pipe'] })
     } catch (err) {
       this.message = `Failed to launch privileged helper: ${err instanceof Error ? err.message : err}`
       return this.getStatus()
@@ -190,14 +190,14 @@ export class DnsEnforcement {
     const ready = await waitForHelper(this.helper)
     if (!ready) {
       this.stopHelper()
-      this.message = 'Could not bind 127.0.0.1:53 (elevation required). Enable passwordless privilege or run the signed helper.'
+      this.message = 'Could not bind 127.0.0.1:53. Approve the system authentication prompt and ensure no other DNS service owns port 53.'
       return this.getStatus()
     }
 
     // 2. Back up and rewrite resolv.conf (elevated).
     this.backupPath = join(this.dataDir(), 'resolv.conf.backup')
     try {
-      await execFileAsync('sudo', ['-n', 'cp', RESOLV_CONF, this.backupPath])
+      await execFileAsync('pkexec', ['cp', RESOLV_CONF, this.backupPath])
       await writeResolvConf(buildResolvConf(LOOPBACK))
     } catch (err) {
       this.stopHelper()
@@ -223,7 +223,7 @@ export class DnsEnforcement {
     this.autoRevertAt = null
 
     if (this.backupPath && existsSync(this.backupPath)) {
-      try { await execFileAsync('sudo', ['-n', 'cp', this.backupPath, RESOLV_CONF]) }
+      try { await execFileAsync('pkexec', ['cp', this.backupPath, RESOLV_CONF]) }
       catch (err) { this.message = `Failed to restore ${RESOLV_CONF}: ${err instanceof Error ? err.message : err}` }
     }
     this.stopHelper()
@@ -237,8 +237,8 @@ export class DnsEnforcement {
 
   private stopHelper(): void {
     if (this.helper && this.helper.pid) {
-      // The helper runs under sudo; kill the sudo child tree.
-      try { spawn('sudo', ['-n', 'kill', String(this.helper.pid)]) } catch { /* ignore */ }
+      // The helper runs under pkexec; kill the pkexec child tree.
+      try { spawn('pkexec', ['kill', String(this.helper.pid)]) } catch { /* ignore */ }
       try { this.helper.kill() } catch { /* ignore */ }
     }
     this.helper = null
@@ -274,7 +274,7 @@ function waitForHelper(child: ChildProcess): Promise<boolean> {
 /** Write resolv.conf via an elevated `tee` (root-owned file). */
 function writeResolvConf(contents: string): Promise<void> {
   return new Promise((resolve, reject) => {
-    const child = spawn('sudo', ['-n', 'tee', RESOLV_CONF], { stdio: ['pipe', 'ignore', 'pipe'] })
+    const child = spawn('pkexec', ['tee', RESOLV_CONF], { stdio: ['pipe', 'ignore', 'pipe'] })
     child.on('error', reject)
     child.on('exit', (code) => (code === 0 ? resolve() : reject(new Error(`tee exited ${code}`))))
     child.stdin?.write(contents)

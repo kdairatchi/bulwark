@@ -1465,6 +1465,22 @@ async function detectLinuxPackageManager(): Promise<LinuxPM | null> {
 /** Linux package name: alphanumeric (mixed case for RPM), hyphens, dots, underscores, plus, colons (for arch qualifiers) */
 const LINUX_PKG_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9.+\-_:]{0,200}$/
 
+/** Build the package-manager command, optionally wrapped in desktop elevation. */
+export function buildLinuxUpgradeCommand(
+  pm: LinuxPM,
+  appId: string,
+  elevated: boolean,
+): { file: string; args: string[] } {
+  const command = pm === 'apt'
+    ? { file: '/usr/bin/apt-get', args: ['install', '-y', '-qq', '--only-upgrade', appId] }
+    : pm === 'dnf'
+      ? { file: '/usr/bin/dnf', args: ['upgrade', '-y', '-q', appId] }
+      : { file: '/usr/bin/pacman', args: ['-S', '--noconfirm', appId] }
+  return elevated
+    ? { file: 'pkexec', args: [command.file, ...command.args] }
+    : command
+}
+
 // ── apt ──
 
 /**
@@ -1504,9 +1520,13 @@ export function parseDpkgInstalled(stdout: string): UpToDateApp[] {
 async function checkForUpdatesApt(): Promise<UpdateCheckResult> {
   try {
     // Refresh package cache (may fail without root — that's OK, uses stale cache)
-    try {
-      await execFileAsync('/usr/bin/apt-get', ['update', '-qq'], { timeout: 60_000 })
-    } catch { /* non-root: use existing cache */ }
+    // Do not invoke apt-get as an unprivileged desktop process: it emits a
+    // misleading dpkg lock error. A later install can use pkexec interactively.
+    if (typeof process.getuid !== 'function' || process.getuid() === 0) {
+      try {
+        await execFileAsync('/usr/bin/apt-get', ['update', '-qq'], { timeout: 60_000 })
+      } catch { /* use the existing cache */ }
+    }
 
     let upgradableStdout = ''
     try {
@@ -1649,9 +1669,13 @@ export function parsePacmanQu(stdout: string): UpdatableApp[] {
 async function checkForUpdatesPacman(): Promise<UpdateCheckResult> {
   try {
     // Sync database first
-    try {
-      await execFileAsync('/usr/bin/pacman', ['-Sy'], { timeout: 60_000 })
-    } catch { /* may need root — use stale db */ }
+    // Avoid a guaranteed permission failure from a normal GUI process. The
+    // install path below can request elevation when the user confirms updates.
+    if (typeof process.getuid !== 'function' || process.getuid() === 0) {
+      try {
+        await execFileAsync('/usr/bin/pacman', ['-Sy'], { timeout: 60_000 })
+      } catch { /* use the existing database */ }
+    }
 
     let quStdout = ''
     try {
@@ -1711,22 +1735,14 @@ async function attemptLinuxUpgrade(
   }
 
   try {
-    if (pm === 'apt') {
-      await execFileAsync('/usr/bin/apt-get', ['install', '-y', '-qq', appId], {
-        timeout: 10 * 60 * 1000,
-        maxBuffer: 10 * 1024 * 1024,
-      })
-    } else if (pm === 'dnf') {
-      await execFileAsync('/usr/bin/dnf', ['upgrade', '-y', '-q', appId], {
-        timeout: 10 * 60 * 1000,
-        maxBuffer: 10 * 1024 * 1024,
-      })
-    } else {
-      await execFileAsync('/usr/bin/pacman', ['-S', '--noconfirm', appId], {
-        timeout: 10 * 60 * 1000,
-        maxBuffer: 10 * 1024 * 1024,
-      })
-    }
+    // Package managers modify system-owned files. pkexec provides the normal
+    // desktop authentication flow without restarting the Electron app as root.
+    const elevated = typeof process.getuid === 'function' && process.getuid() !== 0
+    const command = buildLinuxUpgradeCommand(pm, appId, elevated)
+    await execFileAsync(command.file, command.args, {
+      timeout: 10 * 60 * 1000,
+      maxBuffer: 10 * 1024 * 1024,
+    })
     return { success: true }
   } catch (err: any) {
     const output = cleanOutput(err?.stderr || err?.stdout || err?.message || 'Unknown error')
@@ -1741,19 +1757,6 @@ async function runUpdatesLinux(
 ): Promise<UpdateResult> {
   const pm = await detectLinuxPackageManager()
   if (!pm) return { succeeded: 0, failed: 0, errors: [] }
-
-  // Package installation changes system-owned files. Do not invoke apt/dnf/
-  // pacman repeatedly when the desktop process is not elevated; that produces
-  // noisy dpkg lock errors and cannot succeed. The UI can show one actionable
-  // reason per selected package instead.
-  if (typeof process.getuid === 'function' && process.getuid() !== 0) {
-    const reason = `Administrator privileges are required to update ${pm} packages. Run the package manager with sudo, or use your system Software Manager; this desktop app should not be launched as root.`
-    return {
-      succeeded: 0,
-      failed: appIds.length,
-      errors: appIds.map((appId) => ({ appId, name: appId, reason })),
-    }
-  }
 
   let succeeded = 0
   let failed = 0
